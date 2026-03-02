@@ -3,6 +3,7 @@
 # dataset files
 *.csv
 all.parquet
+all_elaborated.parquet
 
 
 # Byte-compiled / optimized / DLL files
