@@ -1,9 +1,11 @@
 # Python.gitignore
 
 # dataset files
-*.csv
+all.csv
 all.parquet
 all_elaborated.parquet
+DATASETS/originals csv/*.*
+scrap.csv
 
 
 # Byte-compiled / optimized / DLL files

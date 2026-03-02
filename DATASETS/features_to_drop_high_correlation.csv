@@ -1,0 +1,28 @@
+Feature
+Bwd Header Len
+Bwd Pkt Len Std
+Bwd Seg Size Avg
+CWE Flag Count
+ECE Flag Cnt
+Flow IAT Min
+Fwd Act Data Pkts
+Fwd Header Len
+Fwd IAT Max
+Fwd IAT Mean
+Fwd IAT Min
+Fwd IAT Std
+Fwd IAT Tot
+Fwd Pkt Len Std
+Fwd Seg Size Avg
+Idle Max
+Idle Mean
+Idle Std
+Pkt Len Max
+Pkt Len Std
+Pkt Size Avg
+SYN Flag Cnt
+Subflow Bwd Byts
+Subflow Bwd Pkts
+Subflow Fwd Byts
+Subflow Fwd Pkts
+TotLen Bwd Pkts
