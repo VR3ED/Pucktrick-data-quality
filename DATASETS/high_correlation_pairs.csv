@@ -1,47 +1,81 @@
 Feature_1,Feature_2,Correlation
 Flow Duration,Fwd IAT Tot,1.0
 TotLen Bwd Pkts,Subflow Bwd Byts,1.0
-Flow IAT Max,Fwd IAT Max,1.0
-Fwd URG Flags,CWE Flag Count,1.0
-Flow IAT Std,Fwd IAT Std,1.0
-Flow IAT Mean,Fwd IAT Mean,1.0
 Bwd Pkt Len Mean,Bwd Seg Size Avg,1.0
-RST Flag Cnt,ECE Flag Cnt,1.0
+Flow IAT Max,Fwd IAT Max,1.0
 Flow IAT Min,Fwd IAT Min,1.0
-Fwd Pkt Len Mean,Fwd Seg Size Avg,1.0
 Fwd PSH Flags,SYN Flag Cnt,1.0
-Tot Fwd Pkts,Subflow Fwd Pkts,1.0
+Fwd URG Flags,CWE Flag Count,1.0
+Fwd Pkt Len Mean,Fwd Seg Size Avg,1.0
+RST Flag Cnt,ECE Flag Cnt,1.0
+Flow IAT Mean,Fwd IAT Mean,1.0
+Flow IAT Std,Fwd IAT Std,1.0
 TotLen Fwd Pkts,Subflow Fwd Byts,1.0
 Tot Bwd Pkts,Subflow Bwd Pkts,1.0
-Subflow Fwd Pkts,Fwd Act Data Pkts,0.9992
+Tot Fwd Pkts,Subflow Fwd Pkts,1.0
 Tot Fwd Pkts,Fwd Act Data Pkts,0.9992
+Subflow Fwd Pkts,Fwd Act Data Pkts,0.9992
 Bwd Header Len,Subflow Bwd Pkts,0.9978
 Tot Bwd Pkts,Bwd Header Len,0.9978
 TotLen Bwd Pkts,Bwd Header Len,0.996
 Bwd Header Len,Subflow Bwd Byts,0.996
 Fwd Header Len,Subflow Fwd Pkts,0.9956
 Tot Fwd Pkts,Fwd Header Len,0.9956
-Tot Bwd Pkts,TotLen Bwd Pkts,0.9935
-Tot Bwd Pkts,Subflow Bwd Byts,0.9935
-Subflow Bwd Pkts,Subflow Bwd Byts,0.9935
 TotLen Bwd Pkts,Subflow Bwd Pkts,0.9935
+Subflow Bwd Pkts,Subflow Bwd Byts,0.9935
+Tot Bwd Pkts,Subflow Bwd Byts,0.9935
+Tot Bwd Pkts,TotLen Bwd Pkts,0.9935
 Pkt Len Mean,Pkt Size Avg,0.9929
 Idle Std,Idle Max,0.9923
 Fwd Header Len,Fwd Act Data Pkts,0.9915
 Idle Mean,Idle Max,0.9818
 Idle Mean,Idle Std,0.9806
-Flow IAT Std,Idle Mean,0.9746
 Fwd IAT Std,Idle Mean,0.9746
+Flow IAT Std,Idle Mean,0.9746
 Bwd Pkt Len Max,Bwd Pkt Len Std,0.9698
 Pkt Len Max,Pkt Len Std,0.9655
 Fwd Pkt Len Max,Fwd Pkt Len Std,0.9601
 Bwd Pkt Len Max,Pkt Len Max,0.9577
-Fwd IAT Std,Fwd IAT Min,-0.9576
+Flow IAT Min,Fwd IAT Std,-0.9576
 Flow IAT Std,Flow IAT Min,-0.9576
 Flow IAT Std,Fwd IAT Min,-0.9576
-Flow IAT Min,Fwd IAT Std,-0.9576
+Fwd IAT Std,Fwd IAT Min,-0.9576
 Fwd IAT Std,Idle Std,0.9568
 Flow IAT Std,Idle Std,0.9568
-Flow IAT Std,Idle Max,0.9565
 Fwd IAT Std,Idle Max,0.9565
+Flow IAT Std,Idle Max,0.9565
 Bwd Pkt Len Std,Pkt Len Max,0.9522
+Flow IAT Max,Idle Max,0.9482
+Fwd IAT Max,Idle Max,0.9482
+Active Mean,Active Max,0.9479
+Bwd Pkt Len Mean,Pkt Len Mean,0.9474
+Pkt Len Mean,Bwd Seg Size Avg,0.9474
+Bwd Pkt Len Std,Pkt Len Std,0.946
+Flow IAT Max,Idle Std,0.9409
+Fwd IAT Max,Idle Std,0.9409
+Bwd Pkt Len Mean,Pkt Size Avg,0.9409
+Pkt Size Avg,Bwd Seg Size Avg,0.9409
+Flow IAT Min,Idle Mean,-0.937
+Fwd IAT Min,Idle Mean,-0.937
+Fwd Pkt Len Min,Pkt Len Min,0.9362
+Flow IAT Max,Idle Mean,0.931
+Fwd IAT Max,Idle Mean,0.9309
+Flow IAT Min,Idle Max,-0.9278
+Fwd IAT Min,Idle Max,-0.9277
+Flow IAT Min,Idle Std,-0.9236
+Fwd IAT Min,Idle Std,-0.9236
+Bwd Pkt Len Max,Pkt Len Std,0.9158
+Active Mean,Active Min,0.9079
+Flow IAT Std,Fwd IAT Max,0.8957
+Flow IAT Max,Fwd IAT Std,0.8957
+Flow IAT Std,Flow IAT Max,0.8957
+Fwd IAT Std,Fwd IAT Max,0.8957
+Bwd IAT Mean,Bwd IAT Min,0.8936
+Bwd IAT Std,Bwd IAT Max,0.8785
+Fwd Pkt Len Mean,Fwd Pkt Len Std,0.8774
+Fwd Pkt Len Std,Fwd Seg Size Avg,0.8774
+Fwd Pkt Len Max,Fwd Seg Size Avg,0.8773
+Fwd Pkt Len Max,Fwd Pkt Len Mean,0.8773
+Pkt Len Mean,Pkt Len Std,0.8656
+Bwd Pkt Len Mean,Pkt Len Std,0.8512
+Pkt Len Std,Bwd Seg Size Avg,0.8512

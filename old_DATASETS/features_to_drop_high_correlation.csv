@@ -1,13 +1,9 @@
-Active Max
-Active Min
+Feature
 Bwd Header Len
-Bwd IAT Max
-Bwd IAT Min
 Bwd Pkt Len Std
 Bwd Seg Size Avg
 CWE Flag Count
 ECE Flag Cnt
-Flow IAT Max
 Flow IAT Min
 Fwd Act Data Pkts
 Fwd Header Len
@@ -16,15 +12,12 @@ Fwd IAT Mean
 Fwd IAT Min
 Fwd IAT Std
 Fwd IAT Tot
-Fwd Pkt Len Mean
 Fwd Pkt Len Std
 Fwd Seg Size Avg
 Idle Max
 Idle Mean
 Idle Std
 Pkt Len Max
-Pkt Len Mean
-Pkt Len Min
 Pkt Len Std
 Pkt Size Avg
 SYN Flag Cnt
