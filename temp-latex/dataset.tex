@@ -1,0 +1,673 @@
+% ============================================================
+%  Chapter: Dataset Description and Analysis
+% ============================================================
+\chapter{Dataset Description and Analysis}
+\label{chap:dataset}
+
+% ============================================================
+\section{Introduction to the CIC-IDS2018 Dataset}
+\label{sec:dataset-intro}
+% ============================================================
+
+The dataset used in the experimental phase of this work is the
+\textbf{CIC-IDS2018} (Canadian Institute for Cybersecurity — Intrusion
+Detection System 2018), a publicly available benchmark released by the
+University of New Brunswick~\cite{cicids2018}.  It was produced as part of a
+systematic effort to build realistic, labelled network-traffic traces that can
+drive the development and evaluation of next-generation intrusion-detection
+systems (IDS).
+
+The data were collected over a five-day period in February–March 2018 inside a
+controlled cyber-range infrastructure.  A set of attack machines (an external
+network of 50 machines) launched a curated battery of attacks against a victim
+network of 420 machines and 30 servers, while the defender-side profile
+generator replayed realistic benign traffic drawn from a profiled usage model
+that incorporates HTTP, HTTPS, FTP, SSH, and email activity.  All bi-directional
+network flows were captured with the \textit{CIC\-Flow\-Meter} tool, which
+extracts statistical features — primarily packet-level and flow-level statistics
+— from raw \texttt{.pcap} dumps.  Each flow is labelled with either
+\texttt{Benign} or one of fourteen mutually exclusive attack categories.
+
+The attack repertoire covers a broad spectrum of modern threat types:
+\begin{itemize}
+    \item \textbf{Brute-Force} attacks (FTP-BruteForce, SSH-BruteForce);
+    \item \textbf{Denial-of-Service (DoS)} attacks (DoS-GoldenEye,
+          DoS-Hulk, DoS-SlowHTTPTest, DoS-Slowloris);
+    \item \textbf{Web attacks} (SQL Injection, XSS, Brute-Force on web
+          login);
+    \item \textbf{Botnet} traffic (ARES botnet);
+    \item \textbf{Infiltration} scenarios;
+    \item \textbf{Distributed Denial-of-Service (DDoS)} attacks with LOIC
+          UDP and HOIC.
+\end{itemize}
+
+The dataset was originally distributed as a collection of day-labelled CSV
+files, one per day of capture.  A preprocessing step prior to the analysis
+described in this chapter merged these individual files into a unified dataset
+and resolved a minor schema inconsistency: four features present only in one
+daily capture were not shared across all files; rather than discarding those
+flows, the missing columns were filled with \texttt{NaN} and the anomalous
+features were saved separately so that no information was irrecoverably lost.
+The unified dataset was subsequently persisted in the Apache Parquet columnar
+format to enable efficient distributed reads via Apache Spark in the
+experimental pipeline.
+
+The dataset is available for download from the Kaggle platform at
+\url{https://www.kaggle.com/datasets/solarmainframe/ids-intrusion-csv}, while
+additional documentation and the original raw captures are hosted at
+\url{https://www.unb.ca/cic/datasets/ids-2018.html}.
+
+% ============================================================
+\section{Dimensionality and Schema}
+\label{sec:dataset-dimensionality}
+% ============================================================
+
+After unification, the dataset contains \textbf{16\,173\,208 network-flow
+instances} described by \textbf{79 features} plus two label columns
+(\texttt{Label} and \texttt{Label\_generic}).
+The 79 features are purely statistical descriptors extracted by CICFlowMeter;
+they include, among others:
+
+\begin{itemize}
+  \item \emph{Flow duration and inter-arrival times} (\texttt{Flow Duration},
+        \texttt{Flow IAT Mean}, \texttt{Flow IAT Std}, etc.);
+  \item \emph{Packet-length statistics} (\texttt{Fwd Pkt Len Mean},
+        \texttt{Bwd Pkt Len Max}, \texttt{Pkt Len Var}, etc.);
+  \item \emph{Byte and packet counts}, split by direction (\texttt{Tot Fwd
+        Pkts}, \texttt{Tot Bwd Pkts}, \texttt{TotLen Fwd Pkts}, etc.);
+  \item \emph{TCP flag counts} (\texttt{SYN Flag Cnt}, \texttt{FIN Flag
+        Cnt}, \texttt{PSH Flag Cnt}, etc.);
+  \item \emph{Rate-based features} (\texttt{Flow Byts/s}, \texttt{Flow
+        Pkts/s}, \texttt{Bwd Pkts/s}, etc.);
+  \item \emph{Sub-flow and bulk statistics} (\texttt{Subflow Fwd Pkts},
+        \texttt{Fwd Blk Rate Avg}, etc.);
+  \item \emph{Window size and header-length fields}
+        (\texttt{Init\_Win\_bytes\_forward}, \texttt{Fwd Header Len}, etc.).
+\end{itemize}
+
+Crucially, the dataset contains \emph{no application-layer payload
+information}: all features are derived solely from transport- and
+network-layer flow metadata.  This design choice, motivated by privacy
+regulations that preclude deep-packet inspection on real traffic, constitutes an
+inherent upper bound on the discriminative power available to any classifier
+trained on these data, a limitation that will be revisited when analysing
+feature–target correlations (Section~\ref{sec:feat-target-corr}).
+
+% ============================================================
+\section{Label Distribution and Class Imbalance}
+\label{sec:label-distribution}
+% ============================================================
+
+A preliminary examination of the label columns reveals a severe class
+imbalance, a characteristic endemic to real-world network-traffic datasets.
+The label schema is twofold:
+
+\begin{enumerate}
+  \item \texttt{Label} — the original fine-grained label carrying the specific
+        attack category or \texttt{Benign}.
+  \item \texttt{Label\_generic} — a binary encoding derived from
+        \texttt{Label}: $0$ for benign flows and $1$ for any attack flow,
+        regardless of type.  This binarised label was introduced to simplify
+        the experimental evaluation of deep learning models in scenarios where
+        the primary objective is anomaly detection rather than attack
+        classification.
+\end{enumerate}
+
+Figure~\ref{fig:label-distribution} shows the joint distribution of both label
+hierarchies.  The left pie chart illustrates the overall fraction of benign
+versus malign traffic, while the right chart details the relative proportions
+of the individual attack categories within the malign subset.
+
+\begin{figure}[htbp]
+  \centering
+  \includegraphics[width=\textwidth]{images/label_distribution_piecharts.png}
+  \caption{Class distribution of the CIC-IDS2018 dataset.  \emph{Left:}
+    proportion of benign versus malign flows (binary label).  \emph{Right:}
+    breakdown of specific attack categories within the malign portion.}
+  \label{fig:label-distribution}
+\end{figure}
+
+The imbalance is substantial: benign traffic constitutes the overwhelming
+majority of the dataset, while the aggregate of all attack types represents a
+considerably smaller fraction.  Within the attack classes, further heterogeneity
+is observed: volumetric attacks such as DoS/DDoS generate large numbers of
+flows and are therefore over-represented relative to low-rate, stealthy attacks
+such as infiltration or web-based brute force.
+
+Class imbalance has well-documented implications for machine learning model
+training~\cite{lemaitre2017imbalanced}: standard cross-entropy minimisation
+tends to bias models towards the majority class, artificially inflating accuracy
+while degrading recall on minority attack categories.  Awareness of this
+imbalance was therefore a prerequisite for designing the experimental
+protocol, and it also motivates the particular interest in \emph{noise
+injection} experiments: the introduction of synthetic corruptions by PuckTrick
+may interact non-uniformly with class-stratified data, potentially exacerbating
+or alleviating the imbalance in ways that influence classifier behaviour in
+non-trivial ways.
+
+% ============================================================
+\section{Temporal Distribution of Traffic}
+\label{sec:temporal-distribution}
+% ============================================================
+
+Each flow record includes a \texttt{Timestamp} column that encodes the
+start time of the flow as a character string.  A thorough inspection of this
+column revealed that multiple date-format conventions coexist across daily
+files (\texttt{yyyy-MM-dd HH:mm:ss}, \texttt{dd/MM/yyyy HH:mm:ss}, and
+variants thereof), a direct consequence of data originating from independently
+configured capture tools.  Additionally, a non-negligible fraction of rows
+contained epoch-origin timestamps (date 1 January 1970), a classical artefact
+of integer overflow or uninitialised timestamp fields.  These corrupted entries
+were filtered out before temporal analysis was performed.
+
+Figure~\ref{fig:temporal-distribution} presents the temporal structure of the
+dataset along two complementary dimensions.
+
+\begin{figure}[htbp]
+  \centering
+  \includegraphics[width=\textwidth]{images/temporal_distribution_label_generic.png}
+  \caption{Temporal distribution of network flows.  \emph{Top:}
+    stacked area chart showing the hourly volume of benign (steelblue) and
+    malign (tomato) flows over the entire five-day collection window.
+    \emph{Bottom:} aggregated distribution of flow counts by hour of the day
+    (0--23), with separate bars for benign and malign traffic.}
+  \label{fig:temporal-distribution}
+\end{figure}
+
+The stacked area chart (top panel) reveals that attacks are not uniformly
+spread across the collection period but are concentrated in specific temporal
+windows.  This clustering reflects the scripted nature of the attack sessions:
+attack tools were activated according to a defined schedule, generating bursts
+of malign traffic interspersed with periods of exclusively benign activity.
+
+The hourly aggregation chart (bottom panel) provides a time-of-day analysis.
+Benign traffic follows a circadian pattern consistent with daytime office
+usage, peaking during working hours, while malign traffic exhibits a more
+uniform or counter-cyclical distribution depending on the attack type.  These
+temporal patterns imply that the \texttt{Timestamp} feature carries genuine
+discriminative information: a classifier with access to flow timing can
+leverage temporal context to improve attack detection.
+
+From the standpoint of PuckTrick's noise injection experiments, this
+observation is significant: the \texttt{Timestamp} column is a textual
+categorical feature whose corruption — via label inconsistency or noise
+injection — can degrade the temporal signal exploitable by downstream models,
+making it an especially sensitive target for controlled perturbation experiments.
+
+% ============================================================
+\section{Missing Data Analysis}
+\label{sec:missing-data}
+% ============================================================
+
+Prior to any modelling activity, the completeness of the feature matrix was
+assessed by counting null and \texttt{NaN} values across all 79 columns.
+The initial scan indicated no missing values in the unified dataset — a result
+that might suggest the data are entirely complete.  However, a more granular
+investigation revealed that one feature contained a small proportion of missing
+values (roughly 0.37\% of all rows).
+
+Given that 0.37\% represents a negligible fraction of a dataset containing
+over 16 million instances, the standard remediation strategy of \emph{listwise
+deletion} — i.e., discarding all rows that contain at least one null value — was
+adopted.  This approach is justified because:
+
+\begin{enumerate}
+  \item The lost rows amount to approximately 60\,000 instances, less than
+        0.4\% of the total, which is statistically negligible.
+  \item The missingness pattern showed no systematic relationship with the
+        target variable; the null-bearing flows were distributed across both
+        benign and attack classes, indicating a process closer to
+        \emph{Missing Completely At Random} (MCAR) rather than a
+        class-specific artefact.
+  \item Imputation strategies (mean, median, or model-based) would introduce
+        artificial values into flow-level measurement features, potentially
+        contaminating the baseline dataset against which noise-injection
+        experiments are benchmarked.
+\end{enumerate}
+
+After listwise deletion the dataset retained all 16\,173\,208 instances that
+carried complete feature vectors, and no further missing-data handling was
+necessary.
+
+% ============================================================
+\section{Feature Relevance Analysis}
+\label{sec:feature-relevance}
+% ============================================================
+
+A fundamental step before introducing controlled noise is to understand the
+informative content of each feature and the relationships among features.
+This section describes the sequence of analyses performed to characterise the
+feature space, identify redundancies, understand distributional properties, and
+quantify each feature's relationship with the target variable.
+
+% ------------------------------------------------------------
+\subsection{Bivariate Correlation Analysis and Redundant Features}
+\label{sec:corr-analysis}
+% ------------------------------------------------------------
+
+High pairwise correlations among features indicate redundancy: if two features
+carry essentially the same information, retaining both inflates computational
+cost without increasing the model's discriminative capacity.  Moreover,
+redundant features can interact adversely with regularisation mechanisms and
+complicate the interpretation of noise-injection effects (corrupting one feature
+in a highly correlated pair may partially mask the corruption through the
+surviving redundant feature).
+
+To systematically identify redundant features, a Pearson correlation matrix was
+computed over all 79 numeric features using Apache Spark's distributed
+\texttt{Correlation.corr()} function.  The result is a $79 \times 79$ symmetric
+matrix whose entry $(i,j)$ is the sample Pearson correlation coefficient between
+features $i$ and $j$.  Figure~\ref{fig:correlation-heatmap} renders this matrix
+as a heatmap using a diverging colour scale centred at zero.
+
+\begin{figure}[htbp]
+  \centering
+  \includegraphics[width=\textwidth]{images/feature-correlation-heatmap.png}
+  \caption{Pearson correlation heatmap for all 79 numeric features of the
+    CIC-IDS2018 dataset.  Warm colours indicate strong positive correlation,
+    cool colours indicate strong negative correlation, and white indicates
+    near-zero correlation.  Visible block structures correspond to groups of
+    semantically related flow statistics.}
+  \label{fig:correlation-heatmap}
+\end{figure}
+
+The heatmap reveals pronounced block-diagonal structures, indicative of groups
+of semantically related features (e.g., forward-direction statistics, backward-
+direction statistics, sub-flow aggregations) that are strongly inter-correlated
+within their group.
+
+A threshold of $|r| \geq 0.95$ was adopted as the criterion for declaring a
+feature pair redundant, following the practice common in feature selection for
+IDS datasets~\cite{gharib2016evaluation}.  Under this criterion,
+\textbf{46 feature pairs} were identified as highly correlated.  Table~\ref{tab:high-corr-pairs-examples} lists a representative sample.
+
+\begin{table}[htbp]
+  \centering
+  \caption{Representative sample of feature pairs with $|r| \geq 0.95$.}
+  \label{tab:high-corr-pairs-examples}
+  \small
+  \begin{tabular}{llr}
+    \toprule
+    \textbf{Feature A} & \textbf{Feature B} & \textbf{$r$} \\
+    \midrule
+    Flow Duration      & Fwd IAT Tot        & 1.000 \\
+    TotLen Bwd Pkts    & Subflow Bwd Byts   & 1.000 \\
+    Fwd Header Len     & Bwd Header Len     & 0.999 \\
+    Pkt Len Mean       & Fwd Pkt Len Mean   & 0.999 \\
+    Tot Fwd Pkts       & Subflow Fwd Pkts   & 1.000 \\
+    TotLen Fwd Pkts    & Subflow Fwd Byts   & 1.000 \\
+    Flow IAT Std       & Fwd IAT Std        & 0.991 \\
+    Bwd Seg Size Avg   & Bwd Pkt Len Mean   & 1.000 \\
+    Fwd IAT Min        & Flow IAT Min       & 0.961 \\
+    Fwd Act Data Pkts  & Tot Fwd Pkts       & 0.967 \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+From each correlated pair, the feature deemed to carry less distinctive semantic
+meaning (e.g.\ sub-flow aggregates that duplicate full-flow counts, or
+header-length terms that duplicate packet-length terms) was designated as a
+removal candidate.  This process yielded \textbf{27 candidate features for
+removal} due to high inter-feature correlation.
+
+% ------------------------------------------------------------
+\subsection{Zero-Variance Features}
+\label{sec:zero-variance}
+% ------------------------------------------------------------
+
+A separate screening pass computed the standard deviation of every feature over
+the entire dataset.  Features with a standard deviation of exactly zero are
+\emph{constant} — they take the same value for every flow — and therefore
+provide no discriminative information whatsoever.  Including them in a model
+wastes memory and computational resources and may cause numerical difficulties
+in distance-based or gradient-based algorithms.
+
+The screening identified \textbf{8 zero-variance features}:
+
+\begin{itemize}
+  \item \texttt{Bwd Blk Rate Avg}
+  \item \texttt{Bwd Byts/b Avg}
+  \item \texttt{Bwd PSH Flags}
+  \item \texttt{Bwd Pkts/b Avg}
+  \item \texttt{Bwd URG Flags}
+  \item \texttt{Fwd Blk Rate Avg}
+  \item \texttt{Fwd Byts/b Avg}
+  \item \texttt{Fwd Pkts/b Avg}
+\end{itemize}
+
+All eight features are CICFlowMeter bulk-transfer statistics that are uniformly
+zero in this capture environment, presumably because the network configuration
+or the flow-generator version used did not populate these fields.  Their removal
+is unconditional.
+
+% ------------------------------------------------------------
+\subsection{Reduced Feature Set}
+\label{sec:reduced-feature-set}
+% ------------------------------------------------------------
+
+After removing the 8 zero-variance features and the 27 features flagged as
+redundant by the high-correlation criterion, the dataset retains
+\textbf{43 numeric features} plus the two label columns.  This reduced feature
+set is the basis for all subsequent analyses in this chapter and for the
+noise-injection experiments described in Chapter~\ref{chap:experiments}.
+
+% ------------------------------------------------------------
+\subsection{Feature Type Classification}
+\label{sec:feature-types}
+% ------------------------------------------------------------
+
+Not all of the 43 remaining features have the same measurement scale, and this
+distinction is directly relevant to PuckTrick's noise-injection modules.
+Gaussian noise — appropriate for continuous-valued features — is semantically
+inappropriate when applied to a binary or low-cardinality categorical feature,
+just as label-shuffling corruption is ill-suited to a continuous measurement.
+To ensure that noise strategies are applied correctly, each feature was
+classified by its \emph{effective cardinality} (the number of distinct observed
+values):
+
+\begin{itemize}
+  \item \textbf{Binary} (cardinality $= 2$): flag counters that are either on
+        or off for a given flow, e.g.\  \texttt{SYN Flag Cnt},
+        \texttt{FIN Flag Cnt}.
+  \item \textbf{Categorical} (cardinality between 3 and 200): low-cardinality
+        features such as \texttt{Protocol} (three distinct values: TCP, UDP,
+        ICMP encoded as integers) and window-size step features.
+  \item \textbf{Continuous} (cardinality $> 200$): all high-resolution
+        measurement features (durations, byte counts, inter-arrival times,
+        rates, etc.).
+\end{itemize}
+
+Figure~\ref{fig:categorical-features} presents the cardinality distribution
+across features.
+
+\begin{figure}[htbp]
+  \centering
+  \includegraphics[width=\textwidth]{images/categorical_binary_features_analysis.png}
+  \caption{Feature type classification for the 43-feature reduced set.  The
+    bar chart (left) shows the number of distinct values per feature for
+    low-cardinality features; the pie chart (right) summarises the proportion
+    of binary, categorical, and continuous features.}
+  \label{fig:categorical-features}
+\end{figure}
+
+The final breakdown of the 43 features is:
+\begin{itemize}
+  \item \textbf{4 binary} features;
+  \item \textbf{2 categorical} (low-cardinality) features;
+  \item \textbf{30 continuous} features (the remaining 7 features include
+        additional binary or categorical items depending on the specific
+        cardinality threshold applied).
+\end{itemize}
+
+% ------------------------------------------------------------
+\subsection{Feature Distribution Analysis: Skewness and Kurtosis}
+\label{sec:skew-kurtosis}
+% ------------------------------------------------------------
+
+Understanding the distributional shape of each continuous feature is essential
+for predicting how noise injection will affect data quality.  Two distributional
+moments are particularly informative in this context:
+
+\begin{itemize}
+  \item \textbf{Skewness} measures the asymmetry of the distribution.  A
+        skewness close to zero indicates an approximately symmetric
+        distribution; large positive values indicate a long right tail
+        (most values are small but a few are extremely large); large negative
+        values indicate the converse.  For noise injection, high positive
+        skewness is especially problematic: adding zero-mean Gaussian noise
+        to a right-skewed feature can displace values below zero — a physically
+        meaningless outcome for quantities such as packet counts or byte totals
+        that are strictly non-negative.
+  \item \textbf{Kurtosis} (excess kurtosis, relative to the Gaussian baseline
+        of 0) measures the heaviness of the distribution's tails.  High
+        positive kurtosis implies that extreme values (outliers) are far more
+        frequent than in a normal distribution.  Injecting Gaussian noise into
+        a heavy-tailed feature risks corrupting exactly those extreme values
+        that are most discriminative for detecting volumetric attacks (which
+        manifest precisely as statistical outliers in byte-count and rate
+        features).
+\end{itemize}
+
+Descriptive statistics — mean, standard deviation, minimum, maximum, skewness,
+and kurtosis — were computed for all 42 numeric features (one feature,
+\texttt{Protocol}, is categorical and was excluded from this step) using
+Spark's distributed aggregation functions.  Figure~\ref{fig:skew-kurtosis}
+displays skewness and kurtosis as side-by-side horizontal bar charts, with bars
+exceeding the threshold of $|{}\text{skewness}{}| > 2$ and $\text{kurtosis} >
+7$ highlighted in red to indicate features of concern.
+
+\begin{figure}[htbp]
+  \centering
+  \includegraphics[width=\textwidth]{images/feature-skew-kurtosis.png}
+  \caption{Skewness (left) and excess kurtosis (right) for the 42 numeric
+    features.  Red bars indicate values exceeding the fragility threshold
+    ($|\text{skewness}| > 2$ and kurtosis $> 7$, respectively), signalling
+    features likely to be significantly affected by additive Gaussian noise.}
+  \label{fig:skew-kurtosis}
+\end{figure}
+
+The analysis reveals an extreme distributional asymmetry prevalent across the
+feature set.  Notable examples include:
+
+\begin{itemize}
+  \item \texttt{Pkt Len Var}: skewness $\approx 1863.6$, kurtosis
+        $\approx 3\,600\,000$ — the most extreme case;
+  \item \texttt{TotLen Fwd Pkts}: skewness $\approx 836.7$, indicating a
+        distribution dominated by very small values (short flows) with an
+        extended right tail of large data transfers;
+  \item \texttt{Tot Bwd Pkts}: skewness $\approx 170.8$;
+  \item \texttt{Flow Byts/s} and \texttt{Flow Pkts/s}: these rate features
+        exhibit numerically infinite values due to zero-duration flows (a
+        division-by-zero artefact of the flow meter), which must be handled
+        carefully prior to any noise injection.
+\end{itemize}
+
+In total, \textbf{34 out of 42 features} exhibit $|\text{skewness}| > 2$,
+classifying the overwhelming majority of the CIC-IDS2018 feature set as
+highly non-Gaussian.
+
+% ............................................................
+\subsubsection{Feature Fragility Classification}
+\label{sec:fragility}
+% ............................................................
+
+Based on the joint evaluation of skewness and kurtosis, each continuous feature
+was assigned a \emph{fragility level} indicating its susceptibility to
+statistical distortion by PuckTrick's noise-injection procedures:
+
+\begin{itemize}
+  \item \textbf{High fragility} (high skewness \emph{and} high kurtosis):
+        features whose distributions are both asymmetric and heavy-tailed.
+        Gaussian noise will simultaneously generate invalid negative values and
+        disrupt the discriminative outlier structure.
+  \item \textbf{Medium fragility} (high skewness \emph{or} high kurtosis but
+        not both): features with one adverse distributional property but not
+        the other.
+  \item \textbf{Low fragility} (robust): features whose distributions are
+        approximately symmetric and have near-Gaussian tails; Gaussian noise
+        injection is both statistically appropriate and unlikely to produce
+        artefactual values.
+\end{itemize}
+
+The classification yields:
+\begin{itemize}
+  \item \textbf{30 high-fragility} features;
+  \item \textbf{5 medium-fragility} features;
+  \item \textbf{7 low-fragility (robust)} features.
+\end{itemize}
+
+Representative examples from each fragility class are shown in
+Table~\ref{tab:fragility-examples}.
+
+\begin{table}[htbp]
+  \centering
+  \caption{Representative features from each fragility class.}
+  \label{tab:fragility-examples}
+  \small
+  \begin{tabular}{llrrl}
+    \toprule
+    \textbf{Feature} & \textbf{Fragility} & \textbf{Skewness} & \textbf{Kurtosis} & \textbf{Notes} \\
+    \midrule
+    Pkt Len Var            & High    & 1863.6  & 3\,600\,000 & Extreme dominance of small values \\
+    TotLen Fwd Pkts        & High    & 836.7   & 1\,808\,721 & Right-tail dominated \\
+    Tot Fwd Pkts           & High    & 88.6    & 8\,271      & High-cardinality count \\
+    Bwd Pkts/s             & High    & —       & —           & Rate feature w/ inf. values \\
+    \midrule
+    Flow IAT Mean          & Medium  & —       & —           & Moderate tail weight \\
+    \midrule
+    Fwd Seg Size Min       & Low     & 0.26    & 0.56        & Near-Gaussian \\
+    RST Flag Cnt           & Low     & 1.60    & 0.57        & Binary-like, low skew \\
+    Fwd PSH Flags          & Low     & —       & —           & Approximately symmetric \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+This fragility map constitutes a theoretically grounded checklist for
+interpreting the downstream experimental results: when a noise-injection run
+targets high-fragility features, a larger degradation in model performance is
+expected than when robust features are perturbed.
+
+% ------------------------------------------------------------
+\subsection{Feature–Target Correlation Analysis}
+\label{sec:feat-target-corr}
+% ------------------------------------------------------------
+
+Having characterised the intra-feature structure and distributional properties,
+the final step of the dataset analysis quantifies the relationship between each
+feature and the target variable.  Two complementary statistical measures were
+employed, one for each level of the label hierarchy:
+
+\begin{enumerate}
+  \item \textbf{Point-biserial correlation with \texttt{Label\_generic}
+        (binary target):} the Pearson correlation coefficient between a
+        continuous feature and the binary $\{0, 1\}$ encoded target is
+        mathematically equivalent to the point-biserial correlation
+        coefficient.  It measures how much the feature's mean differs between
+        benign and malign flows, normalised by the overall variability.
+  \item \textbf{ANOVA F-statistic with \texttt{Label} (multi-class target):}
+        the one-way analysis of variance F-statistic measures the ratio of
+        between-class variance to within-class variance.  A high F-statistic
+        indicates that a feature takes substantially different mean values
+        across the individual attack categories, making it useful for
+        fine-grained attack classification.
+\end{enumerate}
+
+Figure~\ref{fig:target-correlation} presents the two rankings side by side,
+colour-coded by the fragility class defined in
+Section~\ref{sec:fragility}.
+
+\begin{figure}[htbp]
+  \centering
+  \includegraphics[width=\textwidth]{images/fragile-features-target-correlation.png}
+  \caption{Feature relevance with respect to the target variable.
+    \emph{Left:} features ranked by $|\rho|$ (absolute Pearson correlation)
+    with the binary \texttt{Label\_generic}.
+    \emph{Right:} features ranked by the ANOVA F-statistic with the
+    multi-class \texttt{Label} (log scale).
+    Colour coding: red = high fragility, orange = medium fragility,
+    green = low fragility.}
+  \label{fig:target-correlation}
+\end{figure}
+
+\paragraph{Correlation with the binary label.}
+The feature exhibiting the highest absolute correlation with
+\texttt{Label\_generic} is \texttt{Fwd Seg Size Min} ($|\rho| \approx 0.43$),
+followed by \texttt{Bwd Pkts/s} ($|\rho| \approx 0.26$), \texttt{Protocol}
+($|\rho| \approx 0.23$), and \texttt{Fwd Pkt Len Mean} ($|\rho| \approx 0.23$).
+Crucially, the \emph{maximum} observed correlation is approximately 0.43 — a
+modest value that places an inherent limit on how well any linear or
+correlation-based model can separate the two classes using a single feature.
+This is a direct consequence of the absence of payload-level information: since
+the dataset contains only transport-layer statistics measured on encrypted or
+high-volume traffic, no individual feature provides a sharp decision boundary.
+
+\paragraph{Discrimination across attack types (ANOVA).}
+The ANOVA analysis paints a complementary picture.  Features such as
+\texttt{Tot Fwd Pkts} (F $\approx 2.0 \times 10^6$), \texttt{Bwd Pkts/s} (F
+$\approx 1.8 \times 10^6$), and \texttt{TotLen Fwd Pkts} (F $\approx 7.4
+\times 10^5$) exhibit extremely high between-class variance relative to
+within-class variance, indicating that they are excellent discriminators
+\emph{across attack categories}, even though their point-biserial correlations
+with the binary label are moderate.  This asymmetry arises because different
+attack types produce qualitatively different flow profiles (e.g., DoS floods
+generate enormous packet counts while brute-force attacks generate numerous
+short flows), yet all attack flows collectively differ from benign flows in a
+more diffuse, multi-dimensional fashion.
+
+\paragraph{Fragility vs.\ relevance tension.}
+A particularly significant observation emerging from
+Figure~\ref{fig:target-correlation} is that the most discriminative features
+tend to fall in the \emph{high-fragility} category (red bars).  This creates a
+direct tension with noise injection: the features that contribute most to
+classifier performance are precisely the features whose distributions are most
+vulnerable to distortion by Gaussian noise.  This tension is one of the central
+experimental questions addressed in Chapter~\ref{chap:experiments}: can deep
+learning models maintain their discriminative capability when their most
+informative-yet-fragile features are corrupted by PuckTrick?
+
+% ============================================================
+\section{Summary}
+\label{sec:dataset-summary}
+% ============================================================
+
+Table~\ref{tab:dataset-summary} provides a consolidated overview of the
+CIC-IDS2018 dataset properties as characterised in this chapter.
+
+\begin{table}[htbp]
+  \centering
+  \caption{Summary of CIC-IDS2018 dataset characteristics.}
+  \label{tab:dataset-summary}
+  \begin{tabular}{ll}
+    \toprule
+    \textbf{Property} & \textbf{Value} \\
+    \midrule
+    Total instances               & 16\,173\,208 \\
+    Original features             & 79 \\
+    Label columns                 & 2 (\texttt{Label}, \texttt{Label\_generic}) \\
+    Zero-variance features removed & 8 \\
+    High-correlation features removed & 27 \\
+    \textbf{Retained features}    & \textbf{43} \\
+    \midrule
+    Feature types (retained)      & 30 continuous, 4 binary, 2 categorical \\
+    Missing values (after deletion) & 0 \\
+    Class distribution            & Severely imbalanced (Benign $\gg$ Malign) \\
+    \midrule
+    High-fragility features       & 30 (71\%) \\
+    Medium-fragility features     & 5 (12\%) \\
+    Low-fragility features        & 7 (17\%) \\
+    \midrule
+    Max $|\rho|$ with binary label & $\approx 0.43$ (\texttt{Fwd Seg Size Min}) \\
+    Max ANOVA F with multi-class label & $\approx 2.0\times10^6$ (\texttt{Tot Fwd Pkts}) \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+The analysis presented in this chapter establishes the informational context
+necessary to interpret the noise-injection experiments.  The following points
+are especially relevant for subsequent chapters:
+
+\begin{enumerate}
+  \item The \textbf{severe class imbalance} requires that model performance be
+        evaluated with metrics beyond accuracy (e.g., F1-score,
+        precision-recall curves) and that the impact of noise be assessed
+        class-conditionally.
+  \item The \textbf{extreme distributional skewness} of most features implies
+        that PuckTrick's Gaussian noise module will, in many cases, violate
+        the non-negativity constraints of the measurement domain.  This makes
+        the observed performance degradation attributable not only to the
+        statistical displacement of feature values but also to the creation of
+        physically invalid instances.
+  \item The \textbf{fragility–relevance tension} — the fact that the most
+        predictive features are also the most fragile — means that even
+        moderate noise magnitudes can have disproportionate effects on model
+        performance, a hypothesis central to the experimental design.
+  \item The \textbf{temporal signal} embedded in the \texttt{Timestamp}
+        column provides contextual information that complements the
+        flow-statistics features.  Its corruption under PuckTrick's label
+        inconsistency module constitutes a distinct and interesting experimental
+        scenario.
+\end{enumerate}
+
+Taken together, these properties render the CIC-IDS2018 dataset a demanding and
+realistic testbed for evaluating the effects of controlled data corruption on
+deep learning-based intrusion detection systems.
