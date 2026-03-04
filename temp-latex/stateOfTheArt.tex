@@ -1,0 +1,643 @@
+% ============================================================
+%  Chapter: State of the Art
+% ============================================================
+\chapter{State of the Art}
+\label{chap:state-of-the-art}
+
+This chapter reviews the existing literature and tools relevant to the two
+pillars of this thesis: \emph{data quality management for machine learning} and
+\emph{controlled data corruption}.  It then provides a detailed description of
+the PuckTrick library as it existed \emph{prior} to the modifications
+introduced in this work — that is, the Pandas-only version documented in the
+ICAIF 2025 paper~\cite{icaif2025pucktrick} — establishing the baseline against
+which the contributions of this thesis are measured.
+
+% ============================================================
+\section{Data Quality in the Machine Learning Pipeline}
+\label{sec:dq-ml-pipeline}
+% ============================================================
+
+The machine learning pipeline is commonly conceptualised as a sequence of
+stages — data collection, data preparation, feature engineering, model training,
+evaluation, and deployment~\cite{amershi2019software}.  While the research
+community has historically devoted the greatest attention to the model training
+stage (designing novel architectures, loss functions, and optimisation
+algorithms), a growing body of evidence suggests that data quality issues
+originating \emph{upstream} of model training often have a larger impact on
+final model performance than the choice of model
+itself~\cite{sambasivan2021everyone, whang2023data}.
+
+The emergence of the \emph{Data-Centric AI} movement, championed among others
+by Andrew Ng~\cite{ng2021datacentric}, formalises this insight: rather than
+treating the dataset as a fixed input and iterating on the model, Data-Centric
+AI advocates for systematically iterating on the data — cleaning, augmenting,
+curating, and validating it — while keeping the model architecture constant.
+This paradigm shift places \emph{data quality} at the centre of the ML
+engineering workflow and motivates the development of tools that can measure,
+diagnose, and (for experimental purposes) deliberately manipulate data quality
+dimensions.
+
+% ------------------------------------------------------------
+\subsection{Taxonomy of Data Quality Dimensions}
+\label{sec:dq-taxonomy}
+% ------------------------------------------------------------
+
+Data quality is a multidimensional concept.  Batini and
+Scannapieco~\cite{batini2016data} propose a taxonomy that includes dimensions
+such as \emph{accuracy}, \emph{completeness}, \emph{consistency},
+\emph{timeliness}, and \emph{uniqueness}.  In the context of machine learning
+on tabular data, the most operationally relevant quality dimensions
+are~\cite{budach2022effects, gupta2021data}:
+
+\begin{description}
+    \item[Completeness (Missing Values):] The degree to which all expected
+        attribute values are present.  Missing values may occur under three
+        mechanisms formalised by Rubin~\cite{rubin1976inference}: \emph{Missing
+        Completely At Random} (MCAR), \emph{Missing At Random} (MAR), and
+        \emph{Missing Not At Random} (MNAR).  The missingness mechanism
+        determines which imputation strategies are valid and how much
+        information is irrecoverably lost.
+
+    \item[Accuracy (Noise):] The degree to which attribute values faithfully
+        represent the true underlying quantities.  Inaccurate values — also
+        referred to as \emph{noisy} values — may arise from measurement error,
+        data entry mistakes, encoding errors, or adversarial tampering.  For
+        continuous features, noise is commonly modelled as an additive
+        perturbation drawn from a Gaussian or uniform distribution; for
+        categorical features, noise takes the form of value substitutions.
+
+    \item[Consistency (Label Noise):] The degree to which the labelling of
+        instances is correct and internally coherent.  Label noise — the
+        assignment of an incorrect class label to a training instance — is one
+        of the most pernicious forms of data corruption, as it directly
+        misleads the learning algorithm about the target concept.
+        Fr\'{e}nay and Verleysen~\cite{frenay2014classification} provide a
+        comprehensive survey of its effects on classifiers.
+
+    \item[Uniqueness (Duplicates):] The degree to which each record appears
+        exactly once.  Duplicate records inflate the effective sample size for
+        the duplicated instances, biasing the learned distribution towards
+        over-represented regions of the feature space and potentially causing
+        data leakage if duplicates span train and test splits.
+
+    \item[Plausibility (Outliers):] The degree to which attribute values fall
+        within expected statistical boundaries.  Outliers — values that are
+        extremely distant from the bulk of the distribution — may be genuine
+        rare events (in which case they carry high informational content) or
+        artefactual corruptions (in which case they constitute noise).
+        Distinguishing between the two is a fundamental challenge in anomaly
+        detection~\cite{chandola2009anomaly}.
+\end{description}
+
+Each of these quality dimensions maps directly onto one of PuckTrick's five
+corruption modules, as will be described in
+Section~\ref{sec:pucktrick-architecture}.
+
+% ------------------------------------------------------------
+\subsection{The Impact of Data Quality on Model Performance}
+\label{sec:dq-impact}
+% ------------------------------------------------------------
+
+A substantial body of empirical work has investigated the sensitivity of machine
+learning models to the aforementioned data quality issues.
+
+\paragraph{Missing values.}
+The effect of missing data depends on the missingness mechanism, the proportion
+of missing values, and the imputation strategy employed.
+Garc\'{\i}a-Laencina \emph{et al.}~\cite{garciaLaencina2010pattern} demonstrate
+that even moderate rates of MCAR missingness (5--10\%) can significantly degrade
+classifier accuracy, especially for algorithms that cannot handle missing inputs
+natively (e.g., standard neural networks).  Tree-based ensembles (e.g., XGBoost,
+Random Forest) and TabNet are more robust due to their ability to route
+instances around missing splits or to learn attention masks that down-weight
+incomplete features.
+
+\paragraph{Feature noise.}
+Zhu and Wu~\cite{zhu2004class} show that feature noise generally causes a
+monotonic decrease in model performance as the noise rate increases, with the
+magnitude of the effect being highly dependent on the feature's importance to
+the classification task.  Noise applied to irrelevant or redundant features has
+negligible impact, while noise applied to the most discriminative features can
+cause catastrophic degradation — a finding that underpins the
+\emph{fragility-versus-relevance} analysis performed in this thesis.
+
+\paragraph{Label noise.}
+Label noise is widely regarded as more damaging than feature
+noise~\cite{frenay2014classification, nettleton2010study}.  Even a 5\% rate of
+random label flipping can reduce classifier accuracy by several percentage
+points, while systematic (class-conditional) label noise can introduce
+consistent bias that is especially difficult to detect.  Deep neural networks
+are particularly susceptible because of their capacity to memorise noisy
+labels~\cite{arpit2017closer, zhang2021understanding}.
+
+\paragraph{Duplicates.}
+Elmagarmid \emph{et al.}~\cite{elmagarmid2007duplicate} survey the problem of
+duplicate detection and its impact on data analytics.  In the ML context,
+duplicates that span training and test partitions violate the independence
+assumption and lead to over-optimistic performance estimates.  Even when
+duplicates are confined to the training set, they bias the model towards
+over-represented instances, effectively functioning as a form of uncontrolled
+oversampling that can exacerbate class imbalance effects.
+
+\paragraph{Outliers.}
+Outliers exert a disproportionate influence on models that minimise
+squared-error losses or that are sensitive to feature scaling (e.g., linear
+models, $k$-NN, SVMs with RBF kernels).  Deep learning models with batch
+normalisation layers exhibit some degree of natural robustness to outliers, but
+extreme values in the input may still cause gradient instability, especially
+during the initial phases of training~\cite{goodfellow2016deep}.
+
+% ------------------------------------------------------------
+\subsection{Existing Tools for Data Quality Experimentation}
+\label{sec:existing-tools}
+% ------------------------------------------------------------
+
+Several tools and frameworks for data quality assessment and controlled
+corruption have been proposed in the literature and in the open-source
+ecosystem:
+
+\begin{itemize}
+    \item \textbf{Cleanlab}~\cite{northcutt2021confident}: a library focused on
+          \emph{detecting} and \emph{correcting} label errors in datasets, based
+          on the Confident Learning framework.  Unlike PuckTrick, Cleanlab aims
+          to improve quality rather than degrade it; however, it provides
+          valuable baselines for quantifying the label noise already present in
+          real-world datasets.
+
+    \item \textbf{Great Expectations}\footnote{\url{https://greatexpectations.io/}}:
+          a data validation framework that enables users to define declarative
+          expectations (e.g., ``column $X$ has no null values'', ``column $Y$
+          values fall in range $[a, b]$'') and to test datasets against them.
+          It is a quality \emph{checking} tool, not a quality
+          \emph{degradation} tool.
+
+    \item \textbf{DataAssert}~\cite{schelter2018automating} and
+          \textbf{Deequ}~\cite{schelter2018deequ}: Amazon-developed systems
+          for automated data quality verification in production pipelines,
+          also oriented towards detection rather than injection.
+
+    \item \textbf{CleanML}~\cite{li2021cleanml}: a benchmark framework that
+          evaluates the impact of data cleaning methods on ML model
+          performance.  While CleanML studies the effect of cleaning (improving
+          quality), its experimental methodology — systematically varying the
+          quality of the training data and measuring downstream model
+          performance — is directly analogous to the approach taken in this
+          thesis, with the difference that PuckTrick introduces corruption
+          rather than removing it.
+
+    \item \textbf{JENGA}~\cite{schelter2021jenga}: a tool for testing the
+          robustness of ML pipelines to data corruptions, including missing
+          values, encoding errors, and distribution shift.  JENGA's philosophy
+          is similar to PuckTrick's, but it focuses on end-to-end pipeline
+          testing rather than providing a modular, programmatic corruption API.
+
+    \item \textbf{DataLinter}~\cite{hynes2017datalinter}: a Google-developed
+          tool that applies a set of predefined ``lint'' rules to datasets to
+          detect common quality issues before training.
+\end{itemize}
+
+PuckTrick distinguishes itself from the above tools by providing a unified,
+modular, and extensible API for the \emph{deliberate injection} of five
+orthogonal categories of data corruption, each with fine-grained control over
+the corruption percentage, the target column, and the variant (New or Extended).
+Its focus on controlled degradation, rather than detection or cleaning, fills a
+specific niche in the Data-Centric AI toolbox.
+
+% ============================================================
+\section{The PuckTrick Library: Architecture and Corruption Modules}
+\label{sec:pucktrick-architecture}
+% ============================================================
+
+This section describes the architecture and functionality of PuckTrick as it
+existed in version 0.5.0 — the Pandas-only baseline prior to the Spark extension
+developed in this thesis.  The description draws on the official
+documentation\footnote{\url{https://andreamaurino.github.io/pucktrick-ui-docs/}}
+and the accompanying ICAIF 2025 paper~\cite{icaif2025pucktrick}.
+
+% ------------------------------------------------------------
+\subsection{Design Philosophy}
+\label{sec:pucktrick-philosophy}
+% ------------------------------------------------------------
+
+PuckTrick was developed at the Dat*AI laboratory of the University of
+Milano-Bicocca with the goal of providing researchers with an ``intuitive
+library for data contamination''~\cite{icaif2025pucktrick}.  Its design is
+guided by three principles:
+
+\begin{enumerate}
+    \item \textbf{Controlled contamination}: every corruption operation is
+          parametrised by a target percentage, a target column, and (where
+          appropriate) a reference to the original clean dataset, ensuring
+          that the exact degree of corruption is known and reproducible.
+    \item \textbf{Method-specific specialisation}: each corruption category
+          (missing, noise, outliers, labels, duplicates) provides sub-methods
+          tailored to the data type of the target column (continuous, discrete,
+          binary, categorical string, categorical integer), because the
+          semantics of corruption differ fundamentally across data types.
+    \item \textbf{New vs.\ Extended paradigm}: every corruption method exists
+          in two variants:
+          \begin{itemize}
+              \item \emph{New} methods inject corruption into a \emph{clean}
+                    column (one that has not been previously corrupted), reaching
+                    the specified percentage from zero.
+              \item \emph{Extended} methods take a column that has already been
+                    partially corrupted and add further corruption until the
+                    cumulative percentage reaches the specified target.  This
+                    two-phase design supports incremental experiments in which
+                    corruption is progressively increased.
+          \end{itemize}
+\end{enumerate}
+
+The data flow is straightforward: the user passes a Pandas DataFrame and a
+\emph{strategy dictionary} specifying which corruption methods to apply, to
+which columns, and at which percentages.  PuckTrick returns a new DataFrame
+containing the corrupted data, leaving the original DataFrame unmodified.
+
+% ------------------------------------------------------------
+\subsection{Corruption Module: Missing Values}
+\label{sec:pucktrick-missing}
+% ------------------------------------------------------------
+
+The Missing module provides two functions:
+
+\begin{description}
+    \item[\texttt{missingNew(train\_df, column, percentage)}:]
+        Replaces a randomly selected fraction of values in the specified column
+        with \texttt{NaN}, starting from a column that contains no missing
+        values.  The selection is uniform at random, implementing an MCAR
+        missingness mechanism.
+
+    \item[\texttt{missingExtended(original\_df, train\_df, column, percentage)}:]
+        Identifies the values that are already missing in \texttt{train\_df}
+        (by comparison with the original clean DataFrame
+        \texttt{original\_df}), then selects additional non-missing values
+        uniformly at random and replaces them with \texttt{NaN}, until the
+        total proportion of missing values equals the desired percentage.
+\end{description}
+
+The Missing module is designed for \emph{continuous} features.  Applying it to
+categorical columns is semantically valid but should be interpreted with care,
+as downstream imputation strategies may behave differently for continuous versus
+categorical missingness.
+
+% ------------------------------------------------------------
+\subsection{Corruption Module: Noise}
+\label{sec:pucktrick-noise}
+% ------------------------------------------------------------
+
+The Noise module is the most granular of PuckTrick's corruption modules,
+providing specialised methods for six distinct data types, each in New and
+Extended variants.  The supported sub-methods are:
+
+\begin{description}
+    \item[\texttt{noiseContinueNew / noiseContinueExtended}:]
+        Replaces a fraction of values in a continuous numeric column with
+        random values drawn uniformly from the column's observed range
+        $[\min, \max]$.  This uniform-replacement strategy differs from
+        additive Gaussian noise; it simulates gross measurement errors rather
+        than small perturbations.
+
+    \item[\texttt{noiseDiscreteNew / noiseDiscreteExtended}:]
+        Replaces values in a discrete (integer) column with random integers
+        drawn from the column's observed integer range.
+
+    \item[\texttt{noiseBinaryNew / noiseBinaryExtended}:]
+        Flips the value of a binary ($\{0, 1\}$) column: $0 \to 1$ and
+        $1 \to 0$, for a specified fraction of rows.
+
+    \item[\texttt{noiseCategoricalStringNewExistingValues /}]
+    \item[\texttt{noiseCategoricalStringExtendedExistingValues}:]
+        Replaces a fraction of string values in a categorical column with
+        other strings randomly sampled from the set of \emph{existing} unique
+        values in that column.
+
+    \item[\texttt{noiseCategoricalStringNewFakeValues /}]
+    \item[\texttt{noiseCategoricalStringExtendedFakeValues}:]
+        Replaces a fraction of string values with randomly generated
+        \emph{fake} strings (sequences of random letters), simulating encoding
+        errors or data integration artefacts that introduce entirely new,
+        invalid category levels.
+
+    \item[\texttt{noiseCategoricalIntNewExistingValues /}]
+    \item[\texttt{noiseCategoricalIntExtendedExistingValues}:]
+        Replaces a fraction of integer-coded categorical values with other
+        existing integer codes from the same column.
+\end{description}
+
+The distinction between ``existing value'' and ``fake value'' noise is
+conceptually important: the former preserves the domain of the feature (all
+corrupted values are within the set of valid categories), while the latter
+introduces out-of-vocabulary entries that may cause downstream failures in
+models that rely on fixed category encodings.
+
+% ------------------------------------------------------------
+\subsection{Corruption Module: Outliers}
+\label{sec:pucktrick-outliers}
+% ------------------------------------------------------------
+
+The Outlier module injects statistically extreme values, simulating either
+sensor malfunctions that produce implausibly large or small readings, or
+adversarial perturbations designed to push instances outside the decision
+boundary.  The module supports four data types:
+
+\begin{description}
+    \item[\texttt{outlierContinuosNew3Sigma / outlierContinuosExtended3Sigma}:]
+        Replaces a fraction of values in a continuous column with random values
+        drawn from outside the $3\sigma$ envelope
+        ($< \mu - 3\sigma$ or $> \mu + 3\sigma$).  The use of the three-sigma
+        rule anchors the outlier magnitude to the column's own statistical
+        profile, ensuring that injected outliers are ``extreme but not
+        arbitrary'' relative to the data distribution.
+
+    \item[\texttt{outlierDiscreteNew3Sigma / outlierDiscreteExtended3Sigma}:]
+        Analogous to the continuous case, but for discrete (integer) columns,
+        with outlier values discretised to integer values outside the
+        $3\sigma$ integer range.
+
+    \item[\texttt{outlierCategoricalIntegerNew /}]
+    \item[\texttt{outliercategoricalIntegerExtended}:]
+        Replaces integer categorical values with randomly generated integers
+        \emph{outside} the observed $[\min, \max]$ range of the column,
+        effectively introducing category codes that do not exist in the
+        original data.
+
+    \item[\texttt{outlierCategoricalStringNew /}]
+    \item[\texttt{outliercategoricalStringExtended}:]
+        Replaces string categorical values with the fixed sentinel string
+        \texttt{"puck was here"}, providing a clearly identifiable marker that
+        is unambiguously an outlier in any categorical context.
+\end{description}
+
+% ------------------------------------------------------------
+\subsection{Corruption Module: Label Noise}
+\label{sec:pucktrick-labels}
+% ------------------------------------------------------------
+
+The Labels module targets the \emph{target variable} rather than input features,
+simulating annotation errors that are endemic in real-world labelled datasets.
+It provides methods for both binary and multi-class classification tasks:
+
+\begin{description}
+    \item[\texttt{wrongLabelsBinaryNew(train\_df, target, percentage)}:]
+        Flips the value of a binary target column ($0 \leftrightarrow 1$) for
+        a specified fraction of rows.  The selection of rows to flip is uniform
+        at random, implementing \emph{symmetric} (also called \emph{uniform})
+        label noise as defined by Angluin and Laird~\cite{angluin1988learning}.
+
+    \item[\texttt{wrongLabelsBinaryExtended(original\_df, train\_df, column,}]
+    \item[\texttt{percentage)}:]
+        Extends existing label noise in a binary column to reach the target
+        error rate, using the clean DataFrame as a reference to identify which
+        rows have already been flipped.
+
+    \item[\texttt{wrongLabelsCategoricalNew(train\_df, target, percentage)}:]
+        For integer-coded multi-class targets, replaces a fraction of values
+        with other valid category codes drawn uniformly from the set of
+        existing labels.  This simulates \emph{symmetric multi-class label
+        noise} in which an instance's true label is replaced with a randomly
+        chosen incorrect label.
+
+    \item[\texttt{wrongLabelsCategoryExtended(train\_df, target, percentage)}:]
+        Extends multi-class label noise analogously to the binary Extended
+        variant.
+\end{description}
+
+The Label module is unique among PuckTrick's corruption modules in that it
+targets the \emph{dependent variable}: its corruption directly misleads the
+training signal, as opposed to the other modules which corrupt
+\emph{independent variables} and therefore affect the input-space
+representation.  This distinction has profound implications for model behaviour:
+label noise can cause the model to learn incorrect decision boundaries, while
+feature noise typically causes increased variance without systematic bias
+(assuming the noise is zero-mean).
+
+% ------------------------------------------------------------
+\subsection{Corruption Module: Duplicates}
+\label{sec:pucktrick-duplicates}
+% ------------------------------------------------------------
+
+The Duplicates module adds exact copies of existing rows to the dataset,
+simulating scenarios such as data pipeline re-runs, merge-join artefacts, or
+intentional oversampling gone awry.  Two strategies are available:
+
+\begin{description}
+    \item[\texttt{duplicateAllNew(train\_df, percentage)}:]
+        Randomly selects a fraction of rows from the entire dataset and
+        appends exact copies, excluding already-existing duplicates.  The
+        resulting dataset has approximately
+        $(1 + \text{percentage}) \times n$ rows.
+
+    \item[\texttt{duplicateAllExtended(original\_df, train\_df, percentage)}:]
+        Uses the clean dataset as a reference to determine the current
+        duplication rate and adds further duplicates until the target rate
+        is reached.
+
+    \item[\texttt{duplicateClassNew(train\_df, target, value, percentage)}:]
+        Restricts duplication to rows belonging to a specific class, allowing
+        the user to simulate class-conditional oversampling bias.
+
+    \item[\texttt{duplicateClassExtended(original\_df, train\_df, target,}]
+    \item[\texttt{value, percentage)}:]
+        The Extended variant of class-specific duplication.
+\end{description}
+
+Unlike the other corruption modules, duplication operates at the \emph{row
+level} rather than the \emph{column level}: it does not alter any individual
+feature value but increases the effective weight of specific instances in the
+training set.  Consequently, it interacts differently with model training: while
+noise, outliers, and missing values degrade the quality of individual feature
+values, duplication biases the empirical data distribution.
+
+% ============================================================
+\section{Strategy-Based Invocation}
+\label{sec:pucktrick-strategy}
+% ============================================================
+
+PuckTrick's corruption modules can be invoked individually via their
+respective functions, but the library also supports a higher-level
+\emph{strategy-based} interface.  A strategy is a Python dictionary that
+declaratively specifies which corruption types to apply, to which columns, and
+at which percentages.  The following is a representative example:
+
+\begin{verbatim}
+strategy = {
+    "missing": {
+        "columns": ["Flow Duration", "Fwd Pkt Len Mean"],
+        "percentage": 0.10
+    },
+    "noise": {
+        "columns": ["Protocol"],
+        "percentage": 0.05,
+        "type": "categorical_int_existing"
+    },
+    "outliers": {
+        "columns": ["Tot Fwd Pkts"],
+        "percentage": 0.05,
+        "type": "continuous_3sigma"
+    },
+    "labels": {
+        "target": "Label",
+        "percentage": 0.10,
+        "type": "categorical"
+    },
+    "duplicated": {
+        "percentage": 0.05,
+        "type": "all"
+    }
+}
+\end{verbatim}
+
+When passed to PuckTrick's entry point, the library parses the strategy,
+validates the parameters, and applies each corruption module sequentially in a
+deterministic order.  This declarative interface facilitates reproducibility: the
+strategy dictionary can be serialised to JSON, stored alongside experimental
+results, and re-executed to produce identical corrupted datasets (given the same
+random seed).
+
+% ============================================================
+\section{Limitations of the Pre-Extension PuckTrick}
+\label{sec:pucktrick-limitations}
+% ============================================================
+
+While PuckTrick version 0.5.0 provides a comprehensive and well-designed
+corruption toolkit, it is subject to several limitations that motivated the
+extension work described in this thesis:
+
+\begin{enumerate}
+    \item \textbf{Single-machine scalability.}  All corruption operations are
+          implemented on Pandas DataFrames, which reside entirely in the
+          memory of a single machine.  For datasets exceeding the available
+          RAM — such as the 16-million-row CIC-IDS2018 dataset used in this
+          work — Pandas becomes a bottleneck, either requiring expensive
+          vertical scaling or forcing the user to work on subsampled data.
+
+    \item \textbf{No distributed computing support.}  There is no facility
+          for distributing corruption operations across multiple nodes.  In
+          environments where the data already resides in a distributed file
+          system (e.g., HDFS, S3) or is managed by a distributed processing
+          engine (e.g., Spark), the user must first collect the data to a
+          single node, apply PuckTrick, and then redistribute the result — an
+          inefficient and error-prone workflow.
+
+    \item \textbf{Index-dependent implementations.}  Many corruption
+          algorithms rely on Pandas' integer-positional indexing
+          (\texttt{.iloc}) to select target rows, a mechanism that has no
+          direct analogue in Spark's distributed DataFrame API.  This
+          architectural coupling to Pandas' mutable, row-indexed data model
+          makes migration to a distributed backend non-trivial.
+
+    \item \textbf{In-place mutation patterns.}  Some implementations modify
+          the DataFrame in place (e.g., assigning \texttt{NaN} to specific
+          cells via \texttt{.loc}), which conflicts with Spark's immutable
+          DataFrame semantics where every transformation produces a new
+          DataFrame.
+\end{enumerate}
+
+These limitations collectively prevented the use of PuckTrick on the full
+16-million-instance CIC-IDS2018 dataset within a distributed Spark cluster
+— a capability that is essential for the large-scale noise-injection experiments
+described in Chapter~\ref{chap:experiments}.  The next chapter describes how
+these limitations were addressed through the design and implementation of a
+PySpark-compatible backend.
+
+% ============================================================
+\section{Related Work on Distributed Data Processing for ML}
+\label{sec:distributed-ml}
+% ============================================================
+
+The need to process large-scale datasets in distributed environments has driven
+the development of numerous frameworks beyond Apache Spark.
+
+\textbf{Dask}~\cite{rocklin2015dask} provides a Pandas-compatible API over a
+task-based distributed scheduler, enabling many Pandas workflows to scale to
+clusters with minimal code changes.  However, Dask's scheduling overhead and
+limited catalyst-style query optimisation make it less suitable for the
+complex multi-step transformations required by PuckTrick's corruption
+algorithms.
+
+\textbf{Ray}~\cite{moritz2018ray} is a general-purpose distributed computing
+framework that excels at distributed training and reinforcement learning
+workloads, but its data processing capabilities (via the Ray Data library) are
+less mature than Spark's for tabular data operations.
+
+\textbf{Modin}~\cite{petersohn2020towards} transparently accelerates Pandas
+operations using Ray or Dask as a backend, but it targets multi-core
+single-machine parallelism rather than true multi-node distribution.
+
+The choice of Apache Spark as the target distributed backend for PuckTrick was
+motivated by its maturity, its rich DataFrame API (which most closely mirrors
+the operations required by PuckTrick), its native integration with distributed
+storage systems (HDFS, S3, Parquet), and its widespread adoption in both
+industry and academic data engineering pipelines.
+
+% ============================================================
+\section{Deep Learning for Network Intrusion Detection}
+\label{sec:nids-dl}
+% ============================================================
+
+Network Intrusion Detection Systems (NIDS) aim to identify malicious network
+activity by analysing traffic metadata and, in some cases, packet payloads.
+Traditional NIDS relied on signature-based matching (e.g.,
+Snort~\cite{roesch1999snort}) or statistical anomaly detection (e.g.,
+threshold-based rules on traffic volumes).  With the advent of deep learning,
+data-driven approaches have achieved substantially higher detection rates,
+especially for zero-day attacks that lack known
+signatures~\cite{aldweesh2020deep, ferrag2020deep}.
+
+The CIC-IDS2018 dataset~\cite{cicids2018}, used as the experimental testbed in
+this thesis, has been widely adopted in the NIDS literature.  Prior works have
+applied a variety of ML and DL architectures to this dataset:
+
+\begin{itemize}
+    \item \textbf{Random Forest and Gradient Boosting} models achieve strong
+          baseline performance on flow-level features, with reported F1 scores
+          exceeding 0.95 on balanced subsets~\cite{sharafaldin2018toward}.
+    \item \textbf{Convolutional Neural Networks (CNNs)} have been applied to
+          reshaped flow vectors or to traffic image representations, exploiting
+          spatial correlations between features~\cite{kim2020cnn}.
+    \item \textbf{LSTM and GRU networks} capture temporal dependencies in
+          sequential flow data, improving detection of multi-step attacks such
+          as infiltration and slow-rate DoS~\cite{imrana2021bidirectional}.
+    \item \textbf{Autoencoders and Variational Autoencoders} have been used
+          for unsupervised anomaly detection, learning a compressed
+          representation of benign traffic and flagging flows that cannot be
+          accurately reconstructed~\cite{mirsky2018kitsune}.
+\end{itemize}
+
+However, none of the above works systematically investigate how \emph{data
+quality degradation} affects model performance.  The typical experimental
+protocol assumes a clean dataset (or applies ad-hoc cleaning) and evaluates
+model accuracy on a held-out test set.  This thesis fills this gap by
+introducing controlled corruptions via PuckTrick and measuring their impact on
+TabNet and TFT — two architectures that, to the best of our knowledge, have not
+been previously applied to CIC-IDS2018 in a multi-task/multi-target
+configuration.
+
+% ============================================================
+\section{Summary}
+\label{sec:sota-summary}
+% ============================================================
+
+This chapter has established the theoretical and practical foundations for the
+contributions of this thesis:
+
+\begin{enumerate}
+    \item The Data-Centric AI paradigm motivates the need for tools that can
+          systematically manipulate data quality dimensions.
+    \item PuckTrick, in its original Pandas-based form, provides a
+          comprehensive and modular API for controlled data corruption across
+          five orthogonal dimensions (missing, noise, outliers, labels,
+          duplicates), with fine-grained control over corruption percentages
+          and data-type-specific sub-methods.
+    \item The scalability limitations of the Pandas backend preclude the
+          direct application of PuckTrick to large-scale datasets, motivating
+          the PySpark extension developed in this work.
+    \item The NIDS literature demonstrates the effectiveness of deep learning
+          on the CIC-IDS2018 dataset, but no prior work has systematically
+          studied the impact of controlled data corruption on model performance
+          in this domain.
+\end{enumerate}
+
+The next chapter provides a detailed statistical characterisation of the
+CIC-IDS2018 dataset, establishing the baseline data properties against which
+all subsequent corruption experiments are measured.

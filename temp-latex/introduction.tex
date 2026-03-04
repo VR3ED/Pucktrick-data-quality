@@ -1,0 +1,525 @@
+% ============================================================
+%  Chapter: Introduction
+% ============================================================
+\chapter{Introduction}
+\label{chap:introduction}
+
+% ============================================================
+\section{Motivation and Context}
+\label{sec:motivation}
+% ============================================================
+
+The quality of training data is widely recognised as one of the most critical
+determinants of the performance and reliability of machine learning
+models~\cite{gudivada2017data, whang2023data}.  Real-world datasets are seldom
+pristine: they are pervasively affected by a wide range of imperfections
+including missing values, mislabelled instances, duplicate records, noisy
+measurements, and statistical outliers.  These defects may arise from
+heterogeneous sources — sensor malfunction, human annotation error, data
+integration across disparate systems, adversarial manipulation, or simply the
+inherent noise of the phenomenon being measured.  When such corrupted data are
+consumed by learning algorithms, the resulting models may exhibit degraded
+generalisation, biased predictions, or — in safety-critical domains such as
+cybersecurity and healthcare — potentially harmful decision-making.
+
+Within the paradigm of \emph{Data-Centric AI}~\cite{zha2023datacentric}, the
+focus of the machine learning pipeline shifts from model architecture design to
+systematic improvement and curation of the training data.  Central to this
+paradigm is the ability to \emph{quantify} the impact of specific data quality
+issues on downstream model performance.  This capability, however, presupposes
+the availability of tools that can introduce controlled, reproducible
+perturbations into a dataset while leaving all other aspects of the data intact.
+Such tools enable researchers to answer questions of the form: ``How much does
+model accuracy degrade when $x$\% of a given feature's values are replaced by
+noise?'', or ``Which features are most vulnerable to label corruption?''
+
+\textbf{PuckTrick}\footnote{\url{https://andreamaurino.github.io/pucktrick-ui-docs/}}
+is an open-source Python library developed at the \emph{Dat*AI laboratory} of
+the University of Milano-Bicocca that addresses precisely this need.  PuckTrick
+provides a unified, programmatic interface for the controlled introduction of
+five fundamental categories of data corruption into tabular datasets intended for
+machine learning applications: \emph{duplicated records}, \emph{missing values},
+\emph{noisy values}, \emph{outliers}, and \emph{label inconsistencies}.  Each
+corruption type is parametrised by the target column and the desired percentage
+of affected rows, enabling fine-grained, reproducible experimental designs in
+which individual data quality dimensions can be isolated and studied
+independently.
+
+In its original form, PuckTrick operates exclusively on Pandas
+DataFrames~\cite{mckinney2010data} — a widely used in-memory data structure for
+tabular data in the Python ecosystem.  While Pandas is an excellent choice for
+small-to-medium datasets that fit comfortably in a single machine's memory, it
+becomes a bottleneck when the dataset scales to millions or tens of millions of
+rows.  Modern cybersecurity, IoT, and financial datasets routinely exceed the
+single-node memory capacity, and the scientific community increasingly relies on
+distributed computing frameworks to process them.
+
+% ============================================================
+\section{The Cybersecurity Application Domain}
+\label{sec:cybersecurity-domain}
+% ============================================================
+
+The empirical component of this thesis is situated within the domain of
+\emph{network intrusion detection} — a field that offers a particularly
+compelling setting for studying the interplay between data quality and deep
+learning performance.
+
+Modern enterprise networks generate vast volumes of traffic, ranging from
+routine HTTP/HTTPS exchanges and DNS queries to protocol-level heartbeats and
+management flows.  Concealed within this predominantly benign stream, malicious
+actors conduct a broad spectrum of attacks — brute-force credential guessing,
+Denial-of-Service (DoS) and Distributed Denial-of-Service (DDoS) floods,
+web-application exploits (SQL injection, cross-site scripting), botnet
+command-and-control communications, and stealthy infiltration campaigns.
+A \emph{Network Intrusion Detection System} (NIDS) is tasked with
+automatically classifying each observed network flow as either benign or
+malicious and, in the latter case, identifying the specific type of attack
+being carried out~\cite{aldweesh2020deep}.
+
+This classification problem is inherently challenging for several reasons that
+make it an ideal testbed for data quality experimentation:
+
+\begin{enumerate}
+    \item \textbf{Massive scale.}  A single day of traffic capture at an
+          institutional network can produce millions of flow records, each
+          described by dozens of statistical features (packet counts, byte
+          volumes, inter-arrival times, TCP flag distributions, etc.).
+          Processing and corrupting datasets of this magnitude requires
+          distributed computing capabilities — precisely the motivation for
+          extending PuckTrick to Apache Spark.
+    \item \textbf{Extreme class imbalance.}  In any realistic network
+          capture, benign flows vastly outnumber attack flows; moreover, the
+          attack categories themselves exhibit highly unequal frequencies
+          (volumetric DDoS attacks generate far more flows than low-rate
+          infiltrations).  Class imbalance amplifies the sensitivity of
+          classifiers to data quality issues: noise injected into minority
+          attack classes may have a disproportionate effect on recall and
+          F1-score.
+    \item \textbf{Absence of payload information.}  For privacy and
+          encryption reasons, modern NIDS datasets rely exclusively on
+          transport- and network-layer flow statistics rather than
+          application-layer payload content.  This constraint places an
+          inherent ceiling on discriminative power and makes each feature's
+          contribution to classification proportionally more important — and
+          its corruption proportionally more damaging.
+    \item \textbf{Temporal structure.}  Network attacks are not isolated
+          events: they unfold as campaigns with characteristic temporal
+          signatures — bursty DDoS floods, periodic port scans, sustained
+          brute-force attempts.  Models that exploit this temporal context
+          (such as the Temporal Fusion Transformer employed in this work)
+          gain a significant advantage, but their temporal reasoning is also
+          vulnerable to corruption of the timestamp feature or of the features
+          that encode temporal dynamics.
+    \item \textbf{Real-world criticality.}  In a production security
+          operations centre, a classifier trained on corrupted data may fail
+          to detect genuine attacks (false negatives) or overwhelm analysts
+          with spurious alerts (false positives).  Understanding how data
+          quality degradation maps to these operational failure modes is
+          therefore of direct practical relevance.
+\end{enumerate}
+
+The specific dataset selected for this study is the \textbf{CSE-CIC-IDS2018}
+(\emph{Canadian Institute for Cybersecurity — Intrusion Detection System 2018}),
+a publicly available benchmark produced by the University of New
+Brunswick~\cite{cicids2018} and distributed on the Kaggle
+platform\footnote{\url{https://www.kaggle.com/datasets/solarmainframe/ids-intrusion-csv/data}}.
+The dataset was collected over a ten-day capture window in February--March 2018
+inside a controlled cyber-range infrastructure: 50 attack machines launched a
+curated battery of attacks against a victim network comprising 420 machines and
+30 servers, while a profile generator replayed realistic benign traffic drawn
+from a usage model encompassing HTTP, HTTPS, FTP, SSH, and email activity.
+All bi-directional network flows were extracted by the \textit{CICFlowMeter}
+tool~\cite{lashkari2017characterization}, which computes 80 statistical features
+— packet-level and flow-level statistics — from raw \texttt{.pcap} captures.
+Each flow is labelled as either \texttt{Benign} or one of fourteen mutually
+exclusive attack categories:
+
+\begin{itemize}
+    \item \emph{Brute-Force} attacks (FTP-BruteForce, SSH-BruteForce);
+    \item \emph{Denial-of-Service} (DoS-GoldenEye, DoS-Hulk,
+          DoS-SlowHTTPTest, DoS-Slowloris);
+    \item \emph{Web attacks} (SQL Injection, XSS, Brute-Force on web login);
+    \item \emph{Botnet} traffic (ARES botnet);
+    \item \emph{Infiltration} scenarios;
+    \item \emph{Distributed Denial-of-Service} (DDoS) attacks with LOIC
+          UDP and HOIC.
+\end{itemize}
+
+In its unified form the dataset comprises over \textbf{16 million network-flow
+instances}, making it one of the largest and most realistic publicly available
+benchmarks for intrusion detection research.  A detailed statistical
+characterisation of the dataset — including its dimensionality, class
+distribution, temporal structure, missing-data profile, feature correlation
+structure, distributional properties, and feature fragility classification — is
+provided in Chapter~\ref{chap:dataset}.
+
+The choice of this domain is deliberate: by studying the effects of controlled
+noise injection on deep learning models that must discriminate between benign
+and malicious network traffic, this thesis bridges two active research areas —
+\emph{data quality for machine learning} and \emph{AI-driven cybersecurity} —
+and provides actionable insights into how resilient (or brittle) modern deep
+learning architectures are when the data on which they are trained exhibit
+quality degradation of known type and magnitude.
+
+% ============================================================
+\section{Objectives of the Thesis}
+\label{sec:objectives}
+% ============================================================
+
+This thesis pursues two interrelated objectives.
+
+\paragraph{Objective 1: Extending PuckTrick to Apache Spark.}
+The primary engineering contribution of this work is the extension of the
+PuckTrick library to support \textbf{Apache Spark}~\cite{zaharia2016apache}
+(via PySpark) as an alternative processing backend alongside Pandas.  The work
+was conducted within the \texttt{Spark\_Conversion} branch of the PuckTrick
+repository in collaboration with Daniel Satriano, under the supervision of
+Professor Andrea Maurino.
+
+The central design principle guiding the extension was \emph{functional
+equivalence}: for every corruption method offered by PuckTrick, the Spark
+implementation must accept the same parametrisation and produce statistically
+equivalent output distributions, so that experiments conducted on a
+single-machine Pandas backend yield results that are directly comparable with
+those obtained in a distributed Spark cluster.  This requirement poses
+non-trivial engineering challenges, because Pandas and Spark embody
+fundamentally different computation models (eager, mutable, row-indexed
+DataFrames versus lazy, immutable, partition-based Resilient Distributed
+Datasets), and many of PuckTrick's corruption algorithms rely on random
+sampling, in-place mutation, and index-based row selection — operations that do
+not have direct analogues in the Spark API.
+
+The implementation involved:
+\begin{enumerate}
+    \item A systematic audit of all existing PuckTrick corruption methods to
+          catalogue their Pandas-specific dependencies.
+    \item The design of a \emph{dual-backend architecture} in which each
+          corruption module detects the type of the input DataFrame (Pandas
+          \texttt{pd.DataFrame} or PySpark \texttt{pyspark.sql.DataFrame})
+          and dispatches to the appropriate implementation.
+    \item The re-implementation of each corruption method using PySpark's
+          SQL-based DataFrame API, paying particular attention to
+          pseudorandom-number generation with seed control, monotonically
+          increasing identifiers, and window functions to simulate
+          index-based operations.
+    \item An extensive validation campaign comparing the outputs of the Pandas
+          and Spark backends across all corruption types, all supported data
+          types (continuous, discrete, binary, categorical string,
+          categorical integer), and a range of corruption percentages, to
+          verify statistical equivalence.
+    \item Performance benchmarking on a multi-node Spark cluster to evaluate
+          the distributed scalability of the extended library.
+\end{enumerate}
+
+\paragraph{Objective 2: Evaluating the impact of controlled noise on deep
+learning models for cybersecurity.}
+The second objective is an empirical investigation into the effects of
+PuckTrick-generated data corruption on the performance of deep learning models
+trained for \emph{network intrusion detection}, the cybersecurity application
+domain introduced in Section~\ref{sec:cybersecurity-domain}.  This objective
+is motivated by a practical question of considerable importance to the security
+community: \emph{to what extent can deep learning classifiers, trained on
+massive volumes of network-flow data for the purpose of distinguishing benign
+from malicious traffic, tolerate degradation in the quality of their training
+data?}
+
+The investigation operates at two levels of granularity.  At the
+\emph{binary classification} level, the models are asked to discriminate
+between benign and malicious flows — a task analogous to anomaly detection,
+where any deviation from normal traffic triggers an alert.  At the
+\emph{multi-class classification} level, the models must additionally identify
+the specific type of attack (e.g., DDoS-Hulk versus SQL Injection versus
+Botnet), a substantially harder task that requires the classifier to learn
+fine-grained distinctions between attack profiles that often share similar
+flow-level statistics.  Studying both levels simultaneously is essential
+because data corruption may have asymmetric effects: noise that does not
+materially degrade binary detection (benign vs.\ malicious) may nonetheless
+collapse the classifier's ability to distinguish among attack subtypes, or
+vice versa.
+
+The experimental testbed is the \textbf{CSE-CIC-IDS2018} dataset described in
+Section~\ref{sec:cybersecurity-domain}, comprising over 16 million labelled
+network-flow instances spanning benign traffic and fourteen distinct attack
+categories (detailed in Chapter~\ref{chap:dataset}).  Two state-of-the-art
+deep learning architectures were selected for the evaluation:
+
+\begin{itemize}
+    \item \textbf{TabNet}~\cite{arik2021tabnet}: a sequential attention-based
+          architecture specifically designed for tabular data.  TabNet performs
+          instance-wise feature selection through learnable sparse attention
+          masks at each decision step, producing natively interpretable feature
+          importance scores.  It was configured as a \emph{multi-task
+          classifier}, simultaneously predicting both the binary
+          (benign/malicious) and the fine-grained multi-class (specific attack
+          type) labels.
+    \item \textbf{Temporal Fusion Transformer (TFT)}~\cite{lim2021temporal}: a
+          transformer-based architecture originally proposed for multi-horizon
+          time-series forecasting, here repurposed for sequential flow
+          classification.  TFT incorporates \emph{Variable Selection Networks}
+          (VSNs) that learn which input features are most informative at each
+          time step, and multi-head self-attention over the encoder's temporal
+          dimension.  By treating the chronologically ordered network flows as
+          a single continuous time series, TFT can capture temporal patterns
+          in attack campaigns (e.g., DDoS bursts, periodic port scans) that
+          purely tabular models cannot exploit.
+\end{itemize}
+
+The experimental protocol is structured as a multi-stage pipeline:
+
+\begin{enumerate}
+    \item \textbf{Hyperparameter optimisation on a reduced dataset.}
+          A stratified 0.1\% sample of the full dataset is used to conduct
+          Bayesian hyperparameter optimisation via Optuna~\cite{akiba2019optuna}
+          (Tree-structured Parzen Estimator sampler) for both TabNet and TFT.
+          The best hyperparameter configurations are persisted for subsequent
+          reuse.
+    \item \textbf{Feature importance analysis and selection.}
+          Using the baseline (clean) data, the attention-based feature importance
+          scores of TabNet and the Variable Selection Network weights of TFT
+          are extracted.  The approximately 10--15 most important features for
+          each model are identified, and the intersection of these two sets
+          yields a compact core of features that are critical for both
+          architectures.
+    \item \textbf{Feature fragility cross-referencing.}
+          The feature importance rankings are cross-referenced with the
+          fragility analysis performed during dataset characterisation
+          (Chapter~\ref{chap:dataset}), which classifies each feature as high-,
+          medium-, or low-fragility based on its skewness and kurtosis.  The
+          final set of target features for corruption comprises those that are
+          simultaneously \emph{highly important} and \emph{highly fragile} — a
+          combination that maximises the expected impact of noise injection on
+          model performance.
+    \item \textbf{Systematic noise injection and retraining.}
+          The dataset is scaled to 5\% of its original size (approximately
+          800\,000 instances), retaining only the selected features.  Each of
+          the five target features is then corrupted independently using four
+          of PuckTrick's five corruption methods (missing, noise, outliers,
+          labels), yielding $5 \times 4 = 20$ corrupted dataset variants.  The
+          fifth method, \emph{duplicated}, is row-level and therefore applied
+          once globally on an arbitrary feature.  Each variant is used to
+          retrain both TabNet and TFT, producing a total of
+          $(5 \times 4 + 1) \times 2 = 42$ model evaluations.
+    \item \textbf{Statistical robustness via repeated trials.}
+          The entire corruption-and-retraining loop is repeated 10 times with
+          different random seeds to establish confidence intervals around the
+          observed performance deltas, ensuring that the results are
+          statistically robust and not an artefact of a particular random
+          split or noise realisation.
+\end{enumerate}
+
+% ============================================================
+\section{Technologies and Frameworks}
+\label{sec:technologies}
+% ============================================================
+
+This section provides a concise overview of the principal technologies and
+frameworks employed throughout this thesis, situating each within the broader
+landscape of data engineering and deep learning.
+
+% ------------------------------------------------------------
+\subsection{Apache Spark and PySpark}
+\label{sec:tech-spark}
+% ------------------------------------------------------------
+
+Apache Spark~\cite{zaharia2016apache} is a unified analytics engine for
+large-scale data processing developed at the AMPLab of UC
+Berkeley and subsequently donated to the Apache Software Foundation.  Spark
+extends the MapReduce paradigm by introducing an in-memory computation
+model based on \emph{Resilient Distributed Datasets} (RDDs) — immutable,
+fault-tolerant collections of records partitioned across a cluster's
+nodes~\cite{zaharia2012resilient}.  Subsequent releases introduced the
+\emph{DataFrame API} (a distributed analogue of the Pandas DataFrame with a
+SQL-like query optimiser, Catalyst) and the \emph{Dataset API} (offering
+compile-time type safety on the JVM).
+
+PySpark~\cite{spark2024pyspark} is the Python binding to Spark, enabling
+Python-native code to orchestrate distributed computation on a Spark cluster.
+In the context of this thesis, PySpark provides the execution substrate for the
+Spark-based corruption methods implemented in PuckTrick: each corruption
+operation is expressed as a sequence of Spark DataFrame transformations —
+column selections, filters, joins, window functions, and user-defined functions
+(UDFs) — that are compiled by Catalyst into an optimised physical execution plan
+and distributed across the cluster's executors.
+
+The Spark cluster used for benchmarking and experimental runs in this work
+consists of a driver node and four executor nodes, each equipped with 4 cores
+and 13\,GB of memory, for a total distributed capacity of 16 cores and 52\,GB
+of RAM.
+
+% ------------------------------------------------------------
+\subsection{Pandas}
+\label{sec:tech-pandas}
+% ------------------------------------------------------------
+
+Pandas~\cite{mckinney2010data} is the \emph{de facto} standard library for
+in-memory tabular data manipulation in the Python data science ecosystem.  Its
+core abstraction, the \texttt{DataFrame}, is a two-dimensional labelled data
+structure with heterogeneous column types, supporting rich indexing, grouping,
+merging, and reshaping operations.  Pandas operates eagerly and mutably on a
+single machine: all data must reside in RAM, and transformations are executed
+immediately upon invocation.
+
+PuckTrick's original implementation relies extensively on Pandas' row-level
+indexing (\texttt{.iloc}, \texttt{.loc}), in-place assignment, and
+\texttt{numpy}-backed random sampling.  The migration to Spark required
+abstracting away these Pandas-specific idioms.
+
+% ------------------------------------------------------------
+\subsection{TabNet}
+\label{sec:tech-tabnet}
+% ------------------------------------------------------------
+
+TabNet~\cite{arik2021tabnet} is a deep learning architecture explicitly designed
+for tabular data, proposed by Arik and Pfister at Google Cloud AI.  Its
+distinctive mechanism is \emph{sequential attention}: at each of $N_{\text{steps}}$
+decision steps, a learnable attention mask selects a sparse subset of input
+features to process, and the outputs of successive steps are aggregated to
+produce the final prediction.
+
+Key architectural components include:
+\begin{itemize}
+    \item \textbf{Feature transformer}: a shared-across-steps and
+          step-dependent stack of fully connected layers with batch
+          normalisation and Gated Linear Units (GLU).
+    \item \textbf{Attentive transformer}: a sparsemax~\cite{martins2016softmax}
+          or entmax~\cite{peters2019sparse} activated attention mechanism that
+          enforces feature sparsity — at each step, only a small number of
+          features receive non-zero attention.
+    \item \textbf{Sparsity regularisation}: a coefficient $\lambda_{\text{sparse}}$
+          penalises the entropy of the attention distribution, encouraging the
+          model to rely on a compact set of features.
+\end{itemize}
+
+TabNet's attention masks are directly interpretable: by averaging the masks over
+all instances and steps, a global feature importance ranking is obtained without
+any post-hoc explanation technique.  This property is especially valuable in the
+context of noise-injection experiments, as it allows tracking \emph{how} the
+model redistributes its attention when specific features are corrupted.
+
+In this work, TabNet is instantiated as a \texttt{TabNetMultiTaskClassifier}
+from the \texttt{pytorch-tabnet} library~\cite{dreamquark2020tabnet}, with two
+prediction heads sharing a common encoder: one for the binary label
+(\texttt{label\_generic}) and one for the multi-class label (\texttt{Label}).
+Hyperparameters — including the attention dimension ($N_a = N_d$), the number of
+steps ($N_{\text{steps}}$), the relaxation factor ($\gamma$), the sparsity
+coefficient ($\lambda_{\text{sparse}}$), the learning rate, batch size, and mask
+type — are tuned via Optuna with a Tree-structured Parzen Estimator (TPE)
+sampler, optimising the mean Matthews Correlation Coefficient (MCC) across both
+tasks.
+
+% ------------------------------------------------------------
+\subsection{Temporal Fusion Transformer (TFT)}
+\label{sec:tech-tft}
+% ------------------------------------------------------------
+
+The Temporal Fusion Transformer~\cite{lim2021temporal} is a
+transformer-based architecture developed by Lim \emph{et al.} at Google for
+interpretable multi-horizon time-series forecasting.  Its architecture comprises
+several specialised sub-networks:
+
+\begin{itemize}
+    \item \textbf{Variable Selection Networks (VSNs)}: GRN-based (Gated
+          Residual Network) modules that assign learned importance weights to
+          each input variable, independently for the encoder (past inputs) and
+          the decoder (known future inputs).  VSNs provide per-time-step
+          feature importance, enabling the identification of which features are
+          informative and \emph{when}.
+    \item \textbf{Static covariate encoders}: networks that process
+          time-invariant metadata and inject it as context into all
+          time-dependent components, enriching the representation with
+          entity-level information.
+    \item \textbf{Temporal self-attention}: a multi-head attention layer over
+          the encoder's temporal dimension, allowing the model to capture
+          long-range dependencies across time steps.
+    \item \textbf{Gated skip connections and layer normalisation}: used
+          throughout the architecture to facilitate gradient flow and prevent
+          overfitting.
+\end{itemize}
+
+In this thesis, TFT is repurposed as a sequential classification model for
+network intrusion detection.  The chronologically ordered network flows are
+treated as a single continuous time series, and the model is asked to predict
+the labels (binary and multi-class simultaneously via \texttt{MultiLoss}) of the
+next flow given an encoder window of the preceding 30 flows.  This formulation
+allows TFT to exploit temporal patterns in attack campaigns — for instance,
+the bursty nature of DDoS attacks or the sequential probing of port scans — that
+purely feature-based models such as TabNet cannot leverage.
+
+Hyperparameters (hidden size, attention head size, dropout rate, hidden
+continuous size, learning rate, and batch size) are optimised via Optuna,
+minimising the combined cross-entropy validation loss across both prediction
+heads.
+
+% ------------------------------------------------------------
+\subsection{Optuna}
+\label{sec:tech-optuna}
+% ------------------------------------------------------------
+
+Optuna~\cite{akiba2019optuna} is an automatic hyperparameter optimisation
+framework that implements efficient search strategies including the
+\emph{Tree-structured Parzen Estimator} (TPE) and \emph{Hyperband} pruning.
+It provides a \emph{define-by-run} API in which the search space is specified
+programmatically inside the objective function, enabling dynamic space
+definitions that depend on the values of previously sampled hyperparameters.
+
+In this work, Optuna is used to tune both TabNet and TFT.  The TPE sampler is
+employed with early-stopping callbacks and configurable trial budgets (10
+trials for local development, 20 for cluster-based runs).  Optuna's built-in
+visualisation tools (parameter importance plots, optimisation history) are used
+to analyse the sensitivity of model performance to individual hyperparameters.
+
+% ------------------------------------------------------------
+\subsection{Scikit-learn and PyTorch Ecosystem}
+\label{sec:tech-sklearn-pytorch}
+% ------------------------------------------------------------
+
+The experimental pipeline relies on several additional frameworks:
+
+\begin{itemize}
+    \item \textbf{Scikit-learn}~\cite{pedregosa2011scikit}: used for data
+          splitting (\texttt{train\_test\_split} with stratification), feature
+          scaling (\texttt{StandardScaler}), label encoding
+          (\texttt{LabelEncoder}), and evaluation metrics (accuracy, F1 score,
+          Matthews Correlation Coefficient, ROC-AUC, classification report).
+    \item \textbf{PyTorch}~\cite{paszke2019pytorch}: the underlying deep
+          learning framework for both TabNet (via \texttt{pytorch-tabnet}) and
+          TFT (via \texttt{pytorch-forecasting} and
+          \texttt{pytorch-lightning}).
+    \item \textbf{PyTorch Lightning}~\cite{falcon2019pytorch}: a high-level
+          training framework that abstracts the training loop, gradient
+          accumulation, checkpointing, and multi-GPU/distributed training,
+          used to train the TFT model.
+    \item \textbf{PyTorch Forecasting}~\cite{beitner2020pytorchforecasting}:
+          a library built on top of PyTorch Lightning that provides pre-built
+          time-series architectures including TFT, along with the
+          \texttt{TimeSeriesDataSet} abstraction for efficient batched
+          sequence generation.
+\end{itemize}
+
+% ============================================================
+\section{Thesis Structure}
+\label{sec:thesis-structure}
+% ============================================================
+
+The remainder of this thesis is organised as follows:
+
+\begin{description}
+    \item[Chapter~\ref{chap:state-of-the-art}] reviews the state of the art
+        in data quality for machine learning and describes the original
+        architecture of the PuckTrick library prior to the modifications
+        introduced in this work.
+    \item[Chapter~\ref{chap:dataset}] presents a comprehensive analysis of the
+        CIC-IDS2018 dataset, including its schema, class distribution,
+        temporal structure, missing-data profile, feature correlation structure,
+        distributional properties, and feature fragility classification.
+    \item[Chapter~\ref{chap:spark-extension}] details the design, implementation,
+        and validation of the PySpark extension of PuckTrick, including the
+        dual-backend architecture, the re-implementation of all five corruption
+        modules, and the performance benchmarking results.
+    \item[Chapter~\ref{chap:experiments}] describes the experimental protocol
+        for evaluating the impact of controlled noise injection on TabNet and
+        TFT, presents the results across all corruption types and features, and
+        discusses the observed patterns and their implications.
+    \item[Chapter~\ref{chap:conclusion}] summarises the contributions of this
+        thesis and outlines directions for future work.
+\end{description}
