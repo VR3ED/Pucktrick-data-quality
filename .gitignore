@@ -7,7 +7,7 @@ all_elaborated.parquet
 DATASETS/originals csv/*.*
 scrap.csv
 *.zip
-
+*.ckpt
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

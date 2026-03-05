@@ -1,0 +1,19 @@
+{
+    "model": "models/tft_trial_0.ckpt",
+    "model_type": "TFT",
+    "label": "0",
+    "feature_importance": null,
+    "val_loss": 0.0008276179432868958,
+    "cm_bin": null,
+    "cm_mul": null,
+    "params": {
+        "hidden_size": 32,
+        "attention_head_size": 1,
+        "dropout": 0.15000000000000002,
+        "hidden_continuous": 16,
+        "lr": 0.0026070247583707684,
+        "batch_size": 128
+    },
+    "metrics_binary": null,
+    "metrics_multiclass": null
+}
