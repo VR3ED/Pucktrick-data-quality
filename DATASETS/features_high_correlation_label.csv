@@ -1,6 +1,4 @@
 feature,corr_label_generic,anova_f_label,abs_corr_generic,noise_fragility,data_type
-Flow Pkts/s,,,,🔴 High fragility,continuous
-Flow Byts/s,,,,🔴 High fragility,continuous
 Tot Fwd Pkts,0.0254476643149087,2004973.399760116,0.0254476643149087,🔴 High fragility,continuous
 Bwd Pkts/s,0.2600926199208206,1839066.377717608,0.2600926199208206,🔴 High fragility,continuous
 TotLen Fwd Pkts,0.0187157962089425,735107.4183418876,0.0187157962089425,🔴 High fragility,continuous

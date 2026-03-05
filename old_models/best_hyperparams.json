@@ -1,0 +1,19 @@
+{
+  "tabnet_multitask": {
+    "N_a": 32,
+    "N_steps": 5,
+    "gamma": 1.1,
+    "lambda_sparse": 0.06153085601625314,
+    "lr": 0.004132765459466363,
+    "batch_size": 512,
+    "mask_type": "sparsemax"
+  },
+  "tft_multitarget": {
+    "hidden_size": 32,
+    "attention_head_size": 1,
+    "dropout": 0.15000000000000002,
+    "hidden_continuous": 16,
+    "lr": 0.0026070247583707684,
+    "batch_size": 128
+  }
+}
