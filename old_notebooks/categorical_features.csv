@@ -1,0 +1,46 @@
+feature,n_distinct_values,is_categorical
+label_generic,2,True
+FIN Flag Cnt,2,True
+RST Flag Cnt,2,True
+PSH Flag Cnt,2,True
+ACK Flag Cnt,2,True
+URG Flag Cnt,2,True
+Fwd URG Flags,2,True
+Fwd PSH Flags,2,True
+Protocol,3,True
+Fwd Seg Size Min,11,True
+Pkt Len Min,164,True
+Down/Up Ratio,239,False
+Bwd Pkt Len Min,477,False
+Fwd Pkt Len Min,502,False
+Bwd Pkt Len Max,1481,False
+Fwd Pkt Len Max,1506,False
+Tot Bwd Pkts,4376,False
+Tot Fwd Pkts,5405,False
+Init Bwd Win Byts,15522,False
+Init Fwd Win Byts,15944,False
+TotLen Fwd Pkts,19852,False
+Dst Port,64695,False
+Fwd Pkt Len Mean,170670,False
+Timestamp,272340,False
+Bwd Pkt Len Mean,294046,False
+Active Min,427234,False
+Bwd IAT Min,472786,False
+Pkt Len Mean,473415,False
+Pkt Len Var,678529,False
+Active Max,905397,False
+Active Std,1071629,False
+Active Mean,1233871,False
+Idle Min,1251846,False
+Bwd IAT Max,1996385,False
+Flow IAT Max,3028720,False
+Bwd IAT Tot,3527100,False
+Bwd IAT Mean,4293279,False
+Flow Duration,5056294,False
+Bwd IAT Std,5124846,False
+Bwd Pkts/s,5374691,False
+Flow IAT Mean,6025501,False
+Fwd Pkts/s,6524425,False
+Flow Pkts/s,6604362,False
+Flow Byts/s,7058098,False
+Flow IAT Std,7400988,False

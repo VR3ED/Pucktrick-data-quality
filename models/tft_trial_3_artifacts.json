@@ -1,0 +1,77 @@
+{
+    "model": "models/tft_trial_3.ckpt",
+    "model_type": "TFT",
+    "label": "3",
+    "pruned": false,
+    "feature_importance": {
+        "encoder_length": 0.008814149536192417,
+        "relative_time_idx": 0.008030072785913944,
+        "Dst Port": 0.013219195418059826,
+        "Protocol": 0.007499855477362871,
+        "Flow Duration": 0.0063496301881968975,
+        "Tot Fwd Pkts": 0.010216465219855309,
+        "Tot Bwd Pkts": 0.05816291272640228,
+        "TotLen Fwd Pkts": 0.012523774988949299,
+        "Fwd Pkt Len Max": 0.03476874157786369,
+        "Fwd Pkt Len Min": 0.00861682090908289,
+        "Bwd Pkt Len Max": 0.01442650519311428,
+        "Bwd Pkt Len Min": 0.009590079076588154,
+        "Bwd Pkt Len Mean": 0.009029538370668888,
+        "Flow Byts/s": 0.008661621250212193,
+        "Flow Pkts/s": 0.03303815424442291,
+        "Flow IAT Mean": 0.008624876849353313,
+        "Flow IAT Std": 0.01138351857662201,
+        "Bwd IAT Tot": 0.005993432831019163,
+        "Bwd IAT Mean": 0.008482124656438828,
+        "Bwd IAT Std": 0.005428855773061514,
+        "Fwd PSH Flags": 0.006969531066715717,
+        "Fwd URG Flags": 0.004857529886066914,
+        "Fwd Pkts/s": 0.005383545067161322,
+        "Bwd Pkts/s": 0.17938832938671112,
+        "Pkt Len Var": 0.007550826761871576,
+        "FIN Flag Cnt": 0.009846548549830914,
+        "RST Flag Cnt": 0.007728567812591791,
+        "PSH Flag Cnt": 0.1758996695280075,
+        "ACK Flag Cnt": 0.011012625880539417,
+        "URG Flag Cnt": 0.008067161776125431,
+        "Down/Up Ratio": 0.20847991108894348,
+        "Init Fwd Win Byts": 0.011405739933252335,
+        "Init Bwd Win Byts": 0.00643817288801074,
+        "Fwd Seg Size Min": 0.012239903211593628,
+        "Active Mean": 0.009699112735688686,
+        "Active Std": 0.052172500640153885
+    },
+    "val_loss": 0.000713578425347805,
+    "cm_bin": [
+        [
+            1
+        ]
+    ],
+    "cm_mul": [
+        [
+            1
+        ]
+    ],
+    "params": {
+        "hidden_size": 64,
+        "attention_head_size": 4,
+        "dropout": 0.15000000000000002,
+        "hidden_continuous": 8,
+        "lr": 0.0012399967836846098,
+        "batch_size": 128
+    },
+    "metrics_binary": {
+        "task": "Trial 3 - Binary Task",
+        "accuracy": 1.0,
+        "f1": 1.0,
+        "mcc": 0.0,
+        "auc": NaN
+    },
+    "metrics_multiclass": {
+        "task": "Trial 3 - Multiclass Task",
+        "accuracy": 1.0,
+        "f1": 1.0,
+        "mcc": 0.0,
+        "auc": NaN
+    }
+}

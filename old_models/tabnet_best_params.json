@@ -1,0 +1,9 @@
+{
+  "N_a": 16,
+  "N_steps": 4,
+  "gamma": 1.0,
+  "lambda_sparse": 0.0396760507705299,
+  "lr": 0.0015930522616241021,
+  "batch_size": 1024,
+  "mask_type": "sparsemax"
+}
