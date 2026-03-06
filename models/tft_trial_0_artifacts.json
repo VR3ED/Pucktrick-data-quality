@@ -4,52 +4,69 @@
     "label": "0",
     "pruned": false,
     "feature_importance": {
-        "encoder_length": 0.009859675541520119,
-        "relative_time_idx": 0.0030096357222646475,
-        "Dst Port": 0.19305022060871124,
-        "Protocol": 0.04013372212648392,
-        "Flow Duration": 0.006835460662841797,
-        "Tot Fwd Pkts": 0.008603283204138279,
-        "Tot Bwd Pkts": 0.007740847300738096,
-        "TotLen Fwd Pkts": 0.17072223126888275,
-        "Fwd Pkt Len Max": 0.011868302710354328,
-        "Fwd Pkt Len Min": 0.011871648021042347,
-        "Bwd Pkt Len Max": 0.006556758191436529,
-        "Bwd Pkt Len Min": 0.008916070684790611,
-        "Bwd Pkt Len Mean": 0.004599510692059994,
-        "Flow Byts/s": 0.013663588091731071,
-        "Flow Pkts/s": 0.01292265485972166,
-        "Flow IAT Mean": 0.0070787756703794,
-        "Flow IAT Std": 0.005338744260370731,
-        "Bwd IAT Tot": 0.009735330007970333,
-        "Bwd IAT Mean": 0.009488653391599655,
-        "Bwd IAT Std": 0.00857392605394125,
-        "Fwd PSH Flags": 0.008057314902544022,
-        "Fwd URG Flags": 0.05128047615289688,
-        "Fwd Pkts/s": 0.008888091892004013,
-        "Bwd Pkts/s": 0.010508200153708458,
-        "Pkt Len Var": 0.038317251950502396,
-        "FIN Flag Cnt": 0.0489102266728878,
-        "RST Flag Cnt": 0.04500986635684967,
-        "PSH Flag Cnt": 0.011397764086723328,
-        "ACK Flag Cnt": 0.012336029671132565,
-        "URG Flag Cnt": 0.010051415301859379,
-        "Down/Up Ratio": 0.13020361959934235,
-        "Init Fwd Win Byts": 0.004906929098069668,
-        "Init Bwd Win Byts": 0.05292745679616928,
-        "Fwd Seg Size Min": 0.004995868541300297,
-        "Active Mean": 0.0038019558414816856,
-        "Active Std": 0.007838530465960503
+        "encoder_length": 34.561004638671875,
+        "relative_time_idx": 15.373414039611816,
+        "Dst Port": 41.582130432128906,
+        "Protocol": 142.42800903320312,
+        "Flow Duration": 27.131011962890625,
+        "Tot Fwd Pkts": 44.7322998046875,
+        "Tot Bwd Pkts": 16.15460777282715,
+        "TotLen Fwd Pkts": 202.52227783203125,
+        "Fwd Pkt Len Max": 25.696449279785156,
+        "Fwd Pkt Len Min": 28.463972091674805,
+        "Bwd Pkt Len Max": 18.1715087890625,
+        "Bwd Pkt Len Min": 35.0307502746582,
+        "Bwd Pkt Len Mean": 19.287662506103516,
+        "Flow Byts/s": 81.69243621826172,
+        "Flow Pkts/s": 13.632862091064453,
+        "Flow IAT Mean": 21.672727584838867,
+        "Flow IAT Std": 45.478271484375,
+        "Bwd IAT Tot": 46.86687469482422,
+        "Bwd IAT Mean": 53.48765563964844,
+        "Bwd IAT Std": 26.72147560119629,
+        "Fwd PSH Flags": 16.805753707885742,
+        "Fwd URG Flags": 33.08280563354492,
+        "Fwd Pkts/s": 66.81356811523438,
+        "Bwd Pkts/s": 20.879030227661133,
+        "Pkt Len Var": 597.3174438476562,
+        "FIN Flag Cnt": 41.85807418823242,
+        "RST Flag Cnt": 19.207212448120117,
+        "PSH Flag Cnt": 16.273258209228516,
+        "ACK Flag Cnt": 21.539928436279297,
+        "URG Flag Cnt": 798.607421875,
+        "Down/Up Ratio": 193.34080505371094,
+        "Init Fwd Win Byts": 41.700111389160156,
+        "Init Bwd Win Byts": 46.24730682373047,
+        "Fwd Seg Size Min": 24.630197525024414,
+        "Active Mean": 24.915966033935547,
+        "Active Std": 334.09381103515625
     },
-    "val_loss": 0.005792692303657532,
+    "val_loss": 2.230801582336426,
     "cm_bin": [
         [
-            1
+            2772,
+            7
+        ],
+        [
+            450,
+            9
         ]
     ],
     "cm_mul": [
         [
-            1
+            0,
+            452,
+            7
+        ],
+        [
+            0,
+            2775,
+            4
+        ],
+        [
+            0,
+            0,
+            0
         ]
     ],
     "params": {
@@ -62,16 +79,10 @@
     },
     "metrics_binary": {
         "task": "Trial 0 - Binary Task",
-        "accuracy": 1.0,
-        "f1": 1.0,
-        "mcc": 0.0,
-        "auc": NaN
+        "accuracy": 0.8588634959851761,
+        "f1": 0.037894736842105266,
+        "mcc": 0.08500476532292549,
+        "auc": 0.7155314406759065
     },
-    "metrics_multiclass": {
-        "task": "Trial 0 - Multiclass Task",
-        "accuracy": 1.0,
-        "f1": 1.0,
-        "mcc": 0.0,
-        "auc": NaN
-    }
+    "metrics_multiclass": null
 }
