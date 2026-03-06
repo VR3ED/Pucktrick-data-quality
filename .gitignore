@@ -8,6 +8,7 @@ DATASETS/originals csv/*.*
 scrap.csv
 *.zip
 *.ckpt
+baseline_10pct_top_features.parquet
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
