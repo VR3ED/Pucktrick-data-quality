@@ -1,8 +1,9 @@
 feature
-Bwd Pkts/s
 Down/Up Ratio
 Dst Port
-Flow IAT Std
+FIN Flag Cnt
+Flow Pkts/s
+Fwd Pkt Len Max
 Init Bwd Win Byts
 Init Fwd Win Byts
-PSH Flag Cnt
+Protocol

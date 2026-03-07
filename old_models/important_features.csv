@@ -1,0 +1,15 @@
+feature
+Active Std
+Bwd IAT Std
+Bwd Pkt Len Min
+Bwd Pkts/s
+Down/Up Ratio
+Dst Port
+FIN Flag Cnt
+Flow IAT Mean
+Fwd Pkt Len Min
+Init Bwd Win Byts
+Init Fwd Win Byts
+PSH Flag Cnt
+TotLen Fwd Pkts
+URG Flag Cnt
