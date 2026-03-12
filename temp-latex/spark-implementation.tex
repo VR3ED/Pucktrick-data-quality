@@ -1,0 +1,48 @@
+% ============================================================
+
+\newpage
+
+\section{The library implementation protocol}
+
+% ============================================================
+
+The central design principle guiding the extension was \emph{functional equivalence}: for every corruption method offered by PuckTrick, the Spark implementation must accept the same parametrisation and produce statistically equivalent output distributions, so that experiments conducted on a single-machine Pandas backend yield results that are directly comparable with those obtained in a distributed Spark cluster.  This requirement poses non-trivial engineering challenges, because Pandas and Spark embody fundamentally different computation models, and many of PuckTrick's corruption algorithms rely on random sampling, in-place mutation, and index-based row selection: operations that do not have direct analogues in the Spark API.
+
+The implementation involved:
+
+\begin{enumerate}
+
+    \item Creating documentation of all existing PuckTrick corruption methods to
+
+          catalogue their Pandas-specific dependencies.
+
+    \item The design of a \emph{dual-backend architecture} in which each
+
+          corruption module detects the type of the input DataFrame (Pandas
+
+          \texttt{pd.DataFrame} or PySpark \texttt{pyspark.sql.DataFrame})
+
+          and dispatches to the appropriate implementation.
+
+    \item The re-implementation of each corruption method using PySpark's
+
+          SQL-based DataFrame API, paying particular attention to
+
+          window functions to simulate
+
+          index-based operations.
+
+    \item An extensive validation campaign comparing the outputs of the Pandas
+
+          and Spark backends across all corruption types and all supported data
+
+          types (continuous, discrete, binary, categorical string,
+
+          categorical integer),
+
+    \item Performance benchmarking on a multi-node Spark cluster to evaluate
+
+          the distributed scalability of the extended library.
+
+\end{enumerate}
+
