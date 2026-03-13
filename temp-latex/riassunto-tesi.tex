@@ -1,0 +1,247 @@
+\documentclass{article}
+
+\usepackage{graphicx}
+
+\begin{document}
+
+% \documentclass[a4paper,12pt]{report}
+% \usepackage{graphicx}
+% \usepackage{hyperref}
+% \usepackage[T1]{fontenc}
+% \usepackage[utf8]{inputenc}
+% \usepackage{setspace}
+% \usepackage[paper=a4paper,margin=1in]{geometry}
+
+\begin{titlepage}
+
+    
+    \noindent
+    \begin{minipage}[t]{0.19\textwidth}
+        \vspace{-4mm}{\includegraphics[scale=1.10]{images/logo_unimib.pdf}}
+    \end{minipage}
+    \hspace{2mm}
+    \begin{minipage}[t]{0.70\textwidth}
+    {
+            {\textsc{Università degli Studi di Milano - Bicocca}} \\
+            \textbf{Dipartimento di Informatica, Sistemistica e Comunicazione} \\
+            \textbf{Corso di Laurea in Informatica} \\
+            \par
+    }
+    \end{minipage}
+    
+\vspace{40mm}
+    
+\begin{center}
+{
+    \LARGE{
+        \textbf{Pucktrick Data Quality:}
+        \newline
+        Robustness and Computational Performance Analysis of Deep Learning Models on Tabular and Time Series Data with Synthetic Corruption via Pucktrick
+    }
+    \par
+}
+\end{center}
+    
+    \vspace{30mm}
+
+    \noindent
+    {\large \textbf{Relatore:} Prof. Maurino Andrea} \\
+
+
+    \vspace{10mm}
+
+    \begin{flushright}
+        {\large \textbf{Tesi di Laurea di:}} \\
+        \large{ \red{Cavallini Francesco} } \\
+        \large{ Matricola \red{920835} } 
+    \end{flushright}
+    
+    \vspace{10mm}
+    \begin{center}
+        {\large{\bf Anno Accademico 20\red{24}-20\red{25}}}
+    \end{center}
+
+    %\restoregeometry
+    
+\end{titlepage}
+
+\section{Motivation, Context, and Objectives}
+
+The quality of training data plays a crucial role in the performance and reliability of deep learning models. Real-world datasets often contain imperfections such as missing values, mislabelled instances, duplicates, and noise, caused by factors including sensor failures, human annotation errors, or data integration issues. Training models on such corrupted data can lead to reduced generalisation capability, biased predictions, and unreliable decision-making, particularly in critical domains such as cybersecurity and healthcare.
+
+
+Within the paradigm of Data-Centric AI, systematic improvement and
+curation of training data takes precedence over model architecture
+design. Central to this paradigm is the ability to quantify the impact
+of specific data quality issues on downstream model performance through
+controlled, reproducible perturbations.
+\textbf{PuckTrick} is an open-source Python library
+developed at the University of Milano-Bicocca that addresses precisely
+these needs, providing a unified programmatic interface for the
+controlled introduction of five fundamental categories of data
+corruption into tabular datasets: \emph{duplicated records},
+\emph{missing values}, \emph{noisy values}, \emph{outliers}, and
+\emph{label inconsistencies}. In its original form, however, PuckTrick
+operates exclusively on Pandas DataFrames, which become a bottleneck
+when datasets scale to millions of rows: a limitation that motivates
+its extension to distributed computing frameworks. This limitations on said library 
+drived us to update it to support pyskark (an unified analytics engine for
+large-scale data processing) that allowed Pucktrick library to efficiently inject noise
+into large scale datasets. 
+
+Therefore, to prove the effectiveness of noise injection in a deep learning sitting, a second empirical component was experimented on this thesis. The empirical component of this thesis is situated within the domain of \emph{network intrusion detection}, a field that offers a particularly
+compelling setting for studying the interplay between data quality and
+deep learning performance. A single day of traffic capture at an
+institutional network can produce millions of flow records, each
+described by dozens of statistical features, making distributed
+computing capabilities essential. The specific dataset selected for this
+study is the \textbf{CSE-CIC-IDS2018} (\emph{Canadian Institute for
+Cybersecurity Intrusion Detection System 2018}), a publicly
+available benchmark comprising over \textbf{16 million} labelled
+network-flow instances spanning benign traffic and fourteen distinct
+attack categories, collected over a ten-day capture window inside a
+controlled cyber-range infrastructure.
+
+Therefore this thesis pursues two interrelated objectives:
+
+\textbf{Objective 1: Extending PuckTrick to Apache Spark.} The primary contribution of this work is the extension of the PuckTrick
+library to support \textbf{Apache Spark} (via PySpark) as an alternative
+processing backend alongside Pandas. The work was conducted within the
+\texttt{Spark\_Conversion} branch of the PuckTrick repository, 
+under the supervision of Professor Andrea Maurino.
+
+\textbf{Objective 2: Evaluating the impact of controlled noise on deep
+learning models for cybersecurity.} The second objective is an empirical
+investigation into the effects of PuckTrick-generated data corruption on
+the performance of deep learning models trained for \emph{network
+intrusion detection}. The investigation operates at two levels of
+granularity:
+
+\begin{itemize}
+\item
+  At the \emph{binary classification} level, models are asked to
+  discriminate between benign and malicious flows a task analogous
+  to anomaly detection, where any deviation from normal traffic triggers
+  an alert.
+\item
+  At the \emph{multi-class classification} level, models must
+  additionally identify the specific type of attack (e.g., DDoS-Hulk
+  versus SQL Injection versus Botnet), a substantially harder task
+  requiring the classifier to learn fine-grained distinctions between
+  attack profiles that often share similar flow-level statistics.
+\end{itemize}
+
+Studying both levels simultaneously is essential because data corruption
+may have asymmetric effects: noise that does not materially degrade
+binary detection may nonetheless collapse the classifier's ability to
+distinguish among attack subtypes, or vice versa.
+
+Two state-of-the-art deep learning architectures were selected for
+evaluation:
+
+\begin{itemize}
+\item
+  \textbf{TabNet}: a sequential attention-based architecture
+  specifically designed for tabular data, performing instance-wise
+  feature selection through learnable sparse attention masks at each
+  decision step and producing natively interpretable feature importance
+  scores. It was configured as a \emph{multi-task classifier},
+  simultaneously predicting both binary and fine-grained multi-class
+  labels.
+\item
+  \textbf{CNN-LSTM}: an ad-hoc architecture, which augments a convolutional
+  backbone with LSTM blocks to enable the model to learn from data
+  provided in time windows, rendering the CNN capable of capturing
+  temporal dependencies in network flow sequences.
+\end{itemize}
+
+% ============================================================
+\section{The library implementation protocol}
+% ============================================================
+The central design principle guiding the extension of PuckTrick library was \emph{functional equivalence}: for every corruption method offered by PuckTrick, the Spark implementation must accept the same parametrisation and produce statistically equivalent output distributions, so that experiments conducted on a single-machine Pandas backend yield results that are directly comparable with those obtained in a distributed Spark cluster. 
+
+% ------------------------------------------------------------
+\subsection{Library restructure and dual-backend architecture}
+% ------------------------------------------------------------
+
+Before applying any change the original PuckTrick codebase, the library was structured as a flat collection of Pandas-specific modules. To accommodate a second backend without code duplication, the repository was reorganised according to a modular layout separating concerns into three distinct packages: \texttt{pucktrick/backends/pandas\_backend/}, \texttt{pucktrick/backends/spark\_backend/}, \texttt{pucktrick/backends/core/}. The latter hosting shared utilities and a centralised logging system.
+
+The new entry point exposed to library users is a single \texttt{PuckTrick} class that accepts a DataFrame and an engine selector (\texttt{Engine.AUTO}, \texttt{Engine.PANDAS}, or \texttt{Engine.SPARK}). A newly implemented \texttt{BackendFactory} component resolves the appropriate backend at runtime, consulting PySpark availability and the estimated dataset size (the latter only in \texttt{AUTO} mode). This new Strategy/Factory pattern ensures that the user-facing API remains unchanged regardless of the underlying computation engine. For distributed deployments, the class exposes a static method $$\texttt{make\_remote\_cluster\_config}$$ that accepts a Spark master URL, executor count, per-executor core and memory allocation, and driver memory, encapsulating all cluster-specific configuration behind a single dictionary object.
+
+% ------------------------------------------------------------
+\subsection{Technical challenges in the Spark re-implementation}
+% ------------------------------------------------------------
+
+Several deep architectural differences between Pandas and Spark required careful engineering solutions across the five corruption modules (\texttt{duplicated}, \texttt{labels}, \texttt{missing}, \texttt{noisy}, \texttt{outliers}).
+
+\paragraph{Absence of positional indices.}
+Pandas exposes \texttt{iloc} and \texttt{loc} for positional and label-based row selection. Spark DataFrames, being distributed collections partitioned across nodes, possess no intrinsic row ordering. The solution adopted was to assign each row a surrogate key via \texttt{monotonically\_increasing\_id()}, stored as the internal column \texttt{\_pucktrick\_row\_id}. This identifier enables deterministic joins, filtering, and sampling without requiring a globally sorted dataset.
+
+\paragraph{Lazy versus eager evaluation.}
+Pandas executes each statement immediately and materialises results in memory. Spark registers transformations in a directed acyclic graph and defers execution until an action is invoked, allowing the Catalyst Optimizer to reorder and fuse operations automatically. This required restructuring the control flow of several modules (notably \texttt{noisy} and \texttt{outliers}) where branching logic depends on runtime column properties that can only be determined by materialising a partial result.
+
+\paragraph{Probabilistic sampling.}
+PuckTrick's corruption methods operate on a user-specified fraction of rows. Pandas' \texttt{sample(n=\ldots)} is deterministic, returning exactly $n$ rows. Spark's \texttt{sample(fraction=\ldots)} is probabilistic, with row counts following a binomial distribution. To preserve functional equivalence, a custom sampling strategy was implemented: an initial over-sample with an inflated fraction guarantees a sufficient candidate pool, after which \texttt{limit(n)} truncates the result to the exact target size. The computational overhead of this two-stage procedure is negligible relative to the corruption cost.
+
+\paragraph{Null value semantics.}
+Pandas distinguishes \texttt{None} from \texttt{NaN} with type-dependent behaviour, whereas Spark uniformly represents missing data as \texttt{null}. This divergence required systematic use of explicit casts (\texttt{cast("string")}, \texttt{cast("double")}) and explicit null predicates (\texttt{isNull()}, \texttt{isNotNull()}) throughout the \texttt{missing} and \texttt{noisy} modules to ensure consistent treatment across all column types.
+
+% ------------------------------------------------------------
+\subsection{Cluster setup and infrastructure}
+% ------------------------------------------------------------
+
+Validation in a genuinely distributed environment was conducted on an Apache Spark Standalone cluster provisioned on university-managed virtual machines, comprising one master node and four worker nodes. Three workers (VM2--VM4) were equipped with 4 cores and 16\,GB of RAM each; the fourth worker was more powerful, with 16 cores and 32\,GB of RAM. SSH key-based authentication was established from the master to all workers, worker hostnames were declared in \texttt{\$SPARK\_HOME/conf/workers}, and per-worker resource allocation was set to 4 cores and 15\,GB of memory via \texttt{spark-env.sh}; this was a deliberately conservative figure for the high-resource node, chosen to prevent a single node from monopolising task scheduling. Required network ports (7077 for cluster communication, 8080 for the Web UI) were opened on each machine's firewall, and the correct registration of all four workers was verified through the Spark Web UI dashboard.
+
+% ------------------------------------------------------------
+\subsection{Performance results}
+% ------------------------------------------------------------
+
+Benchmark was executed on a synthetic dataset of 1\,000\,000 rows containing columns of varied types. Each corruption module was applied independently to each column using a fixed strategy specifying a 50\% corruption rate:
+
+\paragraph{Low-complexity methods: \texttt{duplicated} and \texttt{missing}.}
+For these modules, the Pandas backend consistently outperforms Spark, completing in approximately 0.5\,s versus 2\,s for Spark. This outcome is explained by the structural overhead of the Spark framework: DAG compilation, Python-to-JVM serialization, partition management, and distributed coordination impose a fixed cost estimated at 1.2--1.5\,s per job. Since \texttt{duplicated} and \texttt{missing} involve computationally simple operations that fit comfortably within a single machine's memory, this fixed overhead is never amortised by parallelization gains.
+
+\paragraph{High-complexity methods: \texttt{noise}, \texttt{outlier}, and \texttt{labels}.}
+These modules exhibit a dramatic reversal of the performance ranking. On the Pandas backend, execution times range from at least 30 to 40 seconds for numeric columns, to 2\,500 of seconds for string and datetime columns. While on the Spark backend, execution times are uniformly distributed between 2 and 8\,s across all column types. This type-agnostic uniformity is a direct consequence of Spark's columnar paradigm: the Catalyst Optimizer compiles all transformations into native JVM execution plans, eliminating the Python-interpreter overhead that penalizes Pandas for complex row-by-row transformations. The sole outlier is the \texttt{noise} method applied to the \texttt{datetime} column (60.6\,s), attributable to a suboptimal date-handling implementation that mirrors the Pandas logic rather than exploiting native Spark date functions. Yet this same method still widely outperforms it's pandas implementation that required 2\,500 seconds to be executed.
+
+\paragraph{Distributed scalability.}
+A stress test of the \texttt{duplicated} method on the remote cluster demonstrated near-linear scaling from 1\,M to 128\,M rows: execution time grows from approximately 3.6\,s to 84.6\,s as dataset size doubles repeatedly. The first three size doublings (1\,M, 2\,M, 4\,M rows) show nearly identical runtimes of about 3-3.5\,s, confirming that at low cardinalities the dominant cost is Spark job initialization rather than data volume. From 8\,M rows onward, the curve is proportional to data size with no evidence of shuffle bottlenecks or resource exhaustion up to 128\,M rows, yielding a total suite runtime of approximately 173.6\,s and confirming the suitability of the Spark backend for large-scale production use.
+
+
+
+% ============================================================
+\section{The Experimental Protocol}
+% ============================================================
+
+\paragraph{Dataset analysis and preparation.} Firstly the entierty of the dataset 
+    is put through an analysis and preparation pipeline. This includes a first unification of the entire dataset into a single 16\,000\,000 instances and 80 features dataset file(having around 80\% benign and malign 20\% instances). Then, this same pipeline will remove  from the dataset any anomalies such as presence of null and inf values, as such as removal of low variance columns and redundant ones. 
+    Also at the end of this pipeline an analysis of distribution of different types of attacks is done: identifying most of attacks appear in reoccurring times. followed by an analysis on fragility of remaininng features: which classifies each feature as high, medium, or low fragility (based on its skewness and kurtosis). This will allow to effectively test noise injection into the dataset. 
+    
+\paragraph{Hyperparameter optimization on a reduced dataset.}
+    A stratified 0.1\% sample of the full dataset (16k record with same distribution of labels) is used to conduct hyperparameter optimization via Optuna for both TabNet and CNN-LSTM.
+    The best hyperparameter configurations are persisted for subsequent reuse during baseline training and experimentation. Also, using best models from hyperparameters tuning, we use both (1) the attention-based feature importance scores of TabNet and (2) the most important features from CNN-LSTM ranked by a self developed heuristic algorithm. Those are both extracted and intersected; this creates a composed list of 9 most important features that are critical for both architectures.
+    
+\paragraph{Baseline and Feature importance analysis and selection.}
+    The original dataset is then brought back scaled to 10\% of its original size (approximately
+    1\,600\,000 instances making sure to keep same distribution of original label). Using previously extracted hyperparameters and top 9 most important features the 2 models are trained as baseline for subsequent experiments. It's important to note that in order to acquire correct train-test-val sets, no traditional method could be used as the nature of the dataset couldn't allow a simple \texttt{train-test-split} as it would completely mix temporal data. Also classical temporal split could not be applied, as gathering all information before day \emph{x} as train would have resulted in excluding some attack types unique to some other days into tain set. Therefore strategy used to successfully divide dataset into train-test-val is to divide original dataset into quadruple (a,b,x,y) and assigning first two packets to train set (a,b) while last 2 packets to test-set (x) and val-set (y) respectively. This maintains integrity of temporal data flows.
+
+\paragraph{Discarted models}
+    In the original work 2 more other models were tested and optimized for this dataset (a pure LSTM network and a Temporal-Fusion-Transformer). Yet due to their high training times and low performance on baseline dataset were discarded. 
+
+\paragraph{Systematic noise injection and retraining.}
+  Retaining same dataset as previous step, the feature importance rankings are then cross-referenced with the
+fragility analysis performed during dataset exploration evaluating the final set of 4 target features to be experimented on. Each of the four target features is then corrupted independently using four of PuckTrick's five corruption methods (missing, noise, outliers,labels) and using different volumes of noise injections (1\%, 5\%, 10\%, 20\%, 30\%), yielding $5 \times 4 \times 4 = 80$ dataset variants (and 160 models to be trained).  The fifth method, \emph{duplicated}, is row-level and therefore applied
+  once globally on an arbitrary feature on each percentage.  Each variant is used to
+  retrain both TabNet and CNN-LSTMS, producing a total of $(80 + (5 \times 4 \times 1) \times 2 = 200$ model evaluations.
+  
+\paragraph{Statistical robustness via repeated trials.}
+      The entire corruption-and-retraining loop is repeated more times with
+      different random seeds to establish confidence intervals around the
+      observed performance deltas, ensuring that the results are
+      statistically robust and not an artefact of a particular random
+      split or noise realisation.
+
+\paragraph{}
+Last two steps are still being experimented on as require training of large amount of deep models. Yet, it's important to note that, once completed, trough analysis of those performances on particular noise injection methods and percentages could give insight on effectiveness of noise mirated noise injections methods. Not only proving effectiveness of PuckTrick as a tool but also having real word applications in bettering IDSs based on deep models. 
+
+\end{document}

@@ -1,0 +1,383 @@
+{
+    "model": "experiments/cnn_lstm_trial_Experiment_noise_FIN Flag Cnt_50.0.pt",
+    "model_type": "CNN-LSTM",
+    "label": "Experiment_noise_FIN Flag Cnt_50.0",
+<<<<<<< HEAD:experiments/cnn_lstm_trial_Experiment_noise_FIN Flag Cnt_50.0_artifacts.json
+    "mcc_bin": 0.713375381341879,
+    "mcc_mul": 0.6200923810523806,
+    "mean_mcc": 0.6667338811971297,
+    "val_loss": 0.7839981885626912,
+    "cm_bin": [
+        [
+            21940,
+            303
+        ],
+        [
+            1731,
+            2889
+=======
+    "mcc_bin": 0.6980197333730996,
+    "mcc_mul": 0.5048730609727102,
+    "mean_mcc": 0.6014463971729049,
+    "val_loss": 0.8641337629939828,
+    "cm_bin": [
+        [
+            22140,
+            191
+        ],
+        [
+            1927,
+            2659
+>>>>>>> a448b70f92ad6f09c001173f0f5fcb64bd2e2232:experiments3/cnn_lstm_trial_Experiment_noise_FIN Flag Cnt_50.0_artifacts.json
+        ]
+    ],
+    "cm_mul": [
+        [
+<<<<<<< HEAD:experiments/cnn_lstm_trial_Experiment_noise_FIN Flag Cnt_50.0_artifacts.json
+            22036,
+            6,
+            26,
+            0,
+            0,
+            171,
+            0,
+            0,
+            4,
+            0,
+            0,
+            0,
+            0
+        ],
+        [
+            1,
+            1170,
+            0,
+            0,
+=======
+            22318,
+            10,
+            0,
+            3,
+>>>>>>> a448b70f92ad6f09c001173f0f5fcb64bd2e2232:experiments3/cnn_lstm_trial_Experiment_noise_FIN Flag Cnt_50.0_artifacts.json
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0
+        ],
+        [
+<<<<<<< HEAD:experiments/cnn_lstm_trial_Experiment_noise_FIN Flag Cnt_50.0_artifacts.json
+            954,
+            0,
+            34,
+=======
+            327,
+            409,
+>>>>>>> a448b70f92ad6f09c001173f0f5fcb64bd2e2232:experiments3/cnn_lstm_trial_Experiment_noise_FIN Flag Cnt_50.0_artifacts.json
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+<<<<<<< HEAD:experiments/cnn_lstm_trial_Experiment_noise_FIN Flag Cnt_50.0_artifacts.json
+=======
+            423,
+>>>>>>> a448b70f92ad6f09c001173f0f5fcb64bd2e2232:experiments3/cnn_lstm_trial_Experiment_noise_FIN Flag Cnt_50.0_artifacts.json
+            0,
+            0,
+            0,
+            0
+        ],
+        [
+<<<<<<< HEAD:experiments/cnn_lstm_trial_Experiment_noise_FIN Flag Cnt_50.0_artifacts.json
+            51,
+            52,
+            317,
+            340,
+=======
+            940,
+>>>>>>> a448b70f92ad6f09c001173f0f5fcb64bd2e2232:experiments3/cnn_lstm_trial_Experiment_noise_FIN Flag Cnt_50.0_artifacts.json
+            0,
+            0,
+            1,
+            0,
+            0,
+            0,
+            0,
+            0,
+<<<<<<< HEAD:experiments/cnn_lstm_trial_Experiment_noise_FIN Flag Cnt_50.0_artifacts.json
+=======
+            0,
+            0,
+            0,
+            0
+        ],
+        [
+            168,
+            2,
+            0,
+            612,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+>>>>>>> a448b70f92ad6f09c001173f0f5fcb64bd2e2232:experiments3/cnn_lstm_trial_Experiment_noise_FIN Flag Cnt_50.0_artifacts.json
+            0
+        ],
+        [
+            466,
+            0,
+<<<<<<< HEAD:experiments/cnn_lstm_trial_Experiment_noise_FIN Flag Cnt_50.0_artifacts.json
+            8,
+=======
+            0,
+>>>>>>> a448b70f92ad6f09c001173f0f5fcb64bd2e2232:experiments3/cnn_lstm_trial_Experiment_noise_FIN Flag Cnt_50.0_artifacts.json
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0
+        ],
+        [
+<<<<<<< HEAD:experiments/cnn_lstm_trial_Experiment_noise_FIN Flag Cnt_50.0_artifacts.json
+            8,
+            11,
+            0,
+            0,
+            0,
+            267,
+            0,
+            0,
+            23,
+=======
+            192,
+            118,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            6,
+>>>>>>> a448b70f92ad6f09c001173f0f5fcb64bd2e2232:experiments3/cnn_lstm_trial_Experiment_noise_FIN Flag Cnt_50.0_artifacts.json
+            0,
+            0,
+            0,
+            0
+        ],
+        [
+<<<<<<< HEAD:experiments/cnn_lstm_trial_Experiment_noise_FIN Flag Cnt_50.0_artifacts.json
+            59,
+            64,
+            1,
+            0,
+            0,
+            190,
+=======
+            314,
+            12,
+            0,
+            0,
+            0,
+            0,
+>>>>>>> a448b70f92ad6f09c001173f0f5fcb64bd2e2232:experiments3/cnn_lstm_trial_Experiment_noise_FIN Flag Cnt_50.0_artifacts.json
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0
+        ],
+        [
+<<<<<<< HEAD:experiments/cnn_lstm_trial_Experiment_noise_FIN Flag Cnt_50.0_artifacts.json
+            260,
+            0,
+            2,
+            0,
+            0,
+            13,
+=======
+            270,
+            0,
+            0,
+            0,
+            0,
+            0,
+>>>>>>> a448b70f92ad6f09c001173f0f5fcb64bd2e2232:experiments3/cnn_lstm_trial_Experiment_noise_FIN Flag Cnt_50.0_artifacts.json
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0
+        ],
+        [
+            0,
+            1,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+<<<<<<< HEAD:experiments/cnn_lstm_trial_Experiment_noise_FIN Flag Cnt_50.0_artifacts.json
+            229,
+=======
+            234,
+>>>>>>> a448b70f92ad6f09c001173f0f5fcb64bd2e2232:experiments3/cnn_lstm_trial_Experiment_noise_FIN Flag Cnt_50.0_artifacts.json
+            0,
+            0,
+            0,
+            0
+        ],
+        [
+<<<<<<< HEAD:experiments/cnn_lstm_trial_Experiment_noise_FIN Flag Cnt_50.0_artifacts.json
+            33,
+            20,
+            21,
+            0,
+            0,
+=======
+            66,
+>>>>>>> a448b70f92ad6f09c001173f0f5fcb64bd2e2232:experiments3/cnn_lstm_trial_Experiment_noise_FIN Flag Cnt_50.0_artifacts.json
+            1,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+<<<<<<< HEAD:experiments/cnn_lstm_trial_Experiment_noise_FIN Flag Cnt_50.0_artifacts.json
+=======
+            0,
+            0,
+            0,
+            0,
+>>>>>>> a448b70f92ad6f09c001173f0f5fcb64bd2e2232:experiments3/cnn_lstm_trial_Experiment_noise_FIN Flag Cnt_50.0_artifacts.json
+            0
+        ],
+        [
+            19,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0
+        ],
+        [
+            3,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0
+        ],
+        [
+<<<<<<< HEAD:experiments/cnn_lstm_trial_Experiment_noise_FIN Flag Cnt_50.0_artifacts.json
+            1,
+=======
+            2,
+>>>>>>> a448b70f92ad6f09c001173f0f5fcb64bd2e2232:experiments3/cnn_lstm_trial_Experiment_noise_FIN Flag Cnt_50.0_artifacts.json
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0
+        ]
+    ],
+    "feature_importance": {
+<<<<<<< HEAD:experiments/cnn_lstm_trial_Experiment_noise_FIN Flag Cnt_50.0_artifacts.json
+        "Down/Up Ratio": 0.0,
+        "Dst Port": 0.5462686567164168,
+        "FIN Flag Cnt": 0.0,
+        "Flow Pkts/s": 0.13731343283582081,
+        "Fwd Pkt Len Max": 0.47860696517412854,
+        "Init Bwd Win Byts": 0.11791044776119297,
+        "Init Fwd Win Byts": 1.0,
+        "Protocol": 0.11840796019900406
+=======
+        "Down/Up Ratio": 0.21493212669683365,
+        "Dst Port": 0.4468325791855212,
+        "FIN Flag Cnt": 0.0,
+        "Flow Pkts/s": 0.15610859728506854,
+        "Fwd Pkt Len Max": 0.6323529411764707,
+        "Init Bwd Win Byts": 0.16459276018099553,
+        "Init Fwd Win Byts": 1.0,
+        "Protocol": 0.04920814479638052
+>>>>>>> a448b70f92ad6f09c001173f0f5fcb64bd2e2232:experiments3/cnn_lstm_trial_Experiment_noise_FIN Flag Cnt_50.0_artifacts.json
+    },
+    "params": {
+        "nb_filters": 32,
+        "kernel_size": 3,
+        "lstm_units_1": 128,
+        "lstm_units_2": 256,
+        "dropout": 0.1,
+        "lr": 0.0008204643365323959,
+        "batch_size": 4096
+    },
+    "metrics_binary": {
+        "task": "Trial Experiment_noise_FIN Flag Cnt_50.0 - Binary Task",
+<<<<<<< HEAD:experiments/cnn_lstm_trial_Experiment_noise_FIN Flag Cnt_50.0_artifacts.json
+        "accuracy": 0.9242824703123255,
+        "f1": 0.7396313364055299,
+        "mcc": 0.713375381341879,
+        "auc": 0.9386141182020784
+    },
+    "metrics_multiclass": {
+        "task": "Trial Experiment_noise_FIN Flag Cnt_50.0 - Multiclass Task",
+        "accuracy": 0.8962513494397498,
+        "f1": 0.3125674593323542,
+        "mcc": 0.6200923810523806,
+        "auc": 0.9205009808097728
+=======
+        "accuracy": 0.9213136679421927,
+        "f1": 0.7151694459386767,
+        "mcc": 0.6980197333730996,
+        "auc": 0.9215369625256978
+    },
+    "metrics_multiclass": {
+        "task": "Trial Experiment_noise_FIN Flag Cnt_50.0 - Multiclass Task",
+        "accuracy": 0.8757662443808746,
+        "f1": 0.21660525768212255,
+        "mcc": 0.5048730609727102,
+        "auc": NaN
+>>>>>>> a448b70f92ad6f09c001173f0f5fcb64bd2e2232:experiments3/cnn_lstm_trial_Experiment_noise_FIN Flag Cnt_50.0_artifacts.json
+    }
+}

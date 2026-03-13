@@ -1,0 +1,480 @@
+{
+    "model": "tabnet_trial_Experiment_noise_Protocol_50.0",
+    "model_type": "TabNet",
+    "label": "Experiment_noise_Protocol_50.0",
+<<<<<<< HEAD:experiments/tabnet_trial_Experiment_noise_Protocol_50.0_artifacts.json
+    "mcc_bin": 0.8595211852903648,
+    "mcc_mul": 0.8399115639910738,
+    "mean_mcc": 0.8497163746407193,
+    "cm_bin": [
+        [
+            215309,
+            7754
+        ],
+        [
+            3394,
+            42218
+=======
+    "mcc_bin": 0.933271670741083,
+    "mcc_mul": 0.907173985045285,
+    "mean_mcc": 0.920222827893184,
+    "cm_bin": [
+        [
+            221752,
+            1443
+        ],
+        [
+            3583,
+            42433
+>>>>>>> a448b70f92ad6f09c001173f0f5fcb64bd2e2232:experiments3/tabnet_trial_Experiment_noise_Protocol_50.0_artifacts.json
+        ]
+    ],
+    "cm_mul": [
+        [
+<<<<<<< HEAD:experiments/tabnet_trial_Experiment_noise_Protocol_50.0_artifacts.json
+            216653,
+            101,
+            1704,
+            4129,
+            346,
+            16,
+            108,
+            0,
+            6,
+            0,
+            0,
+            0,
+=======
+            222011,
+            55,
+            928,
+            5,
+            80,
+            18,
+            74,
+            0,
+            5,
+            4,
+            15,
+>>>>>>> a448b70f92ad6f09c001173f0f5fcb64bd2e2232:experiments3/tabnet_trial_Experiment_noise_Protocol_50.0_artifacts.json
+            0,
+            0,
+            0
+        ],
+        [
+<<<<<<< HEAD:experiments/tabnet_trial_Experiment_noise_Protocol_50.0_artifacts.json
+            9,
+            11447,
+=======
+            10,
+            11579,
+>>>>>>> a448b70f92ad6f09c001173f0f5fcb64bd2e2232:experiments3/tabnet_trial_Experiment_noise_Protocol_50.0_artifacts.json
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            1,
+            0,
+            0,
+            0,
+            0,
+<<<<<<< HEAD:experiments/tabnet_trial_Experiment_noise_Protocol_50.0_artifacts.json
+            0,
+            0
+        ],
+        [
+            9,
+            0,
+            9353,
+            221,
+=======
+            0
+        ],
+        [
+            252,
+            0,
+            9307,
+>>>>>>> a448b70f92ad6f09c001173f0f5fcb64bd2e2232:experiments3/tabnet_trial_Experiment_noise_Protocol_50.0_artifacts.json
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0
+        ],
+        [
+<<<<<<< HEAD:experiments/tabnet_trial_Experiment_noise_Protocol_50.0_artifacts.json
+            1156,
+            0,
+            0,
+            6462,
+            0,
+            0,
+            24,
+            0,
+            0,
+            2,
+            0,
+=======
+            579,
+            0,
+            0,
+            7133,
+            0,
+            0,
+            0,
+            0,
+            0,
+            52,
+>>>>>>> a448b70f92ad6f09c001173f0f5fcb64bd2e2232:experiments3/tabnet_trial_Experiment_noise_Protocol_50.0_artifacts.json
+            0,
+            0,
+            0,
+            0
+        ],
+        [
+<<<<<<< HEAD:experiments/tabnet_trial_Experiment_noise_Protocol_50.0_artifacts.json
+            318,
+            0,
+            0,
+            0,
+            4428,
+            0,
+=======
+            95,
+            0,
+            0,
+            0,
+            4679,
+>>>>>>> a448b70f92ad6f09c001173f0f5fcb64bd2e2232:experiments3/tabnet_trial_Experiment_noise_Protocol_50.0_artifacts.json
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0
+        ],
+        [
+            0,
+            0,
+            0,
+            0,
+            0,
+<<<<<<< HEAD:experiments/tabnet_trial_Experiment_noise_Protocol_50.0_artifacts.json
+            2538,
+            0,
+            0,
+            620,
+=======
+            1410,
+            0,
+            0,
+            1793,
+            0,
+            0,
+            0,
+            0,
+            0
+        ],
+        [
+            57,
+            0,
+            0,
+            0,
+            0,
+            0,
+            3116,
+            0,
+>>>>>>> a448b70f92ad6f09c001173f0f5fcb64bd2e2232:experiments3/tabnet_trial_Experiment_noise_Protocol_50.0_artifacts.json
+            0,
+            0,
+            0,
+            0,
+            0,
+            0
+        ],
+        [
+<<<<<<< HEAD:experiments/tabnet_trial_Experiment_noise_Protocol_50.0_artifacts.json
+            88,
+            0,
+            0,
+            0,
+            0,
+            0,
+            3052,
+            0,
+            1,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0
+        ],
+        [
+            2526,
+            1,
+            44,
+            32,
+            12,
+            0,
+=======
+            2671,
+            1,
+            5,
+            7,
+            0,
+            1,
+>>>>>>> a448b70f92ad6f09c001173f0f5fcb64bd2e2232:experiments3/tabnet_trial_Experiment_noise_Protocol_50.0_artifacts.json
+            7,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+<<<<<<< HEAD:experiments/tabnet_trial_Experiment_noise_Protocol_50.0_artifacts.json
+            0,
+=======
+>>>>>>> a448b70f92ad6f09c001173f0f5fcb64bd2e2232:experiments3/tabnet_trial_Experiment_noise_Protocol_50.0_artifacts.json
+            0
+        ],
+        [
+            0,
+            0,
+            0,
+            0,
+            0,
+<<<<<<< HEAD:experiments/tabnet_trial_Experiment_noise_Protocol_50.0_artifacts.json
+            1072,
+            0,
+            0,
+            1241,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0
+        ],
+        [
+            143,
+            0,
+            0,
+            234,
+            0,
+            0,
+            269,
+            0,
+            0,
+            49,
+=======
+            273,
+            0,
+            0,
+            2080,
+>>>>>>> a448b70f92ad6f09c001173f0f5fcb64bd2e2232:experiments3/tabnet_trial_Experiment_noise_Protocol_50.0_artifacts.json
+            0,
+            0,
+            0,
+            0,
+            0
+        ],
+        [
+<<<<<<< HEAD:experiments/tabnet_trial_Experiment_noise_Protocol_50.0_artifacts.json
+            165,
+            39,
+            0,
+            2,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+=======
+            15,
+            0,
+            0,
+            338,
+            0,
+            0,
+            68,
+            0,
+            0,
+            258,
+            4,
+>>>>>>> a448b70f92ad6f09c001173f0f5fcb64bd2e2232:experiments3/tabnet_trial_Experiment_noise_Protocol_50.0_artifacts.json
+            0,
+            0,
+            0
+        ],
+        [
+<<<<<<< HEAD:experiments/tabnet_trial_Experiment_noise_Protocol_50.0_artifacts.json
+            29,
+            0,
+            0,
+=======
+            91,
+            0,
+            0,
+            3,
+            0,
+            0,
+            4,
+            0,
+            0,
+            6,
+            84,
+            0,
+            0,
+            0
+        ],
+        [
+            27,
+            0,
+>>>>>>> a448b70f92ad6f09c001173f0f5fcb64bd2e2232:experiments3/tabnet_trial_Experiment_noise_Protocol_50.0_artifacts.json
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0
+        ],
+        [
+<<<<<<< HEAD:experiments/tabnet_trial_Experiment_noise_Protocol_50.0_artifacts.json
+            11,
+            0,
+            2,
+=======
+            7,
+            0,
+>>>>>>> a448b70f92ad6f09c001173f0f5fcb64bd2e2232:experiments3/tabnet_trial_Experiment_noise_Protocol_50.0_artifacts.json
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0
+        ],
+        [
+            3,
+            0,
+<<<<<<< HEAD:experiments/tabnet_trial_Experiment_noise_Protocol_50.0_artifacts.json
+            1,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0
+        ],
+        [
+            1,
+            0,
+            0,
+=======
+>>>>>>> a448b70f92ad6f09c001173f0f5fcb64bd2e2232:experiments3/tabnet_trial_Experiment_noise_Protocol_50.0_artifacts.json
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0
+        ]
+    ],
+    "feature_importance": {
+<<<<<<< HEAD:experiments/tabnet_trial_Experiment_noise_Protocol_50.0_artifacts.json
+        "Down/Up Ratio": 0.11025262598253635,
+        "Dst Port": 0.15755107412202526,
+        "FIN Flag Cnt": 0.051905869514398795,
+        "Flow Pkts/s": 0.13275090535582743,
+        "Fwd Pkt Len Max": 0.12294020992182209,
+        "Init Bwd Win Byts": 0.15580483553709407,
+        "Init Fwd Win Byts": 0.19205758670434775,
+        "Protocol": 0.07673689286194828
+=======
+        "Down/Up Ratio": 0.11742364811417769,
+        "Dst Port": 0.1429432334779301,
+        "FIN Flag Cnt": 0.029202521963672963,
+        "Flow Pkts/s": 0.10563250531515073,
+        "Fwd Pkt Len Max": 0.16702296298860603,
+        "Init Bwd Win Byts": 0.1599731643906504,
+        "Init Fwd Win Byts": 0.18082436427594362,
+        "Protocol": 0.09697759947386854
+>>>>>>> a448b70f92ad6f09c001173f0f5fcb64bd2e2232:experiments3/tabnet_trial_Experiment_noise_Protocol_50.0_artifacts.json
+    },
+    "params": {
+        "N_a": 16,
+        "N_steps": 4,
+        "gamma": 1.0,
+        "lambda_sparse": 0.003967605077052991,
+        "lr": 0.0015930522616241021,
+        "batch_size": 4096,
+        "mask_type": "sparsemax"
+    },
+    "metrics_binary": {
+        "task": "Trial Experiment_noise_Protocol_50.0 - Binary Task",
+<<<<<<< HEAD:experiments/tabnet_trial_Experiment_noise_Protocol_50.0_artifacts.json
+        "accuracy": 0.9585074904624546,
+        "f1": 0.8833696016069635,
+        "mcc": 0.8595211852903648,
+        "auc": 0.9686372527556983
+    },
+    "metrics_multiclass": {
+        "task": "Trial Experiment_noise_Protocol_50.0 - Multiclass Task",
+        "accuracy": 0.9499320740671815,
+        "f1": 0.4593559964759206,
+        "mcc": 0.8399115639910738,
+        "auc": 0.9290434520206182
+=======
+        "accuracy": 0.9813306291347679,
+        "f1": 0.944088461709607,
+        "mcc": 0.933271670741083,
+        "auc": 0.9758995722223447
+    },
+    "metrics_multiclass": {
+        "task": "Trial Experiment_noise_Protocol_50.0 - Multiclass Task",
+        "accuracy": 0.9719402253251167,
+        "f1": 0.5817778543894211,
+        "mcc": 0.907173985045285,
+        "auc": NaN
+>>>>>>> a448b70f92ad6f09c001173f0f5fcb64bd2e2232:experiments3/tabnet_trial_Experiment_noise_Protocol_50.0_artifacts.json
+    }
+}

@@ -4,38 +4,8 @@
 \chapter{State of the Art}
 \label{chap:state-of-the-art}
 
-This chapter reviews the existing literature and tools relevant to the two
-pillars of this thesis: \emph{data quality management for machine learning} and
-\emph{controlled data corruption}.  It then provides a detailed description of
-the PuckTrick library as it existed \emph{prior} to the modifications
-introduced in this work — that is, the Pandas-only version documented in the
-ICAIF 2025 paper~\cite{icaif2025pucktrick} — establishing the baseline against
-which the contributions of this thesis are measured.
 
-% ============================================================
-\section{Data Quality in the Machine Learning Pipeline}
-\label{sec:dq-ml-pipeline}
-% ============================================================
 
-The machine learning pipeline is commonly conceptualised as a sequence of
-stages — data collection, data preparation, feature engineering, model training,
-evaluation, and deployment~\cite{amershi2019software}.  While the research
-community has historically devoted the greatest attention to the model training
-stage (designing novel architectures, loss functions, and optimisation
-algorithms), a growing body of evidence suggests that data quality issues
-originating \emph{upstream} of model training often have a larger impact on
-final model performance than the choice of model
-itself~\cite{sambasivan2021everyone, whang2023data}.
-
-The emergence of the \emph{Data-Centric AI} movement, championed among others
-by Andrew Ng~\cite{ng2021datacentric}, formalises this insight: rather than
-treating the dataset as a fixed input and iterating on the model, Data-Centric
-AI advocates for systematically iterating on the data — cleaning, augmenting,
-curating, and validating it — while keeping the model architecture constant.
-This paradigm shift places \emph{data quality} at the centre of the ML
-engineering workflow and motivates the development of tools that can measure,
-diagnose, and (for experimental purposes) deliberately manipulate data quality
-dimensions.
 
 % ------------------------------------------------------------
 \subsection{Taxonomy of Data Quality Dimensions}
@@ -90,8 +60,7 @@ are~\cite{budach2022effects, gupta2021data}:
 \end{description}
 
 Each of these quality dimensions maps directly onto one of PuckTrick's five
-corruption modules, as will be described in
-Section~\ref{sec:pucktrick-architecture}.
+corruption modules, as will be described in section~\ref{sec:pucktrick-architecture}.
 
 % ------------------------------------------------------------
 \subsection{The Impact of Data Quality on Model Performance}
@@ -209,7 +178,7 @@ specific niche in the Data-Centric AI toolbox.
 % ============================================================
 
 This section describes the architecture and functionality of PuckTrick as it
-existed in version 0.5.0 — the Pandas-only baseline prior to the Spark extension
+existed in version 0.5.0: the Pandas-only baseline prior to the Spark extension
 developed in this thesis.  The description draws on the official
 documentation\footnote{\url{https://andreamaurino.github.io/pucktrick-ui-docs/}}
 and the accompanying ICAIF 2025 paper~\cite{icaif2025pucktrick}.
@@ -275,10 +244,6 @@ The Missing module provides two functions:
         total proportion of missing values equals the desired percentage.
 \end{description}
 
-The Missing module is designed for \emph{continuous} features.  Applying it to
-categorical columns is semantically valid but should be interpreted with care,
-as downstream imputation strategies may behave differently for continuous versus
-categorical missingness.
 
 % ------------------------------------------------------------
 \subsection{Corruption Module: Noise}
@@ -494,51 +459,6 @@ strategy dictionary can be serialised to JSON, stored alongside experimental
 results, and re-executed to produce identical corrupted datasets (given the same
 random seed).
 
-% ============================================================
-\section{Limitations of the Pre-Extension PuckTrick}
-\label{sec:pucktrick-limitations}
-% ============================================================
-
-While PuckTrick version 0.5.0 provides a comprehensive and well-designed
-corruption toolkit, it is subject to several limitations that motivated the
-extension work described in this thesis:
-
-\begin{enumerate}
-    \item \textbf{Single-machine scalability.}  All corruption operations are
-          implemented on Pandas DataFrames, which reside entirely in the
-          memory of a single machine.  For datasets exceeding the available
-          RAM — such as the 16-million-row CIC-IDS2018 dataset used in this
-          work — Pandas becomes a bottleneck, either requiring expensive
-          vertical scaling or forcing the user to work on subsampled data.
-
-    \item \textbf{No distributed computing support.}  There is no facility
-          for distributing corruption operations across multiple nodes.  In
-          environments where the data already resides in a distributed file
-          system (e.g., HDFS, S3) or is managed by a distributed processing
-          engine (e.g., Spark), the user must first collect the data to a
-          single node, apply PuckTrick, and then redistribute the result — an
-          inefficient and error-prone workflow.
-
-    \item \textbf{Index-dependent implementations.}  Many corruption
-          algorithms rely on Pandas' integer-positional indexing
-          (\texttt{.iloc}) to select target rows, a mechanism that has no
-          direct analogue in Spark's distributed DataFrame API.  This
-          architectural coupling to Pandas' mutable, row-indexed data model
-          makes migration to a distributed backend non-trivial.
-
-    \item \textbf{In-place mutation patterns.}  Some implementations modify
-          the DataFrame in place (e.g., assigning \texttt{NaN} to specific
-          cells via \texttt{.loc}), which conflicts with Spark's immutable
-          DataFrame semantics where every transformation produces a new
-          DataFrame.
-\end{enumerate}
-
-These limitations collectively prevented the use of PuckTrick on the full
-16-million-instance CIC-IDS2018 dataset within a distributed Spark cluster
-— a capability that is essential for the large-scale noise-injection experiments
-described in Chapter~\ref{chap:experiments}.  The next chapter describes how
-these limitations were addressed through the design and implementation of a
-PySpark-compatible backend.
 
 % ============================================================
 \section{Related Work on Distributed Data Processing for ML}
@@ -564,80 +484,6 @@ less mature than Spark's for tabular data operations.
 operations using Ray or Dask as a backend, but it targets multi-core
 single-machine parallelism rather than true multi-node distribution.
 
-The choice of Apache Spark as the target distributed backend for PuckTrick was
-motivated by its maturity, its rich DataFrame API (which most closely mirrors
-the operations required by PuckTrick), its native integration with distributed
-storage systems (HDFS, S3, Parquet), and its widespread adoption in both
-industry and academic data engineering pipelines.
 
-% ============================================================
-\section{Deep Learning for Network Intrusion Detection}
-\label{sec:nids-dl}
-% ============================================================
 
-Network Intrusion Detection Systems (NIDS) aim to identify malicious network
-activity by analysing traffic metadata and, in some cases, packet payloads.
-Traditional NIDS relied on signature-based matching (e.g.,
-Snort~\cite{roesch1999snort}) or statistical anomaly detection (e.g.,
-threshold-based rules on traffic volumes).  With the advent of deep learning,
-data-driven approaches have achieved substantially higher detection rates,
-especially for zero-day attacks that lack known
-signatures~\cite{aldweesh2020deep, ferrag2020deep}.
 
-The CIC-IDS2018 dataset~\cite{cicids2018}, used as the experimental testbed in
-this thesis, has been widely adopted in the NIDS literature.  Prior works have
-applied a variety of ML and DL architectures to this dataset:
-
-\begin{itemize}
-    \item \textbf{Random Forest and Gradient Boosting} models achieve strong
-          baseline performance on flow-level features, with reported F1 scores
-          exceeding 0.95 on balanced subsets~\cite{sharafaldin2018toward}.
-    \item \textbf{Convolutional Neural Networks (CNNs)} have been applied to
-          reshaped flow vectors or to traffic image representations, exploiting
-          spatial correlations between features~\cite{kim2020cnn}.
-    \item \textbf{LSTM and GRU networks} capture temporal dependencies in
-          sequential flow data, improving detection of multi-step attacks such
-          as infiltration and slow-rate DoS~\cite{imrana2021bidirectional}.
-    \item \textbf{Autoencoders and Variational Autoencoders} have been used
-          for unsupervised anomaly detection, learning a compressed
-          representation of benign traffic and flagging flows that cannot be
-          accurately reconstructed~\cite{mirsky2018kitsune}.
-\end{itemize}
-
-However, none of the above works systematically investigate how \emph{data
-quality degradation} affects model performance.  The typical experimental
-protocol assumes a clean dataset (or applies ad-hoc cleaning) and evaluates
-model accuracy on a held-out test set.  This thesis fills this gap by
-introducing controlled corruptions via PuckTrick and measuring their impact on
-TabNet and TFT — two architectures that, to the best of our knowledge, have not
-been previously applied to CIC-IDS2018 in a multi-task/multi-target
-configuration.
-
-% ============================================================
-\section{Summary}
-\label{sec:sota-summary}
-% ============================================================
-
-This chapter has established the theoretical and practical foundations for the
-contributions of this thesis:
-
-\begin{enumerate}
-    \item The Data-Centric AI paradigm motivates the need for tools that can
-          systematically manipulate data quality dimensions.
-    \item PuckTrick, in its original Pandas-based form, provides a
-          comprehensive and modular API for controlled data corruption across
-          five orthogonal dimensions (missing, noise, outliers, labels,
-          duplicates), with fine-grained control over corruption percentages
-          and data-type-specific sub-methods.
-    \item The scalability limitations of the Pandas backend preclude the
-          direct application of PuckTrick to large-scale datasets, motivating
-          the PySpark extension developed in this work.
-    \item The NIDS literature demonstrates the effectiveness of deep learning
-          on the CIC-IDS2018 dataset, but no prior work has systematically
-          studied the impact of controlled data corruption on model performance
-          in this domain.
-\end{enumerate}
-
-The next chapter provides a detailed statistical characterisation of the
-CIC-IDS2018 dataset, establishing the baseline data properties against which
-all subsequent corruption experiments are measured.

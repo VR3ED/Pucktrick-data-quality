@@ -1,0 +1,482 @@
+{
+    "model": "tabnet_trial_Experiment_outliers_FIN Flag Cnt_50.0",
+    "model_type": "TabNet",
+    "label": "Experiment_outliers_FIN Flag Cnt_50.0",
+<<<<<<< HEAD:experiments/tabnet_trial_Experiment_outliers_FIN Flag Cnt_50.0_artifacts.json
+    "mcc_bin": 0.8764448227314896,
+    "mcc_mul": 0.8555161434886313,
+    "mean_mcc": 0.8659804831100604,
+    "cm_bin": [
+        [
+            216292,
+            6771
+        ],
+        [
+            2977,
+            42635
+=======
+    "mcc_bin": 0.8805184018326934,
+    "mcc_mul": 0.8715714076648523,
+    "mean_mcc": 0.8760449047487728,
+    "cm_bin": [
+        [
+            217079,
+            6116
+        ],
+        [
+            3270,
+            42746
+>>>>>>> a448b70f92ad6f09c001173f0f5fcb64bd2e2232:experiments3/tabnet_trial_Experiment_outliers_FIN Flag Cnt_50.0_artifacts.json
+        ]
+    ],
+    "cm_mul": [
+        [
+<<<<<<< HEAD:experiments/tabnet_trial_Experiment_outliers_FIN Flag Cnt_50.0_artifacts.json
+            217259,
+            56,
+            907,
+            4516,
+            210,
+            15,
+            90,
+            1,
+            1,
+            8,
+            0,
+            0,
+=======
+            218378,
+            71,
+            996,
+            3519,
+            90,
+            20,
+            107,
+            0,
+            7,
+            5,
+            2,
+>>>>>>> a448b70f92ad6f09c001173f0f5fcb64bd2e2232:experiments3/tabnet_trial_Experiment_outliers_FIN Flag Cnt_50.0_artifacts.json
+            0,
+            0,
+            0
+        ],
+        [
+<<<<<<< HEAD:experiments/tabnet_trial_Experiment_outliers_FIN Flag Cnt_50.0_artifacts.json
+            10,
+            11447,
+            0,
+            0,
+            0,
+            0,
+            0,
+=======
+            11,
+            11577,
+            0,
+            0,
+            0,
+            2,
+>>>>>>> a448b70f92ad6f09c001173f0f5fcb64bd2e2232:experiments3/tabnet_trial_Experiment_outliers_FIN Flag Cnt_50.0_artifacts.json
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0
+        ],
+        [
+            9,
+            0,
+<<<<<<< HEAD:experiments/tabnet_trial_Experiment_outliers_FIN Flag Cnt_50.0_artifacts.json
+            9353,
+            221,
+            0,
+=======
+            9307,
+            243,
+>>>>>>> a448b70f92ad6f09c001173f0f5fcb64bd2e2232:experiments3/tabnet_trial_Experiment_outliers_FIN Flag Cnt_50.0_artifacts.json
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0
+        ],
+        [
+<<<<<<< HEAD:experiments/tabnet_trial_Experiment_outliers_FIN Flag Cnt_50.0_artifacts.json
+            288,
+            0,
+            0,
+            7127,
+            0,
+            0,
+            228,
+=======
+            480,
+            0,
+            0,
+            7037,
+            0,
+            0,
+            0,
+            0,
+            0,
+            247,
+            0,
+            0,
+            0,
+            0
+        ],
+        [
+            28,
+            0,
+            0,
+            0,
+            4746,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0
+        ],
+        [
+            0,
+            0,
+            0,
+            0,
+            0,
+            2796,
+            0,
+            0,
+            406,
+            1,
+            0,
+            0,
+            0,
+            0
+        ],
+        [
+            56,
+>>>>>>> a448b70f92ad6f09c001173f0f5fcb64bd2e2232:experiments3/tabnet_trial_Experiment_outliers_FIN Flag Cnt_50.0_artifacts.json
+            0,
+            0,
+            1,
+            0,
+            0,
+<<<<<<< HEAD:experiments/tabnet_trial_Experiment_outliers_FIN Flag Cnt_50.0_artifacts.json
+            0,
+            0,
+            0
+        ],
+        [
+            95,
+            0,
+            0,
+            0,
+            4651,
+            0,
+            0,
+            0,
+=======
+            3116,
+>>>>>>> a448b70f92ad6f09c001173f0f5fcb64bd2e2232:experiments3/tabnet_trial_Experiment_outliers_FIN Flag Cnt_50.0_artifacts.json
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0
+        ],
+        [
+<<<<<<< HEAD:experiments/tabnet_trial_Experiment_outliers_FIN Flag Cnt_50.0_artifacts.json
+            0,
+            0,
+            0,
+            0,
+            0,
+            1439,
+            0,
+            0,
+            1719,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0
+        ],
+        [
+            54,
+            0,
+            0,
+            0,
+            0,
+            0,
+            3086,
+            0,
+            1,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0
+        ],
+        [
+            2528,
+            0,
+            7,
+            36,
+            44,
+            0,
+            7,
+            0,
+=======
+            2659,
+            1,
+            5,
+            18,
+            0,
+            0,
+            9,
+>>>>>>> a448b70f92ad6f09c001173f0f5fcb64bd2e2232:experiments3/tabnet_trial_Experiment_outliers_FIN Flag Cnt_50.0_artifacts.json
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0
+        ],
+        [
+            0,
+            0,
+            0,
+            0,
+            0,
+<<<<<<< HEAD:experiments/tabnet_trial_Experiment_outliers_FIN Flag Cnt_50.0_artifacts.json
+            315,
+            0,
+            0,
+            1998,
+            0,
+            0,
+=======
+            1252,
+            0,
+            0,
+            1100,
+            1,
+>>>>>>> a448b70f92ad6f09c001173f0f5fcb64bd2e2232:experiments3/tabnet_trial_Experiment_outliers_FIN Flag Cnt_50.0_artifacts.json
+            0,
+            0,
+            0,
+            0
+        ],
+        [
+            15,
+            0,
+            0,
+<<<<<<< HEAD:experiments/tabnet_trial_Experiment_outliers_FIN Flag Cnt_50.0_artifacts.json
+            234,
+            0,
+            0,
+            394,
+            0,
+            0,
+            52,
+            0,
+=======
+            225,
+            0,
+            0,
+            115,
+            0,
+            0,
+            328,
+>>>>>>> a448b70f92ad6f09c001173f0f5fcb64bd2e2232:experiments3/tabnet_trial_Experiment_outliers_FIN Flag Cnt_50.0_artifacts.json
+            0,
+            0,
+            0,
+            0
+        ],
+        [
+<<<<<<< HEAD:experiments/tabnet_trial_Experiment_outliers_FIN Flag Cnt_50.0_artifacts.json
+            103,
+=======
+            97,
+>>>>>>> a448b70f92ad6f09c001173f0f5fcb64bd2e2232:experiments3/tabnet_trial_Experiment_outliers_FIN Flag Cnt_50.0_artifacts.json
+            0,
+            0,
+            3,
+            0,
+            0,
+<<<<<<< HEAD:experiments/tabnet_trial_Experiment_outliers_FIN Flag Cnt_50.0_artifacts.json
+            0,
+            0,
+            0,
+            100,
+            0,
+=======
+            4,
+            0,
+            0,
+            84,
+>>>>>>> a448b70f92ad6f09c001173f0f5fcb64bd2e2232:experiments3/tabnet_trial_Experiment_outliers_FIN Flag Cnt_50.0_artifacts.json
+            0,
+            0,
+            0,
+            0
+        ],
+        [
+<<<<<<< HEAD:experiments/tabnet_trial_Experiment_outliers_FIN Flag Cnt_50.0_artifacts.json
+            29,
+            0,
+=======
+            27,
+>>>>>>> a448b70f92ad6f09c001173f0f5fcb64bd2e2232:experiments3/tabnet_trial_Experiment_outliers_FIN Flag Cnt_50.0_artifacts.json
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0
+        ],
+        [
+<<<<<<< HEAD:experiments/tabnet_trial_Experiment_outliers_FIN Flag Cnt_50.0_artifacts.json
+            11,
+            0,
+            2,
+=======
+            7,
+            0,
+>>>>>>> a448b70f92ad6f09c001173f0f5fcb64bd2e2232:experiments3/tabnet_trial_Experiment_outliers_FIN Flag Cnt_50.0_artifacts.json
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0
+        ],
+        [
+            3,
+            0,
+<<<<<<< HEAD:experiments/tabnet_trial_Experiment_outliers_FIN Flag Cnt_50.0_artifacts.json
+            1,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0
+        ],
+        [
+            1,
+            0,
+            0,
+=======
+>>>>>>> a448b70f92ad6f09c001173f0f5fcb64bd2e2232:experiments3/tabnet_trial_Experiment_outliers_FIN Flag Cnt_50.0_artifacts.json
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0
+        ]
+    ],
+    "feature_importance": {
+<<<<<<< HEAD:experiments/tabnet_trial_Experiment_outliers_FIN Flag Cnt_50.0_artifacts.json
+        "Down/Up Ratio": 0.07437694598208454,
+        "Dst Port": 0.1392878435848387,
+        "FIN Flag Cnt": 0.10367440472880944,
+        "Flow Pkts/s": 0.1097811504824722,
+        "Fwd Pkt Len Max": 0.18046879465881957,
+        "Init Bwd Win Byts": 0.1183806676493945,
+        "Init Fwd Win Byts": 0.16820306294001663,
+        "Protocol": 0.10582712997356458
+=======
+        "Down/Up Ratio": 0.08773034433411725,
+        "Dst Port": 0.11457960072653353,
+        "FIN Flag Cnt": 0.14117529414600993,
+        "Flow Pkts/s": 0.11812912432962262,
+        "Fwd Pkt Len Max": 0.1281630528435583,
+        "Init Bwd Win Byts": 0.13591250209635955,
+        "Init Fwd Win Byts": 0.13007772231412165,
+        "Protocol": 0.14423235920967703
+>>>>>>> a448b70f92ad6f09c001173f0f5fcb64bd2e2232:experiments3/tabnet_trial_Experiment_outliers_FIN Flag Cnt_50.0_artifacts.json
+    },
+    "params": {
+        "N_a": 16,
+        "N_steps": 4,
+        "gamma": 1.0,
+        "lambda_sparse": 0.003967605077052991,
+        "lr": 0.0015930522616241021,
+        "batch_size": 4096,
+        "mask_type": "sparsemax"
+    },
+    "metrics_binary": {
+        "task": "Trial Experiment_outliers_FIN Flag Cnt_50.0 - Binary Task",
+<<<<<<< HEAD:experiments/tabnet_trial_Experiment_outliers_FIN Flag Cnt_50.0_artifacts.json
+        "accuracy": 0.963718246952638,
+        "f1": 0.8974089119956219,
+        "mcc": 0.8764448227314896,
+        "auc": 0.9714992538929434
+    },
+    "metrics_multiclass": {
+        "task": "Trial Experiment_outliers_FIN Flag Cnt_50.0 - Multiclass Task",
+        "accuracy": 0.9543574951149157,
+        "f1": 0.457350451080025,
+        "mcc": 0.8555161434886313,
+        "auc": 0.861389835775181
+=======
+        "accuracy": 0.9651351542098948,
+        "f1": 0.9010729568498492,
+        "mcc": 0.8805184018326934,
+        "auc": 0.9754903463158522
+    },
+    "metrics_multiclass": {
+        "task": "Trial Experiment_outliers_FIN Flag Cnt_50.0 - Multiclass Task",
+        "accuracy": 0.9597861900145239,
+        "f1": 0.5307305412677592,
+        "mcc": 0.8715714076648523,
+        "auc": NaN
+>>>>>>> a448b70f92ad6f09c001173f0f5fcb64bd2e2232:experiments3/tabnet_trial_Experiment_outliers_FIN Flag Cnt_50.0_artifacts.json
+    }
+}
