@@ -1,35 +1,78 @@
 feature,n_distinct_values,is_binary,is_categorical
+Bwd URG Flags,1,False,False
+Bwd Blk Rate Avg,1,False,False
+Bwd Pkts/b Avg,1,False,False
+Bwd Byts/b Avg,1,False,False
+Fwd Blk Rate Avg,1,False,False
+Fwd Pkts/b Avg,1,False,False
+Fwd Byts/b Avg,1,False,False
+Bwd PSH Flags,1,False,False
 label_generic,2,True,False
+Fwd URG Flags,2,True,False
 FIN Flag Cnt,2,True,False
+SYN Flag Cnt,2,True,False
 RST Flag Cnt,2,True,False
-PSH Flag Cnt,2,True,False
+CWE Flag Count,2,True,False
 ACK Flag Cnt,2,True,False
 URG Flag Cnt,2,True,False
+ECE Flag Cnt,2,True,False
+PSH Flag Cnt,2,True,False
 Fwd PSH Flags,2,True,False
-Fwd URG Flags,2,True,False
 Protocol,3,False,True
 Fwd Seg Size Min,11,False,True
+Pkt Len Min,164,False,True
 Down/Up Ratio,239,False,False
 Bwd Pkt Len Min,477,False,False
 Fwd Pkt Len Min,502,False,False
 Bwd Pkt Len Max,1481,False,False
 Fwd Pkt Len Max,1506,False,False
+Pkt Len Max,1536,False,False
+Fwd Act Data Pkts,2933,False,False
 Tot Bwd Pkts,4376,False,False
+Subflow Bwd Pkts,4376,False,False
 Tot Fwd Pkts,5405,False,False
+Subflow Fwd Pkts,5405,False,False
+Bwd Header Len,7366,False,False
+Fwd Header Len,8276,False,False
 Init Bwd Win Byts,15521,False,False
 Init Fwd Win Byts,15936,False,False
+Subflow Fwd Byts,19852,False,False
 TotLen Fwd Pkts,19852,False,False
 Dst Port,64695,False,False
+Subflow Bwd Byts,90959,False,False
+TotLen Bwd Pkts,90961,False,False
+Fwd Seg Size Avg,139323,False,False
+Fwd Pkt Len Mean,170669,False,False
+Bwd Seg Size Avg,258952,False,False
 Bwd Pkt Len Mean,294046,False,False
+Fwd Pkt Len Std,378128,False,False
+Pkt Size Avg,400168,False,False
+Active Min,427234,False,False
+Bwd Pkt Len Std,428474,False,False
+Bwd IAT Min,472786,False,False
+Pkt Len Mean,473411,False,False
+Pkt Len Std,677247,False,False
 Pkt Len Var,678525,False,False
+Flow IAT Min,766974,False,False
+Active Max,905397,False,False
+Fwd IAT Min,934985,False,False
 Active Std,1071629,False,False
+Idle Max,1101782,False,False
+Idle Std,1117214,False,False
 Active Mean,1233871,False,False
 Idle Min,1251857,False,False
+Idle Mean,1641361,False,False
+Bwd IAT Max,1996385,False,False
+Fwd IAT Max,2826273,False,False
+Flow IAT Max,3028733,False,False
 Bwd IAT Tot,3527100,False,False
+Fwd IAT Tot,4281893,False,False
 Bwd IAT Mean,4293279,False,False
 Flow Duration,5056307,False,False
 Bwd IAT Std,5124846,False,False
+Fwd IAT Mean,5134489,False,False
 Bwd Pkts/s,5374691,False,False
+Fwd IAT Std,5478216,False,False
 Flow IAT Mean,6025514,False,False
 Fwd Pkts/s,6524425,False,False
 Flow Pkts/s,6604375,False,False

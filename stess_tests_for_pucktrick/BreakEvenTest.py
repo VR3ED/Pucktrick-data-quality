@@ -125,6 +125,57 @@ def append_row(
 
 
 # ─────────────────────────────────────────
+# Resume: load already-completed runs
+# ─────────────────────────────────────────
+def load_previous_runs() -> tuple[set[tuple[str, str, int]], dict[str, bool], int | None]:
+    """
+    Reads the CSV (if it exists) and returns:
+      - completed  : set of (metodo, backend, num_righe) already recorded
+                     with a valid result (elapsed >= 0), used to skip re-runs.
+      - be_found   : dict[method -> bool] restored from breakeven_reached column.
+      - all_be_iter: iteration number when ALL methods had crossed break-even,
+                     or None if that point was never reached.
+    """
+    completed: set[tuple[str, str, int]] = set()
+    be_found: dict[str, bool] = {m: False for m in ALL_METHODS}
+    be_iter: dict[str, int] = {}   # iteration at which each method first flagged BE
+
+    if not CSV_PATH.exists():
+        print("  [resume] No existing CSV found – starting fresh.")
+        return completed, be_found, None
+
+    with CSV_PATH.open(newline="", encoding="utf-8") as f:
+        reader = csv.DictReader(f)
+        for row in reader:
+            metodo    = row["metodo"]
+            backend   = row["backend"]
+            num_righe = int(row["num_righe"])
+            elapsed   = float(row["stopwatch_sec"])
+            be_flag   = row.get("breakeven_reached", "False").strip().lower() == "true"
+            iterazione = int(row["iterazione"])
+
+            # Only mark as completed if the run did not error out
+            if elapsed >= 0:
+                completed.add((metodo, backend, num_righe))
+
+            # Restore break-even flags
+            if be_flag and metodo in be_found:
+                be_found[metodo] = True
+                be_iter[metodo] = iterazione
+
+    all_be_iter: int | None = None
+    if all(be_found[m] for m in ALL_METHODS):
+        all_be_iter = max(be_iter[m] for m in ALL_METHODS)
+
+    print(f"  [resume] Loaded {len(completed)} completed run(s) from {CSV_PATH.name}")
+    print(f"  [resume] Break-even state restored: {be_found}")
+    if all_be_iter is not None:
+        print(f"  [resume] All break-evens were already found (last at iteration {all_be_iter})")
+
+    return completed, be_found, all_be_iter
+
+
+# ─────────────────────────────────────────
 # Dataset factories
 # ─────────────────────────────────────────
 def make_spark_dataset(spark, n_rows: int):
@@ -200,13 +251,9 @@ cluster_config = PuckTrick.make_remote_cluster_config(
 spark = get_spark_session(remote_cluster=cluster_config)
 
 # ─────────────────────────────────────────
-# Break-even tracking state
+# Break-even tracking state  (restored from CSV if present)
 # ─────────────────────────────────────────
-# breakeven_found[method] = True once Spark first beats Pandas for that method
-breakeven_found: dict[str, bool] = {m: False for m in ALL_METHODS}
-
-# Iteration index at which ALL methods had crossed their break-even
-all_breakeven_iter: int | None = None
+completed_runs, breakeven_found, all_breakeven_iter = load_previous_runs()
 
 # Reuse PuckTrick Spark objects across iterations (update original_df each time)
 spark_puck_objects: dict[str, PuckTrick | None] = {m: None for m in ALL_METHODS}
@@ -228,9 +275,18 @@ for i in range(1, MAX_ITERS + 1):
     print(f"  ITERATION {i:>3}  |  rows = {rows:>14,}")
     print(f"{'='*65}")
 
-    # ── Build datasets for this iteration ────────────────────────────────
-    df_sp = make_spark_dataset(spark, rows)
-    df_pd = make_pandas_dataset(rows)
+    # ── Determine which methods still need to run on each backend ────────
+    need_pd = [m for m in ALL_METHODS if (m, "PANDAS", rows) not in completed_runs]
+    need_sp = [m for m in ALL_METHODS if (m, "SPARK",  rows) not in completed_runs]
+
+    if not need_pd and not need_sp:
+        print(f"  All methods already completed for rows={rows:,} – skipping iteration.")
+        rows *= 2
+        continue
+
+    # ── Build datasets only if at least one method needs them ─────────────
+    df_pd = make_pandas_dataset(rows) if need_pd else None
+    df_sp = make_spark_dataset(spark, rows) if need_sp else None
 
     iter_breakevens_this_round: list[str] = []   # methods that cross BE this iter
 
@@ -241,81 +297,87 @@ for i in range(1, MAX_ITERS + 1):
 
         # ── Pandas ──────────────────────────────────────────────────────
         elapsed_pd: float | None = None
-        try:
-            obj_pd = PuckTrick(dataframe=df_pd, engine=Engine.PANDAS)
-            sw = Stopwatch()
-            sw.start()
-            run_method(obj_pd, metodo, df_pd, local_strategy)
-            sw.stop()
-            elapsed_pd = sw.elapsed()
-            print(f"    PANDAS : {elapsed_pd:>8.3f} s")
-        except Exception as exc:
-            print(f"    PANDAS ERROR: {exc}")
-            elapsed_pd = None
+        if (metodo, "PANDAS", rows) in completed_runs:
+            print(f"    PANDAS : already done – skipped")
+        else:
+            try:
+                obj_pd = PuckTrick(dataframe=df_pd, engine=Engine.PANDAS)
+                sw = Stopwatch()
+                sw.start()
+                run_method(obj_pd, metodo, df_pd, local_strategy)
+                sw.stop()
+                elapsed_pd = sw.elapsed()
+                print(f"    PANDAS : {elapsed_pd:>8.3f} s")
+            except Exception as exc:
+                print(f"    PANDAS ERROR: {exc}")
+                elapsed_pd = None
 
-        append_row(
-            metodo=metodo,
-            backend="PANDAS",
-            iterazione=i,
-            num_righe=rows,
-            elapsed_sec=elapsed_pd if elapsed_pd is not None else -1.0,
-            breakeven_reached=False,   # break-even is a Spark-side event
-            strategy=local_strategy,
-        )
+            append_row(
+                metodo=metodo,
+                backend="PANDAS",
+                iterazione=i,
+                num_righe=rows,
+                elapsed_sec=elapsed_pd if elapsed_pd is not None else -1.0,
+                breakeven_reached=False,   # break-even is a Spark-side event
+                strategy=local_strategy,
+            )
 
         # ── Spark ───────────────────────────────────────────────────────
         elapsed_sp: float | None = None
         be_this_iter = False
-        try:
-            # Reuse the PuckTrick object; just swap in the new dataframe
-            if spark_puck_objects[metodo] is None:
-                spark_puck_objects[metodo] = PuckTrick(
-                    dataframe=df_sp,
-                    engine=Engine.SPARK,
-                    remote_cluster=cluster_config,
+        if (metodo, "SPARK", rows) in completed_runs:
+            print(f"    SPARK  : already done – skipped")
+        else:
+            try:
+                # Reuse the PuckTrick object; just swap in the new dataframe
+                if spark_puck_objects[metodo] is None:
+                    spark_puck_objects[metodo] = PuckTrick(
+                        dataframe=df_sp,
+                        engine=Engine.SPARK,
+                        remote_cluster=cluster_config,
+                    )
+                else:
+                    spark_puck_objects[metodo].original_df = df_sp
+
+                obj_sp = spark_puck_objects[metodo]
+                sw = Stopwatch()
+                sw.start()
+                out_sp = run_method(obj_sp, metodo, obj_sp.original, local_strategy)
+                materialize_if_spark(out_sp)   # force Spark action for accurate timing
+                sw.stop()
+                elapsed_sp = sw.elapsed()
+                print(f"    SPARK  : {elapsed_sp:>8.3f} s")
+
+            except Exception as exc:
+                print(f"    SPARK ERROR: {exc}")
+                elapsed_sp = None
+                # Invalidate the object so it is recreated on the next iteration
+                spark_puck_objects[metodo] = None
+
+            # ── Break-even detection ─────────────────────────────────────
+            if (
+                elapsed_pd is not None
+                and elapsed_sp is not None
+                and not breakeven_found[metodo]
+                and elapsed_sp < elapsed_pd
+            ):
+                breakeven_found[metodo] = True
+                be_this_iter = True
+                iter_breakevens_this_round.append(metodo)
+                print(
+                    f"    *** BREAK-EVEN reached: Spark ({elapsed_sp:.3f}s)"
+                    f" < Pandas ({elapsed_pd:.3f}s) ***"
                 )
-            else:
-                spark_puck_objects[metodo].original_df = df_sp
 
-            obj_sp = spark_puck_objects[metodo]
-            sw = Stopwatch()
-            sw.start()
-            out_sp = run_method(obj_sp, metodo, obj_sp.original, local_strategy)
-            materialize_if_spark(out_sp)   # force Spark action for accurate timing
-            sw.stop()
-            elapsed_sp = sw.elapsed()
-            print(f"    SPARK  : {elapsed_sp:>8.3f} s")
-
-        except Exception as exc:
-            print(f"    SPARK ERROR: {exc}")
-            elapsed_sp = None
-            # Invalidate the object so it is recreated on the next iteration
-            spark_puck_objects[metodo] = None
-
-        # ── Break-even detection ─────────────────────────────────────────
-        if (
-            elapsed_pd is not None
-            and elapsed_sp is not None
-            and not breakeven_found[metodo]
-            and elapsed_sp < elapsed_pd
-        ):
-            breakeven_found[metodo] = True
-            be_this_iter = True
-            iter_breakevens_this_round.append(metodo)
-            print(
-                f"    *** BREAK-EVEN reached: Spark ({elapsed_sp:.3f}s)"
-                f" < Pandas ({elapsed_pd:.3f}s) ***"
+            append_row(
+                metodo=metodo,
+                backend="SPARK",
+                iterazione=i,
+                num_righe=rows,
+                elapsed_sec=elapsed_sp if elapsed_sp is not None else -1.0,
+                breakeven_reached=be_this_iter,
+                strategy=local_strategy,
             )
-
-        append_row(
-            metodo=metodo,
-            backend="SPARK",
-            iterazione=i,
-            num_righe=rows,
-            elapsed_sec=elapsed_sp if elapsed_sp is not None else -1.0,
-            breakeven_reached=be_this_iter,
-            strategy=local_strategy,
-        )
 
     # ── End-of-iteration summary ─────────────────────────────────────────
     still_pending = [m for m, found in breakeven_found.items() if not found]
@@ -324,7 +386,8 @@ for i in range(1, MAX_ITERS + 1):
         print(f"  Still waiting on:  {still_pending}")
 
     # ── Clean up Spark cache before next iteration ────────────────────────
-    df_sp.unpersist(blocking=False)
+    if df_sp is not None:
+        df_sp.unpersist(blocking=False)
 
     # ── Stopping condition ───────────────────────────────────────────────
     if all(breakeven_found.values()):

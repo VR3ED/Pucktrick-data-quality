@@ -1,9 +1,10 @@
 feature
-Down/Up Ratio
+Fwd Act Data Pkts
 Dst Port
-FIN Flag Cnt
-Flow Pkts/s
-Fwd Pkt Len Max
-Init Bwd Win Byts
 Init Fwd Win Byts
 Protocol
+PSH Flag Cnt
+Fwd Seg Size Min
+Bwd Byts/b Avg
+Fwd Blk Rate Avg
+Idle Mean

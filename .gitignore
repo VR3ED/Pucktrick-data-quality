@@ -5,6 +5,8 @@ all.csv
 all.parquet
 all_elaborated.parquet
 DATASETS/originals csv/*.*
+DATASETS_first_batch_experiments/*.*
+DATASETS_first_batch_experiments/originals csv/*.*
 scrap.csv
 *.zip
 *.ckpt
