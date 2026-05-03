@@ -2,32 +2,32 @@
     "model": "tabnet_trial_Experiment_noise_Fwd Act Data Pkts_75.0",
     "model_type": "TabNet",
     "label": "Experiment_noise_Fwd Act Data Pkts_75.0",
-    "mcc_bin": 0.8840521085063258,
-    "mcc_mul": 0.8532403735989417,
-    "mean_mcc": 0.8686462410526337,
+    "mcc_bin": 0.8761482426261182,
+    "mcc_mul": 0.8270359100431088,
+    "mean_mcc": 0.8515920763346135,
     "cm_bin": [
         [
-            222639,
-            487
+            222394,
+            732
         ],
         [
-            8137,
-            37861
+            8453,
+            37545
         ]
     ],
     "cm_mul": [
         [
-            222779,
-            31,
-            5,
+            222725,
+            105,
+            139,
+            10,
+            80,
+            11,
             4,
-            145,
-            50,
-            102,
-            2,
-            0,
-            6,
-            2,
+            33,
+            11,
+            7,
+            1,
             0,
             0,
             0,
@@ -51,9 +51,9 @@
             0
         ],
         [
-            5415,
+            5684,
             0,
-            4217,
+            3948,
             0,
             0,
             0,
@@ -68,7 +68,7 @@
             0
         ],
         [
-            19,
+            35,
             0,
             0,
             7396,
@@ -77,7 +77,7 @@
             260,
             0,
             0,
-            16,
+            0,
             0,
             0,
             0,
@@ -122,10 +122,10 @@
             0,
             0,
             0,
+            1602,
             0,
             0,
-            0,
-            3158,
+            1556,
             0,
             0,
             0,
@@ -136,14 +136,14 @@
             0
         ],
         [
-            2670,
+            2654,
             1,
+            3,
             0,
             0,
             0,
-            1,
-            2,
             0,
+            16,
             0,
             0,
             0,
@@ -170,24 +170,24 @@
             0
         ],
         [
+            44,
             0,
             0,
-            0,
-            163,
+            165,
             0,
             0,
             242,
             0,
             0,
-            270,
-            18,
+            241,
+            1,
             0,
             0,
             0,
             0
         ],
         [
-            3,
+            43,
             0,
             0,
             23,
@@ -196,8 +196,8 @@
             2,
             0,
             0,
-            0,
-            114,
+            5,
+            69,
             0,
             0,
             0,
@@ -273,15 +273,15 @@
         ]
     ],
     "feature_importance": {
-        "Fwd Act Data Pkts": 0.06137684735564378,
-        "Dst Port": 0.12264823374378338,
-        "Init Fwd Win Byts": 0.17489518588709219,
-        "Protocol": 0.10050076247806526,
-        "PSH Flag Cnt": 0.11270097508039668,
-        "Fwd Seg Size Min": 0.13147761336239042,
-        "Bwd Byts/b Avg": 0.09155752912981846,
-        "Fwd Blk Rate Avg": 0.10764070982880473,
-        "Idle Mean": 0.09720214313400506
+        "Fwd Act Data Pkts": 0.09953996311971038,
+        "Dst Port": 0.11027185929902115,
+        "Init Fwd Win Byts": 0.1693445220549213,
+        "Protocol": 0.10595534155429806,
+        "PSH Flag Cnt": 0.12816467440925872,
+        "Fwd Seg Size Min": 0.14338625951999376,
+        "Bwd Byts/b Avg": 0.08062474311799127,
+        "Fwd Blk Rate Avg": 0.09102532440852885,
+        "Idle Mean": 0.07168731251627666
     },
     "params": {
         "N_a": 16,
@@ -294,33 +294,33 @@
     },
     "metrics_binary": {
         "task": "Trial Experiment_noise_Fwd Act Data Pkts_75.0 - Binary Task",
-        "accuracy": 0.967955291984364,
-        "f1": 0.8977544874682853,
-        "mcc": 0.8840521085063258,
-        "auc": 0.9738416941747193
+        "accuracy": 0.9658707510292653,
+        "f1": 0.8910115692672798,
+        "mcc": 0.8761482426261182,
+        "auc": 0.9702711322821813
     },
     "metrics_multiclass": {
         "task": "Trial Experiment_noise_Fwd Act Data Pkts_75.0 - Multiclass Task",
-        "accuracy": 0.9567114044083768,
-        "f1": 0.49563590988008877,
-        "mcc": 0.8532403735989417,
-        "auc": 0.9660891598140211
+        "accuracy": 0.9493430537596053,
+        "f1": 0.453063725815749,
+        "mcc": 0.8270359100431088,
+        "auc": 0.9252047584610178
     },
     "correlation_matrix": {
         "Fwd Act Data Pkts": {
             "Fwd Act Data Pkts": 1.0,
-            "Dst Port": 0.0033,
-            "Init Fwd Win Byts": 0.0179,
-            "Protocol": -0.0075,
-            "PSH Flag Cnt": -0.013,
-            "Fwd Seg Size Min": 0.0158,
+            "Dst Port": 0.0048,
+            "Init Fwd Win Byts": 0.0181,
+            "Protocol": -0.0074,
+            "PSH Flag Cnt": -0.0147,
+            "Fwd Seg Size Min": 0.0162,
             "Bwd Byts/b Avg": NaN,
             "Fwd Blk Rate Avg": NaN,
-            "Idle Mean": 0.0,
-            "label_generic_enc": -0.0316
+            "Idle Mean": 0.0003,
+            "label_generic_enc": -0.0326
         },
         "Dst Port": {
-            "Fwd Act Data Pkts": 0.0033,
+            "Fwd Act Data Pkts": 0.0048,
             "Dst Port": 1.0,
             "Init Fwd Win Byts": 0.2057,
             "Protocol": 0.28,
@@ -332,7 +332,7 @@
             "label_generic_enc": -0.1813
         },
         "Init Fwd Win Byts": {
-            "Fwd Act Data Pkts": 0.0179,
+            "Fwd Act Data Pkts": 0.0181,
             "Dst Port": 0.2057,
             "Init Fwd Win Byts": 1.0,
             "Protocol": 0.3233,
@@ -344,7 +344,7 @@
             "label_generic_enc": 0.2182
         },
         "Protocol": {
-            "Fwd Act Data Pkts": -0.0075,
+            "Fwd Act Data Pkts": -0.0074,
             "Dst Port": 0.28,
             "Init Fwd Win Byts": 0.3233,
             "Protocol": 1.0,
@@ -356,7 +356,7 @@
             "label_generic_enc": 0.2498
         },
         "PSH Flag Cnt": {
-            "Fwd Act Data Pkts": -0.013,
+            "Fwd Act Data Pkts": -0.0147,
             "Dst Port": -0.1799,
             "Init Fwd Win Byts": 0.3046,
             "Protocol": 0.4811,
@@ -368,7 +368,7 @@
             "label_generic_enc": 0.022
         },
         "Fwd Seg Size Min": {
-            "Fwd Act Data Pkts": 0.0158,
+            "Fwd Act Data Pkts": 0.0162,
             "Dst Port": -0.2655,
             "Init Fwd Win Byts": -0.3086,
             "Protocol": -0.8111,
@@ -404,7 +404,7 @@
             "label_generic_enc": NaN
         },
         "Idle Mean": {
-            "Fwd Act Data Pkts": 0.0,
+            "Fwd Act Data Pkts": 0.0003,
             "Dst Port": 0.0158,
             "Init Fwd Win Byts": 0.2516,
             "Protocol": 0.0391,
@@ -416,7 +416,7 @@
             "label_generic_enc": -0.0576
         },
         "label_generic_enc": {
-            "Fwd Act Data Pkts": -0.0316,
+            "Fwd Act Data Pkts": -0.0326,
             "Dst Port": -0.1813,
             "Init Fwd Win Byts": 0.2182,
             "Protocol": 0.2498,

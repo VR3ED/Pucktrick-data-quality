@@ -2,31 +2,31 @@
     "model": "tabnet_trial_Experiment_outliers_Idle Mean_20.0",
     "model_type": "TabNet",
     "label": "Experiment_outliers_Idle Mean_20.0",
-    "mcc_bin": 0.8895514302136855,
-    "mcc_mul": 0.8355741628424203,
-    "mean_mcc": 0.8625627965280529,
+    "mcc_bin": 0.8797243536254662,
+    "mcc_mul": 0.8258646341369135,
+    "mean_mcc": 0.8527944938811898,
     "cm_bin": [
         [
-            222616,
-            510
+            222498,
+            628
         ],
         [
-            7714,
-            38284
+            8303,
+            37695
         ]
     ],
     "cm_mul": [
         [
-            222662,
-            122,
-            78,
+            222509,
+            305,
+            72,
             10,
-            87,
-            54,
-            4,
-            10,
+            82,
+            46,
+            98,
             0,
-            99,
+            0,
+            4,
             0,
             0,
             0,
@@ -51,9 +51,9 @@
             0
         ],
         [
-            5033,
+            5573,
             0,
-            4599,
+            4059,
             0,
             0,
             0,
@@ -136,16 +136,16 @@
             0
         ],
         [
-            2663,
-            1,
-            3,
-            0,
-            0,
-            1,
-            0,
-            4,
-            0,
+            2668,
             2,
+            1,
+            0,
+            0,
+            1,
+            2,
+            0,
+            0,
+            0,
             0,
             0,
             0,
@@ -173,31 +173,31 @@
             0,
             0,
             0,
-            191,
+            245,
             0,
             0,
             242,
             0,
             0,
-            251,
-            9,
+            196,
+            10,
             0,
             0,
             0,
             0
         ],
         [
-            5,
-            0,
-            0,
-            44,
-            0,
-            45,
             2,
             0,
             0,
+            23,
+            0,
+            45,
             5,
-            86,
+            0,
+            0,
+            4,
+            108,
             0,
             0,
             0,
@@ -221,26 +221,9 @@
             0
         ],
         [
-            4,
-            0,
-            4,
+            8,
             0,
             0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0
-        ],
-        [
-            2,
-            0,
-            2,
             0,
             0,
             0,
@@ -255,9 +238,26 @@
             0
         ],
         [
-            1,
+            4,
             0,
-            2,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0
+        ],
+        [
+            3,
+            0,
+            0,
             0,
             0,
             0,
@@ -273,15 +273,15 @@
         ]
     ],
     "feature_importance": {
-        "Fwd Act Data Pkts": 0.09096989460481805,
-        "Dst Port": 0.23370622118141413,
-        "Init Fwd Win Byts": 0.1247261170480211,
-        "Protocol": 0.08388243983060757,
-        "PSH Flag Cnt": 0.10920824492320809,
-        "Fwd Seg Size Min": 0.19043369124397513,
-        "Bwd Byts/b Avg": 0.03667109716011733,
-        "Fwd Blk Rate Avg": 0.06029482368820214,
-        "Idle Mean": 0.07010747031963631
+        "Fwd Act Data Pkts": 0.07087775884593703,
+        "Dst Port": 0.2193341509066415,
+        "Init Fwd Win Byts": 0.15823434911971315,
+        "Protocol": 0.07983753634378131,
+        "PSH Flag Cnt": 0.12445116180481182,
+        "Fwd Seg Size Min": 0.23930052072154026,
+        "Bwd Byts/b Avg": 0.02812672738082624,
+        "Fwd Blk Rate Avg": 0.02545620492797122,
+        "Idle Mean": 0.054381589948777384
     },
     "params": {
         "N_a": 16,
@@ -294,17 +294,17 @@
     },
     "metrics_binary": {
         "task": "Trial Experiment_outliers_Idle Mean_20.0 - Binary Task",
-        "accuracy": 0.9694415956956645,
-        "f1": 0.9030097178979148,
-        "mcc": 0.8895514302136855,
-        "auc": 0.9730238490066118
+        "accuracy": 0.9668145538859411,
+        "f1": 0.8940833244387519,
+        "mcc": 0.8797243536254662,
+        "auc": 0.9746012501862953
     },
     "metrics_multiclass": {
         "task": "Trial Experiment_outliers_Idle Mean_20.0 - Multiclass Task",
-        "accuracy": 0.9516431087528425,
-        "f1": 0.45951863715583346,
-        "mcc": 0.8355741628424203,
-        "auc": 0.9750707611895992
+        "accuracy": 0.9489306044797193,
+        "f1": 0.45822816540408867,
+        "mcc": 0.8258646341369135,
+        "auc": 0.9686677268924022
     },
     "correlation_matrix": {
         "Fwd Act Data Pkts": {
@@ -316,7 +316,7 @@
             "Fwd Seg Size Min": 0.0184,
             "Bwd Byts/b Avg": NaN,
             "Fwd Blk Rate Avg": NaN,
-            "Idle Mean": -0.0022,
+            "Idle Mean": -0.0003,
             "label_generic_enc": 0.0253
         },
         "Dst Port": {
@@ -328,7 +328,7 @@
             "Fwd Seg Size Min": -0.2655,
             "Bwd Byts/b Avg": NaN,
             "Fwd Blk Rate Avg": NaN,
-            "Idle Mean": 0.0062,
+            "Idle Mean": 0.0071,
             "label_generic_enc": -0.1813
         },
         "Init Fwd Win Byts": {
@@ -340,7 +340,7 @@
             "Fwd Seg Size Min": -0.3086,
             "Bwd Byts/b Avg": NaN,
             "Fwd Blk Rate Avg": NaN,
-            "Idle Mean": 0.1118,
+            "Idle Mean": 0.1119,
             "label_generic_enc": 0.2182
         },
         "Protocol": {
@@ -352,7 +352,7 @@
             "Fwd Seg Size Min": -0.8111,
             "Bwd Byts/b Avg": NaN,
             "Fwd Blk Rate Avg": NaN,
-            "Idle Mean": 0.0177,
+            "Idle Mean": 0.017,
             "label_generic_enc": 0.2498
         },
         "PSH Flag Cnt": {
@@ -364,7 +364,7 @@
             "Fwd Seg Size Min": -0.4682,
             "Bwd Byts/b Avg": NaN,
             "Fwd Blk Rate Avg": NaN,
-            "Idle Mean": 0.0004,
+            "Idle Mean": -0.0019,
             "label_generic_enc": 0.022
         },
         "Fwd Seg Size Min": {
@@ -376,7 +376,7 @@
             "Fwd Seg Size Min": 1.0,
             "Bwd Byts/b Avg": NaN,
             "Fwd Blk Rate Avg": NaN,
-            "Idle Mean": -0.0888,
+            "Idle Mean": -0.0883,
             "label_generic_enc": -0.1273
         },
         "Bwd Byts/b Avg": {
@@ -404,16 +404,16 @@
             "label_generic_enc": NaN
         },
         "Idle Mean": {
-            "Fwd Act Data Pkts": -0.0022,
-            "Dst Port": 0.0062,
-            "Init Fwd Win Byts": 0.1118,
-            "Protocol": 0.0177,
-            "PSH Flag Cnt": 0.0004,
-            "Fwd Seg Size Min": -0.0888,
+            "Fwd Act Data Pkts": -0.0003,
+            "Dst Port": 0.0071,
+            "Init Fwd Win Byts": 0.1119,
+            "Protocol": 0.017,
+            "PSH Flag Cnt": -0.0019,
+            "Fwd Seg Size Min": -0.0883,
             "Bwd Byts/b Avg": NaN,
             "Fwd Blk Rate Avg": NaN,
             "Idle Mean": 1.0,
-            "label_generic_enc": -0.0243
+            "label_generic_enc": -0.023
         },
         "label_generic_enc": {
             "Fwd Act Data Pkts": 0.0253,
@@ -424,7 +424,7 @@
             "Fwd Seg Size Min": -0.1273,
             "Bwd Byts/b Avg": NaN,
             "Fwd Blk Rate Avg": NaN,
-            "Idle Mean": -0.0243,
+            "Idle Mean": -0.023,
             "label_generic_enc": 1.0
         }
     }

@@ -2,32 +2,32 @@
     "model": "tabnet_trial_Experiment_outliers_Dst Port_75.0",
     "model_type": "TabNet",
     "label": "Experiment_outliers_Dst Port_75.0",
-    "mcc_bin": 0.7877042889221397,
-    "mcc_mul": 0.7738275510942224,
-    "mean_mcc": 0.7807659200081811,
+    "mcc_bin": 0.8281244212982084,
+    "mcc_mul": 0.7685615501893569,
+    "mean_mcc": 0.7983429857437827,
     "cm_bin": [
         [
-            221092,
-            2034
+            221127,
+            1999
         ],
         [
-            13315,
-            32683
+            10573,
+            35425
         ]
     ],
     "cm_mul": [
         [
-            221273,
-            1234,
-            125,
-            330,
-            9,
-            89,
-            59,
+            221191,
+            1278,
+            186,
+            132,
+            88,
+            103,
+            142,
             0,
-            0,
+            2,
+            3,
             1,
-            6,
             0,
             0,
             0,
@@ -51,11 +51,11 @@
             0
         ],
         [
-            5681,
+            5127,
             0,
-            3951,
+            3965,
             0,
-            0,
+            540,
             0,
             0,
             0,
@@ -68,10 +68,10 @@
             0
         ],
         [
-            43,
+            35,
             0,
             0,
-            7388,
+            7396,
             0,
             0,
             260,
@@ -85,11 +85,11 @@
             0
         ],
         [
-            2504,
+            2726,
             0,
             0,
             0,
-            2371,
+            2149,
             0,
             0,
             0,
@@ -136,17 +136,17 @@
             0
         ],
         [
-            2664,
-            7,
+            2660,
+            5,
+            3,
+            0,
+            2,
+            2,
             2,
             0,
             0,
             0,
             0,
-            0,
-            0,
-            0,
-            1,
             0,
             0,
             0,
@@ -170,34 +170,34 @@
             0
         ],
         [
-            60,
+            53,
             0,
             0,
-            123,
+            202,
             0,
             0,
             242,
             0,
             0,
-            267,
-            1,
+            196,
+            0,
             0,
             0,
             0,
             0
         ],
         [
-            43,
+            114,
             0,
             0,
             23,
             0,
             45,
-            6,
+            5,
             0,
             0,
             0,
-            70,
+            0,
             0,
             0,
             0,
@@ -221,23 +221,10 @@
             0
         ],
         [
-            8,
+            4,
             0,
             0,
             0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0
-        ],
-        [
             4,
             0,
             0,
@@ -248,6 +235,19 @@
             0,
             0,
             0,
+            0
+        ],
+        [
+            2,
+            0,
+            0,
+            0,
+            2,
+            0,
+            0,
+            0,
+            0,
+            0,
             0,
             0,
             0,
@@ -255,11 +255,11 @@
             0
         ],
         [
-            3,
+            1,
             0,
             0,
             0,
-            0,
+            2,
             0,
             0,
             0,
@@ -273,15 +273,15 @@
         ]
     ],
     "feature_importance": {
-        "Fwd Act Data Pkts": 0.0876915416981361,
-        "Dst Port": 0.08952556659041418,
-        "Init Fwd Win Byts": 0.17043980024330024,
-        "Protocol": 0.07443178836857207,
-        "PSH Flag Cnt": 0.10521722072573193,
-        "Fwd Seg Size Min": 0.1553989227327889,
-        "Bwd Byts/b Avg": 0.11782779928954171,
-        "Fwd Blk Rate Avg": 0.08150891631444451,
-        "Idle Mean": 0.11795844403707033
+        "Fwd Act Data Pkts": 0.06516572967050546,
+        "Dst Port": 0.10133493225051744,
+        "Init Fwd Win Byts": 0.1557577243929945,
+        "Protocol": 0.12009348437853379,
+        "PSH Flag Cnt": 0.13523316390133164,
+        "Fwd Seg Size Min": 0.19101622983631475,
+        "Bwd Byts/b Avg": 0.08458867449574269,
+        "Fwd Blk Rate Avg": 0.02947767217855499,
+        "Idle Mean": 0.11733238889550479
     },
     "params": {
         "N_a": 16,
@@ -294,22 +294,22 @@
     },
     "metrics_binary": {
         "task": "Trial Experiment_outliers_Dst Port_75.0 - Binary Task",
-        "accuracy": 0.9429668108381266,
-        "f1": 0.809837081087778,
-        "mcc": 0.7877042889221397,
-        "auc": 0.9415467678457604
+        "accuracy": 0.9532854743538295,
+        "f1": 0.8492963486849991,
+        "mcc": 0.8281244212982084,
+        "auc": 0.9437448852298431
     },
     "metrics_multiclass": {
         "task": "Trial Experiment_outliers_Dst Port_75.0 - Multiclass Task",
-        "accuracy": 0.9346880991661837,
-        "f1": 0.4269283180199657,
-        "mcc": 0.7738275510942224,
-        "auc": 0.9242582365071462
+        "accuracy": 0.9331163329914834,
+        "f1": 0.3773611399810007,
+        "mcc": 0.7685615501893569,
+        "auc": 0.9062448993167601
     },
     "correlation_matrix": {
         "Fwd Act Data Pkts": {
             "Fwd Act Data Pkts": 1.0,
-            "Dst Port": -0.0014,
+            "Dst Port": -0.0015,
             "Init Fwd Win Byts": -0.0062,
             "Protocol": -0.0165,
             "PSH Flag Cnt": -0.0082,
@@ -320,20 +320,20 @@
             "label_generic_enc": 0.0253
         },
         "Dst Port": {
-            "Fwd Act Data Pkts": -0.0014,
+            "Fwd Act Data Pkts": -0.0015,
             "Dst Port": 1.0,
-            "Init Fwd Win Byts": 0.02,
-            "Protocol": 0.0227,
-            "PSH Flag Cnt": -0.0124,
-            "Fwd Seg Size Min": -0.0219,
+            "Init Fwd Win Byts": 0.0202,
+            "Protocol": 0.0234,
+            "PSH Flag Cnt": -0.0126,
+            "Fwd Seg Size Min": -0.0221,
             "Bwd Byts/b Avg": NaN,
             "Fwd Blk Rate Avg": NaN,
-            "Idle Mean": 0.0024,
-            "label_generic_enc": -0.014
+            "Idle Mean": -0.0003,
+            "label_generic_enc": -0.0137
         },
         "Init Fwd Win Byts": {
             "Fwd Act Data Pkts": -0.0062,
-            "Dst Port": 0.02,
+            "Dst Port": 0.0202,
             "Init Fwd Win Byts": 1.0,
             "Protocol": 0.3233,
             "PSH Flag Cnt": 0.3046,
@@ -345,7 +345,7 @@
         },
         "Protocol": {
             "Fwd Act Data Pkts": -0.0165,
-            "Dst Port": 0.0227,
+            "Dst Port": 0.0234,
             "Init Fwd Win Byts": 0.3233,
             "Protocol": 1.0,
             "PSH Flag Cnt": 0.4811,
@@ -357,7 +357,7 @@
         },
         "PSH Flag Cnt": {
             "Fwd Act Data Pkts": -0.0082,
-            "Dst Port": -0.0124,
+            "Dst Port": -0.0126,
             "Init Fwd Win Byts": 0.3046,
             "Protocol": 0.4811,
             "PSH Flag Cnt": 1.0,
@@ -369,7 +369,7 @@
         },
         "Fwd Seg Size Min": {
             "Fwd Act Data Pkts": 0.0184,
-            "Dst Port": -0.0219,
+            "Dst Port": -0.0221,
             "Init Fwd Win Byts": -0.3086,
             "Protocol": -0.8111,
             "PSH Flag Cnt": -0.4682,
@@ -405,7 +405,7 @@
         },
         "Idle Mean": {
             "Fwd Act Data Pkts": -0.0031,
-            "Dst Port": 0.0024,
+            "Dst Port": -0.0003,
             "Init Fwd Win Byts": 0.2516,
             "Protocol": 0.0391,
             "PSH Flag Cnt": -0.0001,
@@ -417,7 +417,7 @@
         },
         "label_generic_enc": {
             "Fwd Act Data Pkts": 0.0253,
-            "Dst Port": -0.014,
+            "Dst Port": -0.0137,
             "Init Fwd Win Byts": 0.2182,
             "Protocol": 0.2498,
             "PSH Flag Cnt": 0.022,

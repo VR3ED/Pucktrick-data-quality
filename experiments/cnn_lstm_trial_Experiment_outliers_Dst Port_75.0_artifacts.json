@@ -2,31 +2,31 @@
     "model": "experiments/cnn_lstm_trial_Experiment_outliers_Dst Port_75.0.pt",
     "model_type": "CNN-LSTM",
     "label": "Experiment_outliers_Dst Port_75.0",
-    "mcc_bin": 0.5402467196310012,
-    "mcc_mul": 0.2172112272782134,
-    "mean_mcc": 0.3787289734546073,
-    "val_loss": 0.9196429018463407,
+    "mcc_bin": 0.5441895712035523,
+    "mcc_mul": 0.2503556822629143,
+    "mean_mcc": 0.39727262673323327,
+    "val_loss": 0.9505075109856469,
     "cm_bin": [
         [
-            20610,
-            1713
+            20656,
+            1667
         ],
         [
-            1768,
-            2817
+            1770,
+            2815
         ]
     ],
     "cm_mul": [
         [
-            22321,
+            22239,
             0,
             0,
             0,
             0,
             0,
+            10,
             0,
-            0,
-            2,
+            74,
             0,
             0,
             0,
@@ -66,15 +66,15 @@
             0
         ],
         [
-            762,
+            731,
             0,
             0,
             0,
             0,
             0,
+            5,
             0,
-            0,
-            14,
+            40,
             0,
             0,
             0,
@@ -98,15 +98,15 @@
             0
         ],
         [
-            284,
+            68,
             0,
             0,
             0,
             0,
+            3,
+            3,
             0,
-            0,
-            0,
-            25,
+            235,
             0,
             0,
             0,
@@ -114,15 +114,15 @@
             0
         ],
         [
-            314,
+            112,
             0,
             0,
             0,
             0,
             0,
+            74,
             0,
-            0,
-            1,
+            129,
             0,
             0,
             0,
@@ -162,15 +162,15 @@
             0
         ],
         [
-            65,
+            34,
             0,
             0,
             0,
             0,
             0,
+            9,
             0,
-            0,
-            0,
+            22,
             0,
             0,
             0,
@@ -178,7 +178,7 @@
             0
         ],
         [
-            18,
+            17,
             0,
             0,
             0,
@@ -186,7 +186,7 @@
             0,
             0,
             0,
-            0,
+            1,
             0,
             0,
             0,
@@ -243,15 +243,15 @@
         ]
     ],
     "feature_importance": {
-        "Fwd Act Data Pkts": 0.001180173092053847,
-        "Dst Port": 0.0003933910306842239,
-        "Init Fwd Win Byts": 0.5318646734854444,
-        "Protocol": 0.02281667977970144,
-        "PSH Flag Cnt": 0.01534225019669531,
+        "Fwd Act Data Pkts": 0.00037467216185811057,
+        "Dst Port": 0.0,
+        "Init Fwd Win Byts": 0.2034469838890973,
+        "Protocol": 0.010865492693893041,
+        "PSH Flag Cnt": 0.01798426376920162,
         "Fwd Seg Size Min": 1.0,
         "Bwd Byts/b Avg": 0.0,
         "Fwd Blk Rate Avg": 0.0,
-        "Idle Mean": 0.00550747442958266
+        "Idle Mean": 0.0
     },
     "params": {
         "nb_filters": 32,
@@ -264,22 +264,22 @@
     },
     "metrics_binary": {
         "task": "Trial Experiment_outliers_Dst Port_75.0 - Binary Task",
-        "accuracy": 0.8706332689163074,
-        "f1": 0.6181020296215031,
-        "mcc": 0.5402467196310012,
-        "auc": 0.8953714208138068
+        "accuracy": 0.8722684703433923,
+        "f1": 0.6209330539318407,
+        "mcc": 0.5441895712035523,
+        "auc": 0.8803568466947865
     },
     "metrics_multiclass": {
         "task": "Trial Experiment_outliers_Dst Port_75.0 - Multiclass Task",
-        "accuracy": 0.838338040731381,
-        "f1": 0.13075422992161553,
-        "mcc": 0.2172112272782134,
+        "accuracy": 0.8381522223873941,
+        "f1": 0.12716640656456524,
+        "mcc": 0.2503556822629143,
         "auc": NaN
     },
     "correlation_matrix": {
         "Fwd Act Data Pkts": {
             "Fwd Act Data Pkts": 1.0,
-            "Dst Port": -0.0014,
+            "Dst Port": -0.0015,
             "Init Fwd Win Byts": -0.0062,
             "Protocol": -0.0165,
             "PSH Flag Cnt": -0.0082,
@@ -290,20 +290,20 @@
             "label_generic_enc": 0.0253
         },
         "Dst Port": {
-            "Fwd Act Data Pkts": -0.0014,
+            "Fwd Act Data Pkts": -0.0015,
             "Dst Port": 1.0,
-            "Init Fwd Win Byts": 0.02,
-            "Protocol": 0.0227,
-            "PSH Flag Cnt": -0.0124,
-            "Fwd Seg Size Min": -0.0219,
+            "Init Fwd Win Byts": 0.0202,
+            "Protocol": 0.0234,
+            "PSH Flag Cnt": -0.0126,
+            "Fwd Seg Size Min": -0.0221,
             "Bwd Byts/b Avg": NaN,
             "Fwd Blk Rate Avg": NaN,
-            "Idle Mean": 0.0024,
-            "label_generic_enc": -0.014
+            "Idle Mean": -0.0003,
+            "label_generic_enc": -0.0137
         },
         "Init Fwd Win Byts": {
             "Fwd Act Data Pkts": -0.0062,
-            "Dst Port": 0.02,
+            "Dst Port": 0.0202,
             "Init Fwd Win Byts": 1.0,
             "Protocol": 0.3233,
             "PSH Flag Cnt": 0.3046,
@@ -315,7 +315,7 @@
         },
         "Protocol": {
             "Fwd Act Data Pkts": -0.0165,
-            "Dst Port": 0.0227,
+            "Dst Port": 0.0234,
             "Init Fwd Win Byts": 0.3233,
             "Protocol": 1.0,
             "PSH Flag Cnt": 0.4811,
@@ -327,7 +327,7 @@
         },
         "PSH Flag Cnt": {
             "Fwd Act Data Pkts": -0.0082,
-            "Dst Port": -0.0124,
+            "Dst Port": -0.0126,
             "Init Fwd Win Byts": 0.3046,
             "Protocol": 0.4811,
             "PSH Flag Cnt": 1.0,
@@ -339,7 +339,7 @@
         },
         "Fwd Seg Size Min": {
             "Fwd Act Data Pkts": 0.0184,
-            "Dst Port": -0.0219,
+            "Dst Port": -0.0221,
             "Init Fwd Win Byts": -0.3086,
             "Protocol": -0.8111,
             "PSH Flag Cnt": -0.4682,
@@ -375,7 +375,7 @@
         },
         "Idle Mean": {
             "Fwd Act Data Pkts": -0.0031,
-            "Dst Port": 0.0024,
+            "Dst Port": -0.0003,
             "Init Fwd Win Byts": 0.2516,
             "Protocol": 0.0391,
             "PSH Flag Cnt": -0.0001,
@@ -387,7 +387,7 @@
         },
         "label_generic_enc": {
             "Fwd Act Data Pkts": 0.0253,
-            "Dst Port": -0.014,
+            "Dst Port": -0.0137,
             "Init Fwd Win Byts": 0.2182,
             "Protocol": 0.2498,
             "PSH Flag Cnt": 0.022,
