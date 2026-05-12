@@ -12,6 +12,7 @@ scrap.csv
 *.zip
 *.ckpt
 baseline_10pct_top_features.parquet
+complete_experiments/*/datasets/*
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
