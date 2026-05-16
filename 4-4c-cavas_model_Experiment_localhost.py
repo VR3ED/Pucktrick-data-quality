@@ -32,7 +32,7 @@ STEP_SIZE         = 10           # overlap tra finestre
 # Percorso base: cartella dello script in locale, path cluster su HPC
 if LOCAL_RUN:
     BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-    RANDOM_SEEDS = [11] 
+    RANDOM_SEEDS = [51] 
 else:
     RANDOM_SEEDS = [303, 404, 505, 606, 707, 808, 909, 1010, 1111, 42] 
     if PROF_DIR:
