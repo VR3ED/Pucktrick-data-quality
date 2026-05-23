@@ -1,0 +1,781 @@
+\documentclass[../main.tex]{subfiles}
+
+\begin{document}
+
+\chapter{PuckTrick Update: \newline Design \& Testing}
+\label{chap:oth}
+
+As already mentioned before, PuckTrick serves as a research support instrument in the domains of Data Quality and Robust Machine Learning.  The present work, carried out within the \texttt{Spark\_Conversion} branch is aimed at extending the PuckTrick library to support Apache Spark (PySpark) as an alternative processing engine to Pandas. The objective is to enable the library to operate on large-scale datasets in a distributed fashion, while preserving the same user interface and ensuring functionally equivalent results across both backends. By extending its development to a Spark-based version, we increase its flexibility as well as enable research on Data Quality for large-scale models.
+
+PuckTrick's original implementation relies extensively on Pandas' row-level indexing, in-place assignment, and \texttt{numpy}-backed random sampling.  The migration to Spark required abstracting away these Pandas-specific idioms. In fact, unlike Pandas, which operates in-memory on a single machine, Spark distributes the computational workload across a cluster of nodes, enabling the processing of datasets on the order of millions of rows \emph{efficiently}. In fact, the key characteristics of Spark relevant to this work are:
+\begin{itemize}
+    \item \textbf{Lazy evaluation}: transformations are planned but executed only when a concrete result is requested (an \emph{action}), allowing automatic optimizations of the execution plan, contrary to what happens in pandas where every transformation happens instantly (having \textbf{eager evaluation});
+    \item \textbf{DataFrame API}: a tabular interface conceptually similar to Pandas, yet based on distributed columnar operations;
+    \item \textbf{Column level operations}: A fundamental distinction between the two frameworks is that, whereas Pandas operates at the row level, Spark operates at the column level, thereby optimizing data access 
+    \item \textbf{Horizontal scalability}: the ability to add nodes to the cluster to handle growing data volumes.
+\end{itemize}
+
+All those key differences between Pandas and Spark architectures, will be be exploited to their full potential in order to reach our goal of allowing PuckTrick library to efficiently operate on large-scale datasets.
+
+
+% ====================================================
+\newpage
+\section{Design Decisions Summary}
+\label{sec:Design_Decisions}
+% ====================================================
+For the library's upgrade it was chosen to pursue a different architectural path from the original PuckTrick project structure, driven by the need to implement the Spark versions in  parallel to the existing Pandas methods. To address these requirements, a \texttt{PuckTrick} class was created that is exposed to the end user and allows dynamic invocation of the error-injection methods on datasets.
+
+All the key design decisions are enumerated below:
+
+\begin{enumerate}
+    \item \textbf{Project restructuring}: (Chapter \ref{sec:backend_factory})       reorganization of the repository structure according to a modular layout:
+          \begin{enumerate}
+              \item \texttt{pucktrick/backends/pandas\_backend/}
+              \item \texttt{pucktrick/backends/spark\_backend/}
+              \item \texttt{pucktrick/core/}
+          \end{enumerate}
+          featuring an automatic backend selection system (\texttt{Engine.AUTO}, \texttt{Engine.PANDAS}, \texttt{Engine.SPARK}) determined by PySpark availability and dataset size. 
+          With the introduction of a centralized logging system and shared utilities inside core directory.
+
+    \item \textbf{Complete module conversion}: (Chapter \ref{sec:Modules_conversion}) rewriting in PySpark of all five error-injection modules (\texttt{duplicated}, \texttt{labels}, \texttt{missing}, \texttt{noisy}, \texttt{outliers}) and their associated utilities, respecting Spark's columnar and lazy paradigm and avoiding row-by-row operations.
+
+    \item \textbf{Remote cluster support}: (Chapter \ref{sec:Library_clusert_config}) implementation of the ability to connect to remote Spark clusters via a configuration dictionary, with a dedicated static method\newline (\texttt{make\_remote\_cluster\_config}).
+
+    \item \textbf{Testing and validation}: (Chapter \ref{sec:Library_unite_integration_tests}) development of a Spark-specific unit test suite and cross-backend integration tests that verify functional coherence between Pandas and Spark outputs.
+\end{enumerate}
+
+Each of these Design decision will be be further explained in a dedicated chapter as listed above, we'll also take a deeper dive into what were the innate problems and challenges faced (those will be deeply explored in Chapter \ref{sec:Technical_challenges}).
+
+% ====================================================
+\newpage
+\section{Project Restructure \& Backend Factory}
+\label{sec:backend_factory}
+% ====================================================
+
+The newly implemented high-level architecture of PuckTrick library follows (as it's previous iteration) the \emph{Strategy} and \emph{Factory} design patterns. The user instantiates a \texttt{PuckTrick} object by providing a DataFrame (that can be created with \emph{both} Pandas and Spark libraries classes) and an optional engine parameter as shown in following example:  
+
+\begin{minted}[fontsize=\small, frame=single] {python}
+import pucktrick
+from pucktrick import PuckTrick, Engine
+
+strategy = {
+    "affected_features": ["f1"],
+    "selection_criteria": "all",
+    "percentage": 0.5,
+    "mode": "new",
+    "perturbate_data": {"distribution": "random"}
+}
+
+cluster_config = PuckTrick.make_remote_cluster_config(
+    master_url="spark://XX.YY.ZZ.XY:7077/",
+    num_executors=4,
+    executor_cores=4,
+    executor_memory="15g",
+    driver_memory="4g"
+)
+
+pt = PuckTrick(
+    dataframe=dataset,
+    engine=Engine.SPARK,
+    remote_cluster=cluster_config
+)
+
+code,result = pt.duplicated(train_df, strategy=strategy)
+\end{minted}
+
+Configuration shown above will allow the user to connect to it's own Spark's dedicated server cluster. The server cluster (if properly configured) will run the specified corruption method (in this case \texttt{duplicated}) upon selected data-frame, then return a copy of the data-frame inside \texttt{result} variable and code (either $0$ for success or $1$ for specifying an error occurred). 
+
+This example was provided to show how easily the library can be used. In the commodity of a few lines of code all features from PuckTrick library can be expressed and called by the user; in fact here we can observe:
+\begin{itemize}
+    \item The usage of \texttt{Pucktrick} class as Library entry-point
+    \item The \emph{Strategy} design patterns
+    \item The usage of \texttt{Engine} (as Backend factory)
+    \item The Cluster configuration
+\end{itemize}
+All of which will be discussed in following chapters.
+
+
+% ====================================================
+\newpage
+\subsection{Strategy Dictionary Overview}
+\label{sec:strategy}
+% ====================================================
+
+A central design element of PuckTrick is the \emph{strategy dictionary}, a structured JSON-like object that declaratively describes the error injection to be performed. This element was alredy present in previous version of puctrick but it has now been adjusted to be used seamlessly with the newly implemented Spark-methods-variariants. All five error-injection methods (regardless of being Spark or Pandas) accept a strategy with the following schema:
+
+\begin{minted}[fontsize=\small, frame=single] {python}
+strategy = {
+    "affected_features": ["col_a", "col_b"],
+    "selection_criteria": "age > 30",  # or "all"
+    "percentage": 0.1,
+    "mode": "new",  # or "extended"
+    "perturbate_data": {
+        "distribution": "random",
+        "value": [None, None],
+        "condition_logic": "and",
+        "param": {}
+    }
+}
+\end{minted}
+
+Following table (Table~\ref{tab:strategy}) summaries each key and accepted input:
+
+\begin{table}[ht]
+\centering
+
+\small
+\begin{tabularx}{\textwidth}{lX}
+  \toprule
+  \textbf{Key} & \textbf{Description} \\
+  \midrule
+  \texttt{affected\_features} &
+    List of column names to which the error injection is applied. \\
+  \texttt{selection\_criteria} &
+    A Boolean predicate (Pandas query syntax) that selects the subset
+    of rows eligible for corruption (e.g., \texttt{"age > 30"}).
+    The special value \texttt{"all"} selects every row. \\
+  \texttt{percentage} &
+    Fraction of the eligible rows to corrupt, in the range $[0,1]$. \\
+  \texttt{mode} &
+    Either \texttt{"new"} (apply errors to the provided DataFrame
+    directly) or \texttt{"extended"} (apply errors only where the
+    current DataFrame and the original still agree). \\
+  \texttt{perturbate\_data} &
+    Nested dictionary specifying the corruption distribution,
+    optional value filters, filter combination logic, and distribution
+    parameters. \\
+  \bottomrule
+\end{tabularx}
+\caption{Strategy dictionary keys and their semantics.}
+\label{tab:strategy}
+\end{table}
+
+
+% =======================================
+\newpage
+\subsection{Backend Factory: Engine Decision Criterion}
+\label{sec:factory}
+% =======================================
+
+To the final user is left the option to manually select which backend to utilize, but it is also implemented a logic to automatically choose backend. Therefore the engine selection is governed by the \texttt{Engine} enumeration, which defines three possible values:
+
+\begin{itemize}
+    \item \texttt{Engine.AUTO} $\to$ Automatic detection: The \texttt{get\_backend()} function in \texttt{backend\_factory.py} implements the engine resolution logic. In automatic mode, the decision procedure is: 
+    \begin{enumerate}
+        \item Verify whether PySpark is installed;
+        \item If PySpark is available, estimate the DataFrame size (using \texttt{memory\_usage(deep=True)});
+        \item If the estimated size exceeds 600\,MB, instantiate \texttt{SparkBackend}; otherwise, instantiate \texttt{PandasBackend};
+        \item If PySpark is not available, fall back to \texttt{PandasBackend} regardless of dataset size.
+    \end{enumerate}
+    This allows PuckTrick library to have a valid way to \emph{dinamically} decide which backed to use \textbf{regardless of starting data-frame type}. 
+    \item \texttt{Engine.SPARK} $\to$  Forces the Spark backend. A \texttt{RuntimeError} is raised if PySpark is manually requested, yet not installed.
+    \item \texttt{Engine.PANDAS} $\to$  Forces the Pandas backend unconditionally.
+\end{itemize}
+
+This design makes PuckTrick library flexible to be used as pleased by all end-users. 
+
+
+
+% ====================================================
+\newpage
+\subsection{Pucktrick Class: Library Entrypoint}
+\label{sec:Pucktrick-class}
+% ====================================================
+
+The sole user-facing entry point to the library noise injection methods is the \texttt{PuckTrick} class, located in \texttt{core/pucktrick.py}. It exposes five instance methods, one per data quality dimension (\texttt{duplicated, labels, missing, noise, outlier}).
+The class also stores the \texttt{original\_df} and exposes it
+via an \texttt{original} property, which is used in \emph{extended} mode for differential error injection. To be more specific, the \texttt{PuckTrick} class delegates all perturbation operations to the appropriate backend, which is resolved at construction time by the \texttt{BackendFactory} (as depicted in Section \ref{sec:factory}). The logical flow is as shown in Figure \ref{fig:pucktrick-backend-logical-structure}, shown below.
+
+An additional static method, \texttt{make\_remote\_cluster\_config()},
+provides a convenience builder for PySpark remote-cluster configuration
+dictionaries.
+
+
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.75\textwidth]{images/Excalidraw_user_experience_pucktrick.png}
+\caption{PuckTrick's backend logical structure}
+\label{fig:pucktrick-backend-logical-structure}
+\end{figure}
+
+
+
+
+
+
+% =======================================
+\newpage
+\subsection{Library Final Structure}
+\label{subsec:library-final-structure}
+% =======================================
+
+The final structure of library after applying all the changes becomes very similar to what was already illustrated in Image \ref{fig:pucktrick-backend-logical-structure}. As we can see below, PuckTrick follows a three-tier layered architecture, depicted in
+Figure~\ref{fig:layers}.
+
+\begin{figure}[ht]
+\centering
+\begin{tikzpicture}[
+    layer/.style={draw, rounded corners, minimum width=12cm,
+      minimum height=1.4cm, align=center, font=\sffamily},
+    arrow/.style={-{Stealth[length=3mm]}, thick},
+  ]
+
+  % --- layers ---
+  \node[layer, fill=blue!12]  (api)      at (0, 4.5)
+    {\textbf{Public API Layer}\\
+     \texttt{PuckTrick} class (\texttt{core/pucktrick.py})};
+
+  \node[layer, fill=orange!12] (factory)  at (0, 2.5)
+    {\textbf{Factory \& Abstraction Layer}\\
+     \texttt{BaseBackend} (ABC), \texttt{BackendFactory},
+     \texttt{Engine} enum};
+
+  \node[layer, fill=green!8, minimum width=5.6cm]
+    (pandas) at (-3.2, 0.2)
+    {\textbf{Pandas Backend}\\
+     \texttt{pandas\_backend/}};
+
+  \node[layer, fill=green!8, minimum width=5.6cm]
+    (spark)  at ( 3.2, 0.2)
+    {\textbf{Spark Backend}\\
+     \texttt{spark\_backend/}};
+
+  % --- arrows ---
+  \draw[arrow] (api)     -- (factory);
+  \draw[arrow] (factory) -- (pandas);
+  \draw[arrow] (factory) -- (spark);
+\end{tikzpicture}
+\caption{High-level layered architecture of PuckTrick.}
+\label{fig:layers}
+\end{figure}
+
+
+This design pattern is what guided us to the final structuring of following modular layout:
+\begin{itemize}
+  \item \texttt{pucktrick/backends/pandas\_backend/}: Containing original pandas methods
+  \item \texttt{pucktrick/backends/spark\_backend/}: Containing newly implemented spark variants of the old pandas methods
+  \item \texttt{pucktrick/core/}: Containing \texttt{Pucktrick} class entry point (\ref{sec:Pucktrick-class}) and \texttt{BackendFactory} that decides which engine to use (\ref{sec:factory})
+\end{itemize}
+
+
+All concrete backends inherit from \texttt{BaseBackend}, an abstract base
+class defined in \texttt{core/\_\_init\_\_.py}:
+
+    \begin{minted}[fontsize=\small, frame=single]{python}
+class BaseBackend(ABC):
+    ENGINE = None
+
+    @abstractmethod
+    def duplicate(self, train_df, strategy, original_df): ...
+    @abstractmethod
+    def labels(self, train_df, strategy, original_df):    ...
+    @abstractmethod
+    def missing(self, train_df, strategy, original_df):   ...
+    @abstractmethod
+    def noise(self, train_df, strategy, original_df):     ...
+    @abstractmethod
+    def outlier(self, train_df, strategy, original_df):   ...
+\end{minted}
+
+This design guarantees interface conformity and allows seamless addition
+of future backends (e.g., a Polars or DuckDB backend) without modifying
+the public API.
+
+
+
+
+% =======================================
+\newpage
+\section{Modules Conversion}
+\label{sec:Modules_conversion}
+% =======================================
+
+We've already discussed in previous chapters how the library was restructured to fit the new implementation of the new spark methods. Here we take a deeper dive into how those noise injection methods were made and what were the technical challenges encountered while implementing those methods. Most of those challenges arised from the deep architectural differences between the two paradigms (Apache Spark and Pandas). 
+
+% =================================================
+\subsection{Methods description}
+\label{sec:method_description}
+% =================================================
+
+
+Each method works fundamentally the same and accepts a working copy of the DataFrame and a \emph{strategy} dictionary (as defined in Section~\ref{sec:strategy}). All methods return a tuple \texttt{(error\_code, modified\_df)}, where \texttt{error\_code} is~0 on success and~1 when no modifications were applied. 
+
+It's important to note that our first priority for creating Spark's backend methods was to replicate one to one functionality to the already existing Pandas' backend methods. Therefore following methods descriptions can be applied to both bakends methods.
+
+\subsubsection{Duplicate Records}\label{sec:duplicated}
+
+The \texttt{duplicate()} function selects a subset of rows according to
+the strategy and appends copies of them to the DataFrame.  An optional
+text perturbation function (specified via the strategy) can be applied to
+string columns in the duplicated rows, producing \emph{near-duplicates}
+rather than exact copies. The available perturbation functions include:
+
+\begin{itemize}
+  \item \texttt{shuffle\_words}: randomly reorders the words in a string;
+  \item \texttt{abbreviate\_text}: retains only the first letter of each
+    word;
+  \item \texttt{replace\_punctuation}: randomly substitutes punctuation
+    marks;
+  \item \texttt{remove\_or\_replace}: removes or replaces individual
+    characters;
+  \item \texttt{random\_upper\_lower}: applies random case transformations.
+\end{itemize}
+
+\subsubsection{Label Noise}\label{sec:labels}
+
+Label noise is injected into the target column (or any categorical column) of a supervised-learning
+dataset. The function distinguishes between two cases:
+
+\begin{itemize}
+  \item \textbf{Binary targets.}  Sampled labels are flipped
+    ($0 \to 1$, $1 \to 0$) in specified percentage, according to strategy paramenter.
+  \item \textbf{Categorical targets.}  Each sampled label is replaced
+    with a uniformly chosen different value from the set of existing
+    categories.
+\end{itemize}
+
+Detection of binary versus categorical columns is based on the number of
+distinct values observed in the target column, when counting more than 2 values the column is considered as categorical.
+
+\subsubsection{Missing Values}\label{sec:missing}
+
+The \texttt{missing()} function sets cell values to \texttt{NaN} (Pandas)
+or \texttt{null} (Spark) for the sampled rows and affected columns.  The
+implementation is straightforward: rows are filtered by the selection
+criteria, a sample is drawn using the specified distribution, and the
+selected cells are nullified.  In extended mode, only rows that still
+match the original DataFrame are eligible.
+
+\subsubsection{Random Noise}\label{sec:noise}
+
+The \texttt{noise()} function replaces values with random alternatives
+that are plausible within the column's domain:
+
+\begin{itemize}
+  \item \textbf{String columns:}  a different value from the set of unique
+    values.
+  \item \textbf{Numeric columns:}  a random value uniformly drawn from
+    $[\min, \max]$.
+  \item \textbf{Datetime columns:}  a random date within the observed
+    range.
+  \item \textbf{Categorical columns:}  a random category from the existing
+    set.
+\end{itemize}
+
+\subsubsection{Outliers}\label{sec:outliers}
+
+Outlier injection employs type-dependent strategies:
+
+\begin{itemize}
+  \item \textbf{Numeric (non-categorical) columns:}  values are generated
+    beyond $\mu \pm 4\sigma$, where $\mu$ and $\sigma$ are the sample mean
+    and standard deviation.
+  \item \textbf{Categorical integer columns:}  the next integer beyond the
+    observed maximum is used.  A heuristic function
+    \texttt{is\_int\_categorical()} determines whether an integer column
+    should be treated as categorical, based on criteria such as the number
+    of unique values ($\leq 10$), domain size ($\leq 20$), uniqueness
+    ratio ($\leq 5\%$), and whether consecutive integers are present.
+  \item \textbf{String columns:}  a sentinel string
+    (\texttt{"puck was here"} in Pandas, \texttt{"puck\_outlier"} in
+    Spark) replaces the original value.
+  \item \textbf{Datetime columns:}  extreme date values are injected.
+\end{itemize}
+
+
+
+% ====================================================
+\newpage
+\section{Unit Tests \& Integration Tests}
+\label{sec:Library_unite_integration_tests}
+% ====================================================
+
+During implementation of the library to guarantee validity of code for the new Spark modules both \emph{unit tests} and \emph{integration tests} were developed, which in their complex creates a strong test suite. 
+
+\begin{itemize}
+  \item \textbf{Unit tests}: are isolated tests for each error dimension, with separate test modules for the Pandas backend (that already had existing unit tests) and the Spark backend (which were freshly implemented following same style and logical process of pandas tests). A typical end-to-end workflow for each unit test consists of loading a dataframe, initializing a \texttt{Pucktrick} object, and sequentially injecting a single error. The resulting dataframe is then heuristically compared with the original to verify that the observed deviation corresponds, within a predefined tolerance threshold, to the percentage specified in the strategy object.
+
+  
+  \item \textbf{Integration tests}: are cross-backend comparison of for each of the newly implemented method that verify semantic equivalence between their Pandas counterpart. This happens by verifying that both methods produce around the same percentage of error while operating on two copies of the same auto-generated dataframe. This guarantees both correctness of individual modules and consistency across backends.
+\end{itemize}
+
+
+
+
+% ===============================================
+\newpage
+\section{Technical Challenges}
+\label{sec:Technical_challenges}
+% ===============================================
+
+This chapter analyses the problems encountered and the resolution strategies adopted during the module conversion and library restructuring phases.
+
+\subsection{Absence of Positional Indices in Spark}
+\label{sec:no_index}
+
+One of the most significant differences between Pandas and Spark lies in their data 
+access models. Pandas exposes a positional indexing system that, through the \texttt{iloc} 
+and \texttt{loc} constructs, allows the selection of rows and columns by numeric position 
+or by label. This paradigm underpins numerous operations in the original \texttt{PuckTrick} 
+implementation, particularly for sampling subsets of rows to corrupt and for merge 
+operations between the original and modified datasets.
+
+Apache Spark, by contrast, operates on distributed collections (RDDs and DataFrames) that 
+lack an intrinsic ordering and a positional index. This absence is a direct consequence 
+of the distributed architecture: since data are partitioned across different cluster 
+nodes, the very notion of ``row $i$'' is not uniquely defined without a global sorting 
+operation, which would be computationally prohibitive.
+
+The adopted solution consists of employing the native function:
+\begin{center}
+    \texttt{monotonically\_increasing\_id()}
+\end{center}
+This function assigns to each row a unique, monotonically increasing numeric identifier. 
+This identifier, named \texttt{\_pucktrick\_row\_id}, is added to the DataFrame upon 
+initialisation of the \texttt{PuckTrick} class and serves as a surrogate for positional 
+indexing, enabling join, filtering, and deterministic sampling operations without 
+resorting to global orderings.
+
+\subsection{Lazy Evaluation versus Eager Evaluation}
+\label{sec:lazy}
+
+As already mentioned in previous charapters, Pandas adopts an eager execution model: each instruction is executed immediately and the result is available in memory upon completion of the call. Spark, conversely, implements a lazy execution model: transformation operations (such as \texttt{filter}, 
+\texttt{withColumn}, \texttt{select}) are recorded in a logical execution plan (DAG) but are not actually executed until an action is invoked (e.g.\texttt{count}, \texttt{collect}, \texttt{show}). This mechanism enables Spark's Catalyst Optimizer to reorder, fuse, and optimise operations before their material execution.
+
+This difference necessitated a restructuring of the logical flow within the error-injection modules. In the original Pandas code, intermediate results are frequently inspected, compared, or used as inputs for conditional decisions during execution. In the Spark version, it was necessary to structure the code so as to construct complete transformation pipelines and materialize them exclusively at the point of final result delivery. This entailed a rethinking of the control logic in several modules (particularly \texttt{noisy} and \texttt{outliers}), where the perturbation strategy depends on data properties (for instance, whether a column is categorical or numeric) which require an action to be determined.
+
+\newpage
+\subsection{Distributed DataFrame Sampling}
+\label{sec:sampling}
+
+Error injection in PuckTrick fundamentally relies on sampling: given a percentage 
+specified in the strategy, the library selects a subset of rows on which to apply the 
+corruption. In Pandas, this operation is deterministic (\texttt{sample(n=...)}): it 
+returns exactly $n$ rows.
+
+In Spark (\texttt{sample(fraction=...)}), sampling operates on a \textbf{probabilistic basis}: 
+each row is included in the sample with a probability equal to the specified fraction, 
+yielding an approximate result whose row count follows a binomial distribution. For 
+small datasets, the deviation from the expected count can be significant in relative 
+terms; however, for larger datasets (which are the primary use case of Spark) the variation 
+becomes negligible. Yet, this represents a violation of our policy of perfectly recreating Pandas backend.
+
+Therefore, to guarantee functional coherence with both backend across all modules, a custom 
+sampling strategy was implemented comprising:
+
+\begin{enumerate}
+    \item An initial oversampling with an inflated fraction to ensure a sufficient number 
+          of candidates;
+    \item The application of \texttt{limit(n)} to truncate the result to the exact 
+          desired number of rows.
+\end{enumerate}
+
+This technique introduces negligible computational overhead while ensuring that the 
+corruption percentage specified in the strategy is respected with precision.
+
+\subsection{Null Value Handling}
+\label{sec:nulls}
+
+Pandas and Spark exhibit relevant semantic differences in the representation of missing 
+values. Whereas Pandas distinguishes between \texttt{None} and \texttt{NaN} (with 
+behaviours that vary depending on the column type), Spark uniformly uses the 
+\texttt{null} value to represent the absence of data, irrespective of column type.
+
+This discrepancy required particular attention in the conversion of the \texttt{missing} 
+module---where the objective is precisely the injection of null values---and in the 
+\texttt{noisy} module, where the perturbation of numeric values must correctly 
+distinguish between cells containing valid data and cells that are already null.
+
+The adopted solution entails the systematic use of:
+\begin{enumerate}
+    \item Explicit casts (\texttt{cast("string")}, \texttt{cast("double")});
+    \item Dedicated checks (\texttt{isNull()}, \texttt{isNotNull()}).
+\end{enumerate}
+These ensure coherent treatment of null values across every module of the Spark backend.
+
+\newpage
+\subsection{Modules Optimization}
+\label{sec:Duplicated optimization}
+For most Pandas methods inside the \texttt{PuckTrick} library, replicating the Pandas functionality one to one using the strategies mentioned in the previous chapters (Chapters: \ref{sec:no_index}, \ref{sec:lazy}, \ref{sec:sampling}, \ref{sec:nulls}) was enough to massively improve performance over the newly implemented Spark method variants. Yet for the \texttt{duplicated} method in particular, it seemed like it was always outperformed by it's Pandas counterpart (regardless of the number of rows used): 
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.35\linewidth]{DUplicatedPandasVSSpark.png}
+    \caption{Duplicated methods performances across both backends}
+    \label{fig:Duplicated Spark VS Pandas}
+\end{figure}
+
+This led to the discovery of two distinct categories of inefficiency:
+\begin{itemize}
+    \item The first and most impactful was the excessive number of Spark \emph{Actions} triggered per method call. Each invocation of \texttt{.count()} forced a full DAG materialization, including any upstream shuffles. In the original implementation, \texttt{.count()} was called multiple times on the same DataFrame without caching (in some execution paths as many as four to six times) causing the entire computation graph to be re-evaluated from scratch on every call. On small-to-medium datasets, this fixed overhead dominated the total execution time, eliminating any advantage that distributed processing might otherwise provide. A secondary issue was the use of \texttt{dropDuplicates().count()} to estimate already-existing duplicates in \texttt{extended} mode, which introduced a global sort and shuffle on the full dataset solely to obtain a single integer count.
+    \item The second category concerned the internal sampling routine \texttt{sample\_indices()}: an utility method used for row selection the set (also used by all the other Spark methods). This function unconditionally called \texttt{.count()} at entry to determine dataset size (even when the caller already held that value) and applied a global \texttt{orderBy} to score and rank candidate rows for all distribution types, including \texttt{random}, where an \texttt{orderBy} is entirely unnecessary.
+\end{itemize}
+
+Both issues were addressed through a complete rewrite of the \texttt{duplicate} method and a targeted revision of \texttt{sample\_indices()}. The new \texttt{duplicate} implementation reduces the number of Actions to a maximum of two per call regardless of execution path: one \texttt{.count()} on the candidate pool, which is immediately cached to serve all subsequent reads, and one additional \texttt{.count()} on the reference DataFrame only when operating in \texttt{extended} mode. The \texttt{dropDuplicates().count()}
+pattern was replaced by a single aggregation combining \texttt{count(*)} and \texttt{countDistinct(md5\_hash)} over a per-row surrogate key, resolving the global shuffle entirely. In \texttt{sample\_indices()}, the \texttt{known\_count} parameter was introduced so that callers can pass an already-computed count, suppressing the redundant internal \texttt{.count()}; additionally, the \texttt{random} distribution path was re-implemented using \texttt{DataFrame.sample()} followed by \texttt{.limit()}, which operates partition-locally and avoids the global sort altogether.
+
+The new implementation minimized execution of DAGs (while still keeping same logical functionality of Pandas counterpart) which allowed much faster execution times (visible in Chapter \ref{sec:Library_stress_test}). 
+
+Then a whole re-evaluation of all the other Spark methods, in order to discover same optimization problems. The same fixes were then applied to all other methods, in order to further improve their performances.
+
+
+\subsection{Path Management}
+\label{sec:paths}
+
+The reorganization of the repository structure introduced systematic breakage of the 
+relative references used in tests and support scripts. The test modules, in particular, 
+contained statically encoded relative paths (e.g., for loading CSV datasets) that were 
+invalid under the new structure.
+
+The resolution required a systematic update of all references, adopting 
+\texttt{pathlib.Path} with paths relative to the project root rather than absolute paths 
+or paths relative to the position of individual files. Beyond resolving the immediate 
+problem, this choice improved the portability of the project across different operating 
+systems.
+
+\subsection{Test Reliability}
+\label{sec:test_reliability}
+
+During the validation phase, it emerged that tests produced non-deterministic 
+perturbation results with the Spark backend. The root cause lies in the probabilistic 
+nature of distributed sampling discussed in Section~\ref{sec:sampling}: the approximation 
+introduced by \texttt{sample()} can generate empty samples or samples of significantly 
+different size than expected, causing assertion failures in the tests.
+
+The solution involved two complementary interventions:
+
+\begin{enumerate}
+    \item Increasing the size of the datasets used in tests, bringing them to an order of 
+          magnitude sufficient to render the sampling error negligible;
+    \item Adapting the tolerance thresholds in test assertions, accepting a minimal 
+          percentage deviation from the expected value when the backend is Spark. This 
+          compromise reflects an intrinsic property of distributed systems, in which 
+          absolute precision is traded for scalability.
+\end{enumerate}
+
+
+
+% ====================================================
+\newpage
+\section{Library Cluster Configuration}
+\label{sec:Library_clusert_config}
+% ====================================================
+
+To validate the Spark backend of PuckTrick in a real distributed environment, rather than relying solely on the local mode employed during development, an Apache Spark cluster was deployed in \emph{Standalone} mode on a set of virtual machines provided by the University. The infrastructure consists of:
+\begin{itemize}
+    \item \textbf{one master node:} (VM1) equipped with 4 cores and 16\,GB of RAM
+    \item \textbf{four worker nodes:} 
+        \begin{itemize}
+            \item three virtual machines (VM2, VM3, VM4), each equipped with 4 cores and 16\,GB of RAM
+            \item one more powerful virtual machine (worker) featuring 16 cores and 32\,GB of RAM.
+        \end{itemize}
+\end{itemize}
+First Apache Spark was installed on all machines and a writable working directory at \texttt{\$SPARK\_HOME/work} was created for the user executing the processes, then to finalize the cluster configuration following steps were applied:
+
+\subsection{SSH Access Configuration}
+
+The first prerequisite for operating a Spark Standalone cluster is the ability of the master node to communicate with the worker nodes via SSH \textbf{without interactive authentication}. (Necessary for the master to start and stop Spark daemons on remote nodes through the \texttt{start-all.sh} and \texttt{stop-all.sh} orchestration scripts). To this end, port 22 was opened for inbound connections and an RSA key pair without a passphrase was generated on the master node, and the resulting public key was distributed to each worker.
+
+
+\subsection{Worker Registration and Environment Configuration}
+
+Once SSH connectivity was established, the master node was configured with the list of worker nodes by creating the file \texttt{\$SPARK\_HOME/conf/workers}, containing the hostname or IP address of each worker on a separate line. 
+
+The environment was further specified through the \texttt{spark-env.sh} configuration file, which defined:
+\begin{itemize}
+    \item \textbf{System variables:} such as where \texttt{JAVA\_HOME} is, such as what's the local IP of master node and on which port to communicate whit it.
+    \item \textbf{Single remote worker variables:} variables that defined (for each worker) to allocate whole \textit{4 cores} and \textit{15\,\texttt{GB}} of RAM for spark usage. Since the machines were dedicated exclusively to Spark, nearly all available resources were assigned to each worker, reserving approximately 1 GB of RAM and a minimal CPU margin for the operating system and the Spark daemon itself. For the primary worker (whose hardware resources were significantly superior) a conservative initial configuration aligned with that of the smaller machines (\textit{4 cores}, \textit{15\,\texttt{GB}}) was adopted, with the intent of preventing a single node from monopolizing task assignments and thereby compromising load balancing
+\end{itemize}
+
+\subsection{Network Port Configuration}
+
+Correct cluster operation required following ports to be opened on the firewall of each machine:
+
+\begin{table}[H]
+\centering
+\begin{tabular}{lll}
+\toprule
+\textbf{Port} & \textbf{Service} & \textbf{Direction} \\
+\midrule
+7077 & Spark Master (cluster communication) & Worker $\rightarrow$ Master \\
+8080 & Master Web UI & External access \\
+\bottomrule
+\end{tabular}
+\caption{Network ports used by the Spark cluster.}
+\end{table}
+
+Failure to open port 7077 prevents workers from registering with the master, resulting in a cluster that appears operational but lacks any computational resources. The Web UI on port 8080 proved to be an indispensable diagnostic tool for monitoring cluster status, verifying the number of connected workers, and inspecting resource allocation.
+
+
+
+% ====================================================
+\newpage
+\section{Performance-Analysis Experimentation}
+\label{sec:Library_stress_test}
+% ====================================================
+
+
+Upon completing the remote library setup, a systematic performance evaluation of the PuckTrick framework was conducted, comparing its two computational backends: Pandas and Apache Spark.
+
+The first benchmark was executed on a synthetic dataset (\texttt{fake\_dataset.csv}) comprising \textbf{1{,}000{,}000 rows} with columns of heterogeneous data types:
+
+\begin{itemize}
+    \item \texttt{f1}: floating-point numerical column
+    \item \texttt{f2}: integer numerical column
+    \item \texttt{f3}: categorical string column with 3 distinct classes
+    \item \texttt{f4}: categorical string column with 3 distinct classes
+    \item \texttt{f5}: categorical integer column with 6 distinct classes
+    \item \texttt{date}: temporal column
+    \item \texttt{target}: binary target column
+\end{itemize}
+
+This design choice is fundamental to the interpretation of results, as column data types have a substantial influence on the relative performance of the two backends, as most methods have different branches of operations based on data type.
+
+Each error injection module was executed independently on each column, applying a consistent strategy (that involves noise injection in $50\%$ of total dataset) across both backends:
+
+\begin{minted}[fontsize=\small, frame=single]{json}
+{
+  "affected_features": ["<column>"],
+  "mode": "new",
+  "percentage": 0.5,
+  "perturbate_data": {
+    "distribution": "random"
+  },
+  "selection_criteria": "all"
+}
+\end{minted}
+
+Executions were performed sequentially, with memory cleared between runs. Timing measurements were recorded and exported in CSV format; the corresponding results of this first experiment are visualized in Figure~\ref{fig:ResultsByBackend}.
+
+
+% ====================================================
+\newpage
+\subsection{Backend Comparison Results}
+\label{sec:Backend Comparaison Results}
+% ====================================================
+
+
+\begin{figure}[H]
+    \makebox[\textwidth][c]{\includegraphics[width=1.4\linewidth]{Single Iteration comparaison 1M.png}}
+    \caption{Execution times grouped by backend and injection method.}
+    \label{fig:ResultsByBackend}
+\end{figure}
+
+
+Inspection of Figure~\ref{fig:ResultsByBackend} reveals two distinct performance clusters:
+
+\begin{itemize}
+    \item Methods for which the Pandas backend consistently outperforms Spark: \texttt{duplicated} and \texttt{missing}.
+    \item Spark methods exhibiting substantial execution time advantages over Pandas: \texttt{noise}, \texttt{outlier}, and \texttt{labels}.
+\end{itemize}
+
+% ====================================================
+\newpage
+\subsection{Disclaimers}
+\label{sec:Disclaimer}
+% ====================================================
+
+As illustrated in the figure on the previous page (Figure~\ref{fig:ResultsByBackend}), the \texttt{labels} module was evaluated on all column types, expect for Pansad on the \texttt{f1} column. This particular methon on this column was evaluated and then deleted in post, as it would have took so much more time in comparison to all other methods that it would have completely broke the scale and render Figure~\ref{fig:ResultsByBackend} unreadable. 
+
+For this same method two important notes are argued beneath:
+
+\subsubsection{Column relevance for labels method}
+First important note is that most of assumptions that will be done are base on the following column subset:
+
+\begin{itemize}
+    \item \texttt{f3}: categorical string column with 3 classes
+    \item \texttt{f4}: categorical string column with 3 classes
+    \item \texttt{f5}: categorical integer column with 6 classes
+    \item \texttt{target}: binary column
+\end{itemize}
+
+This restriction stems from the fact that the \texttt{labels} method introduces label noise exclusively on binary or categorical columns, all other columns contain different type of data. Yet those other results are still displayed for informational sake.
+
+\subsubsection{Explanation on labels complexity}
+Secondly, before discussing the results of these methods, a clarification regarding \texttt{labels} is warranted. Before, we've specified that the Pandas backend may superficially appear to fall within the low-complexity cluster for this method, as it seems that (even if always taking more time than the spark methods) the Pandas implementation still reaches all results in very small time for relevant columns.
+This is due since all evaluated relevant columns contain very few distinct classes (3, 3, 6, and 2 respectively). However, the computational complexity of \texttt{labels} scales directly with the number of target classes. At higher class cardinality (as already mentioned before in previous disclaimer (when talking about column \texttt{f1} that has a vey high variance), Pandas execution times increase dramatically and consistently exceed those of Spark. For this reason, \texttt{labels} is treated as a high-complexity method.
+
+
+% ====================================================
+\newpage
+\subsection{Backend Comparison Explanation}
+\label{sec:Backend Comparison Explanation}
+% ====================================================
+\subsubsection{High Computational Complexity Methods: \texttt{noise}, \texttt{outlier}, and \texttt{labels}}
+% ====================================================
+For the high-complexity methods, the benchmark reveals a marked performance divergence between backends. The Pandas backend exhibits a clear dependency on column data type, expressible by the ordering:
+
+\[
+\text{float} < \text{int} < \text{string} < \text{date}
+\]
+
+In stark contrast, Spark execution times are \textbf{remarkably uniform} across all data types, ranging between 2 and 8 seconds regardless of column type. This uniformity is a direct consequence of Spark's columnar execution paradigm: all operations (whether perturbing floats, replacing strings, or transforming categorical integers) are compiled by the Catalyst Optimizer into native JVM execution plans and executed in parallel across partitions, entirely bypassing the Python interpreter and the type-dependent cost differentials observed in Pandas.
+
+A single anomaly is worth noting: the \texttt{date} column (60.6\,s) on the \texttt{noise} method stands as an extreme outlier relative to all other Spark measurements. The root cause lies in the backend's implementation: although Spark's \texttt{noise} module employs native columnar transformations (\texttt{withColumn}, \texttt{when}, \texttt{rand()}) that are compiled to optimized JVM code, the date perturbation logic was ported from the Pandas implementation without full optimization for Spark's date handling model. Consistently, the \texttt{date} column also exhibits the highest execution times in the Pandas backend under the \texttt{noise} method.
+
+In summary, the benchmark results paint a coherent picture: at one million rows, Spark already provides a decisive throughput advantage for \texttt{noise}, \texttt{outlier}, and \texttt{labels} across all column types, most substantially for string and date columns.
+
+% ====================================================
+\subsubsection{Low Computational Complexity Methods: \texttt{duplicated} and \texttt{missing}}
+% ====================================================
+At first glance, it may appear counterintuitive that for those methods Pandas outperforms Spark on a dataset of one million rows. However, upon closer examination, this outcome is entirely predictable: both \texttt{duplicated} and \texttt{missing} implement operations of inherently low computational complexity. Consequently, the performance gap (approximately 0.5 seconds for Pandas versus 2 seconds for Spark) is attributable to the \textbf{structural overhead} of the Spark framework. For every Spark job, the runtime must compile an execution plan (DAG), serialize data across the Python-JVM boundary and manage partition allocation. These fixed costs are estimated at 1.2 to 1.5 seconds per invocation and cannot be amortized by parallelism gains on operations that fit comfortably within the memory of a single machine. Therefore it is theorized that for \texttt{duplicated} and \texttt{missing}, the break-even point lies at higher data volumes, where Spark's fixed initialization overhead becomes negligible relative to total processing time.
+In order to prove said theory a subsequent test was run in Chapter \ref{sec:BreakEven Point Test}.
+
+
+
+% ====================================================
+\newpage
+\subsection{Spark Scalability - BreakEven Point Tests}
+\label{sec:BreakEven Point Test}
+% ====================================================
+In order to prove our previus theory that the low computational complexity methods (such as \texttt{duplicated} and \texttt{missing}) needed more data volumes to reach break-even-point in between Pandas and Spark backend more tests were developed. More specifically each of the five Pucktrick method was applied on the same synthetic dataset as previous experiment, yet instead of running all 10 methods (5 for each backend) on all columns, the Pucktrick methods were applied only on one column (\texttt{f3}); then dataset size would be doubled and the same 10 methods would be re-applied. This is repeated in a loop until we get to 64 million instances within the synthetic dataset.
+
+Results speak for themselves:
+\begin{figure}[H]
+    \makebox[\textwidth][c]{\includegraphics[width=1.4\linewidth]{images/breakeven-points.png}}
+    \caption{Break Even point of each Spark VS Pandas method}
+    \label{fig:Breakeven methods}
+\end{figure}
+
+As we can see, we can clearly affirm that our prevision theory was confirmed as both \texttt{duplicated} and \texttt{missing} methods reach break-even-point at around $7\ \text{million}$ data entries. Then, by doing this test we further confirm that the other methods that we previously classified as computationally complex methods (\texttt{noise}, \texttt{outlier}, and \texttt{labels}) indeed reach break-even-point before $1\ \text{million}$ data entries and become exponentially more efficient than their Pandas counterpart as the dataset size increases. 
+
+A noteworthy pattern is the relatively elevated execution time for the first Spark \texttt{duplicated} and \texttt{missing} methods on first iteration relative to subsequent iterations. This effect is attributable to JVM warm-up and Just-In-Time (JIT) bytecode compilation on the initial invocation. This phenomenon is consistently observable across all Spark methods when processing the first column iteration, yet it is not visible on the computationally complex methods subset as they have a much higher total time (rendering initial difference pretty much imperceptible). By subtracting approximately 1.5 seconds from those measurements yields execution times broadly consistent with the remaining columns, giving us perfectly reasonable results.
+
+
+% ====================================================
+\newpage
+\subsection{Spark Scalability - Cumulative BreakEven Point Tests}
+\label{sec: Cumulative BreakEven Point Test}
+% ====================================================
+
+Ultimately, another test was made to measure how executing subsequently all the five methods from one backend would compare to executing the same five methods of the other backend on the same dataset. Then this process was then repeated doubling the dataset size. 
+
+Therefore figure~\ref{fig:Breakeven cumulative} reports the cumulative execution time required to run all five noise injection methods sequentially on a single dataset, comparing the Pandas and Spark backends across dataset sizes ranging from $1\,\text{million}$ to $64\,\text{million}$ records. The purple dashed line (right axis) represents the speedup factor of Spark over Pandas, while the annotated $\Delta$ values denote the absolute time savings achieved by the Spark backend:
+
+\begin{figure}[H]
+    \makebox[\textwidth][c]{\includegraphics[width=1.4\linewidth]{images/breakeven-points-cumulative.png}}
+    \caption{Enter Caption}
+    \label{fig:Breakeven cumulative}
+\end{figure}
+
+\newpage
+\subsubsection{Results analysis:}
+The results reveal a clear and consistent trend: the Spark backend outperforms the Pandas backend at every tested scale, with the performance gap widening substantially as the dataset size increases. At $1\,\text{million}$ records, Spark already achieves a speedup of $8.2\times$, saving approximately $65\,\text{s}$ of total execution time. This advantage escalates rapidly: at $4\,\text{million}$ records the speedup reaches $29.1\times$ ($\Delta = +272\,\text{s}$), and at $16\,\text{million}$ records it climbs to $40.9\times$ ($\Delta = +1082\,\text{s}$). The peak absolute difference is observed at $64\,\text{million}$ records, where the Pandas backend requires over $4500\,\text{s}$ of total execution time, compared to a negligible fraction for Spark, yielding a speedup of $41.9\times$ and a time saving of approximately $4285\,\text{s}$.
+
+Notably, the speedup curve exhibits a steep initial rise followed by a plateau in the $40\times$–$43\times$ range beyond $32\,\text{million}$ records. This saturation behaviour is consistent with \textbf{Amdahl's Law}: once the parallelisable fraction of the workload dominates, further gains are bounded by the irreducible sequential overhead inherent in Spark's task scheduling and data serialization. Nevertheless, the plateau itself at such a high multiplier underscores the suitability of the Spark backend for large-scale data quality operations.
+
+Taken together, these results demonstrate that the Spark-based implementation of the Pucktrick library provides substantial and scalable performance improvements over the legacy Pandas backend across all tested dataset sizes, making it the preferred choice whenever execution time is a critical constraint.
+
+
+\subsubsection{Why is this test relevant?}
+This test is mostly relevant as in Chapter \ref{chap:Empiric-analysis-models} (the chapter dedicated to further empiric experimentation using deep learning models), due to hardware limitations that will later be discussed, most of our test will be executed using Pucktrick library to inject noise inside a train-set of about $1\,\text{million}$ records. More specifically, those experimentations inside Chapter \ref{chap:Empiric-analysis-models} required the noise injection of all the 5 noise injection methods on 5 copies of the same train-set subsequently.
+
+Having this results proves to us that even using the newly implemented spark backend of Puckrtick library on datasets that are somewhat small (about $1\,\text{million}$ records) still gives us a very big edge over older Pandas backend that would have been otherwise 8 times slower than the newly implemented Spark backend, further proving our work relevance.
+
+
+ % =====================================================
+
+
+
+
+\end{document}

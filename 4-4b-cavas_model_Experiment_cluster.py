@@ -16,12 +16,12 @@ import os   # necessario per BASE_DIR prima del blocco CONFIG
 # =============================================================================
 # CONFIG — modifica solo qui
 # =============================================================================
-LOCAL_RUN              = True   # True → esecuzione locale | False → HPC cluster
+LOCAL_RUN              = False   # True → esecuzione locale | False → HPC cluster
 RUNNING_ON_HPC         = not LOCAL_RUN   # derivato automaticamente da LOCAL_RUN
 RANDOM_SEEDS           = []
 TRIALS_ALREADY_EXECUTED= True
 MIN_SAMPLES_PER_CLASS  = 5
-PROF_DIR               = True
+PROF_DIR               = False
 
 PERCENTAGE_TO_USE = 0.1          # 10 % del dataset
 WINDOW_SIZE       = 50           # finestra temporale per CNN-LSTM
@@ -32,11 +32,13 @@ if LOCAL_RUN:
     BASE_DIR = os.path.dirname(os.path.abspath(__file__))
     RANDOM_SEEDS = [1] #, 49, 11, 1234, 9999, 2026, 432, 654, 987, 666] 
 else:
-    RANDOM_SEEDS = [303, 404, 505, 606, 707, 808, 909, 1010, 1111, 42] 
+    
     if PROF_DIR:
         BASE_DIR = "/scratch_share/datai/maurinoa/dirtify/hpc"
+        RANDOM_SEEDS = [303, 404, 505, 606, 707, 808, 909, 1010, 1111, 42] 
     else:
         BASE_DIR = "/scratch_share/datai/fcavallini/dirtify"
+        RANDOM_SEEDS = [7, 456, 49, 1234, 9999, 2026, 432, 654, 987, 666]    
 
 DATASETS_DIR = f"{BASE_DIR}/DATASETS"
 CURRENT_RANDOM_SEED    = RANDOM_SEEDS[0]   # aggiornato dinamicamente nel loop

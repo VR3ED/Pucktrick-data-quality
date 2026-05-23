@@ -16,7 +16,7 @@ import os   # necessario per BASE_DIR prima del blocco CONFIG
 # =============================================================================
 # CONFIG — modifica solo qui
 # =============================================================================
-JUST_COMPILE_DATASETS  = True   # True → crea e salva i dataset su disco (senza addestrare i modelli)
+JUST_COMPILE_DATASETS  = False   # True → crea e salva i dataset su disco (senza addestrare i modelli)
                                  # False → carica i dataset salvati e addestra i due modelli
 LOCAL_RUN              = True   # True → esecuzione locale | False → HPC cluster
 RUNNING_ON_HPC         = not LOCAL_RUN   # derivato automaticamente da LOCAL_RUN
@@ -32,7 +32,7 @@ STEP_SIZE         = 10           # overlap tra finestre
 # Percorso base: cartella dello script in locale, path cluster su HPC
 if LOCAL_RUN:
     BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-    RANDOM_SEEDS = [51] 
+    RANDOM_SEEDS = [202] 
 else:
     RANDOM_SEEDS = [303, 404, 505, 606, 707, 808, 909, 1010, 1111, 42] 
     if PROF_DIR:
