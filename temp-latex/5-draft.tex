@@ -1,0 +1,213 @@
+\documentclass[../main.tex]{subfiles}
+
+\begin{document}
+
+% =======================================================================
+\chapter{Empiric Models Analysis}
+\addcontentsline{toc}{chapter}{Empiric-analysis-models}
+\label{chap:5-Empiric-analysis-models}
+% =======================================================================
+
+The preceding chapter characterized the statistical properties of the CIC-IDS2018\supercite{cicids2018Official} dataset and established the analytical foundations required to interpret the noise-injection experiments.  The present chapter describes the full pipeline through which those experiments were designed and executed: from the initial hyperparameter optimization on a small representative sample of the data, through the derivation of the feature set on which all subsequent experiments operate, to the training of baseline models and the systematic protocol used to evaluate the impact of PuckTrick-injected corruptions.
+
+This section of the thesis will discuss various applications of the \texttt{Pucktrick} library, but our main goal for this thesis will be developing following experiment: 
+\begin{itemize}
+    \item \red{Experiment A:} \textbf{Experiments performed using a reduced dataset}: These experiments serve as a proof of concept, providing evidence that the introduction of controlled noise into the dataset may positively influence the effectiveness of deep learning-based Intrusion Detection Systems (IDSs). The main objective of this phase was to investigate whether specific noise injection techniques could systematically improve model performance; consequently this set of experiments was carried out on a preprocessed version of the dataset in which redundant features (i.e., highly correlated features) as well as zero-variance features had been removed. 
+
+    \item \red{Experiment B:} \textbf{Experiments performed using the complete dataset}: unlike the previous scenario, this experimental setting relied on the original dataset without applying feature reduction procedures. The purpose of this phase is primarily analytical, focusing on the theoretical aspects of the study. More specifically, it aims to provide a comprehensive understanding of the behavior of the selected models when exposed to noise generated through the \texttt{Pucktrick} library.
+\end{itemize}
+
+
+% =======================================================================
+\newpage
+\section{Models selection}
+\label{Chap: model selection}
+% =======================================================================
+
+In order to develop this work, many different types of models were tested. Yet only the following two made the final cut, each for different reasons:
+\begin{itemize}
+    \item \textbf{Tabnet}: This state of the art model was chosen as it showed giving very promising results on F1-scores both during hyper-parameter tuning and baselines study (where no noise was introduced). Another very important characteristic that made us choose this model is it's ability to give a global feature importance ranking. This model was chosen as our golden standard for processing our CIC-IDS2018 dataset as tabular data.
+    \item \textbf{CNN-LSTM}: This model was directly taken from the "CIC-IDS-using deep leaning"\supercite{jablaoui2024effective} paper. This work operated in a similar manner regarding what we wanted to do in this thesis by using the same dataset and developing same CNN-LSTM as proof of concept that adding some LSTM layers to a CNN (therefore allowing the model to process temporal data) could improve the learning performances. This model was used as our golden standard for processing the CIC-IDS2018 dataset as a time series, as already proved from this paper that this model was more than capable in succeeding this task. 
+\end{itemize}
+
+More detailed informations on both this models, as well as the one that didn't make the final cut will be discussed in following Chapeter \ref{Chapter: models specs}.
+
+Both architectures were configured as \emph{multi-task classifiers}, jointly predicting two distinct output targets from a shared representation of the input flow:
+
+\begin{itemize}
+    \item \textbf{Binary task} (\texttt{label\_generic}): the model predicts whether a flow is benign ($0$) or malicious ($1$), irrespective of the specific attack category. This task is analogous to anomaly detection: the classifier must identify any deviation from normal traffic behaviour.
+    \item \textbf{Multi-class task} (\texttt{Label}): the model simultaneously predicts the specific traffic category (Benign or one of 14 mutually exclusive attack types), requiring the classifier to learn fine-grained discriminative representations that distinguish between attack subtypes with often similar flow-level statistics.
+\end{itemize}
+
+The joint training of both tasks on a shared encoder has two advantages.  First, it allows the binary and multi-class signals to act as complementary supervisory gradients, potentially regularising the shared representation and improving generalization.  Second, it makes it possible to detect \emph{asymmetric} effects of data corruption: noise that does not materially degrade binary detection may nonetheless destroy the classifier's ability to resolve attack subtypes, a phenomenon that would be invisible if only one task were monitored.
+
+% =======================================================================
+\newpage
+\subsection{Models Specifications}
+\label{Chapter: models specs}
+% =======================================================================
+
+Following chapter will discuss the specifics and internal structure of all models that have been chosen for this work, as well as for the ones that were discarded while providing explanations on why the latter didn't make the final cut to this work's model roaster.
+
+% =======================================================================
+\subsubsection{Tabnet}
+\label{Chapter: model tabnet}
+% =======================================================================
+
+TabNet\supercite{arik2021tabnet} is a deep learning architecture explicitly designed for tabular data, proposed by Arik and Pfister at Google Cloud AI.  Its distinctive mechanism is \emph{sequential attention}: at each of $N_{\text{steps}}$ decision steps, a learnable attention mask selects a sparse subset of input features to process, and the outputs of successive steps are aggregated to produce the final prediction.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=1\linewidth]{images/tabnet.png}
+    \caption{TabNet architecture, composed of feature transformer, attentive transformer and feature masking at each decision step. Split block divides the processed representation into two, to be used at the attentive transformer of the subsequent step and to be used towards construction of functionality, and the masks can be aggregated (using the Agg. block) ultimately to obtain global the overall output. At each decision step, its feature selection mask can provide insights about its feature important attribution behavior. (b) A feature transformer block example – 4-layer network is shown, where 2 of them are shared across all decision steps and 2 of them are decision step-dependent. (c) An attentive transformer block example – a single layer mapping is modulated with a prior scale information, which aggregates how much each feature has been used before the current decision step. Normalization of the coefficients is employed using sparsemax (Martins \& Astudillo, 2016).}
+    \label{fig:tabnet-arhitecture}
+\end{figure}
+
+Key architectural components include:
+\begin{itemize}
+    \item \textbf{Feature transformer}: a shared-across-steps and step-dependent stack of fully connected layers with batch normalisation and Gated Linear Units (GLU).
+    \item \textbf{Attentive transformer}: a sparsemax or entmax activated attention mechanism that enforces feature sparsity at each step, only a small number of features receive non-zero attention.
+    \item \textbf{Sparsity regularisation}: a coefficient $\lambda_{\text{sparse}}$ penalises the entropy of the attention distribution, encouraging the  model to rely on a compact set of features.
+\end{itemize}
+
+TabNet's attention masks are directly interpretable: by averaging the masks over all instances and steps, a global feature importance ranking is obtained without any post-hoc explanation technique.  This property is especially valuable in the context of noise-injection experiments, as it allows tracking \emph{how} the model redistributes its attention when specific features are corrupted.
+
+In this work, TabNet is instantiated as a \texttt{TabNetMultiTaskClassifier} from the \texttt{pytorch-tabnet} library, with two prediction heads sharing a common encoder: one for the binary label (\texttt{label\_generic}) and one for the multi-class label (\texttt{Label}).
+Hyperparametersm including: the attention dimension, the number of steps, the relaxation factor, the sparsity coefficient, the learning rate, batch size, and mask type are all tuned via Optuna with a Tree-structured Parzen Estimator (TPE) sampler, optimising the mean Matthews Correlation Coefficient (MCC) across both tasks.
+
+% =======================================================================
+\newpage
+\subsubsection{TFT \& Problems with this model}
+\label{Chapter: model TFT}
+% =======================================================================
+
+The Temporal Fusion Transformer~\supercite{lim2021temporal} is a transformer-based architecture developed by Lim \emph{et al.}\ at Google for interpretable multi-horizon time-series forecasting.  Its architecture comprises several specialised sub-networks:
+
+\begin{itemize}
+    \item \textbf{Variable Selection Networks (VSNs)}: GRN-based (Gated Residual Network) modules that assign learned importance weights to each input variable, independently for the encoder (past inputs) and the decoder (known future inputs).  VSNs provide per-time-step feature importance, enabling the identification of which features are informative and \emph{when}.
+    \item \textbf{Static covariate encoders}: networks that process time-invariant metadata and inject it as context into all time-dependent components, enriching the representation with entity-level information.
+    \item \textbf{Temporal self-attention}: a multi-head attention layer over the encoder's temporal dimension, allowing the model to capture long-range dependencies across time steps.
+    \item \textbf{Gated skip connections and layer normalisation}: used throughout the architecture to facilitate gradient flow and prevent overfitting.
+\end{itemize}
+
+Initially, this thesis evaluated TFT as a candidate sequential classification model for network intrusion detection.  The chronologically ordered network flows were treated as a single continuous time series, and the model was asked to predict the binary and multi-class labels of the current flow given an encoder window of the preceding flows, exploiting the temporal patterns characteristic of attack campaigns (e.g., the bursty structure of DDoS floods or the sequential probing of port scans).
+
+\paragraph{Structural incompatibility with the classification task.}
+Despite the theoretical appeal, the TFT architecture presents a fundamental mismatch with the flow-level classification objective.  TFT is designed around three distinct input streams: (i) \emph{static entity covariates} (time-invariant metadata associated with each series), (ii) \emph{known future inputs} (covariates whose values at future time steps are available at inference time, such as calendar features in demand forecasting), and (iii) \emph{past observed inputs} (the historical measurements being modelled).  The CIC-IDS2018 dataset does not instantiate any of these streams naturally: it consists of aggregated per-flow statistics in which each row is a self-contained measurement with no associated entity metadata and no known future covariate.  The absence of future inputs in particular forces TFT to operate exclusively on its encoder pathway, effectively degrading it to a more complex but less appropriate version of a standard sequence encoder.
+
+\paragraph{Empirical evidence of failure.}
+The structural mismatch was confirmed empirically during preliminary experiments.  The trained models consistently collapsed their predictions to a single dominant class, producing confusion matrices with all entries concentrated in one column and yielding Matthews Correlation Coefficients near zero for both tasks.  The Variable Selection Network weights were also uninformative, assigning near-uniform importance to all features, a symptom of the model failing to identify discriminative temporal structure.  These outcomes are not attributable to hyperparameter misconfiguration but rather to the fundamental unsuitability of the forecasting objective for a retrospective classification setting.
+
+\paragraph{An additional limitation: the inter-flow independence assumption.}
+A further structural issue specific to the CIC-IDS2018 dataset concerns the ordering of rows.  CICFlowMeter aggregates each network flow individually and stores flows from all active connections interleaved by arrival time.  Consequently, two chronologically adjacent rows are frequently from entirely different source-destination pairs rather than from the same ongoing session.  For example, a DoS flow from host A at time $t$ may be immediately followed by a benign flow from host B at time $t{+}\delta$, then by another DoS flow from host A at time $t{+}2\delta$.  A model that treats this sequence as a coherent temporal signal will attempt to learn transitions between flows that have no causal or temporal relationship, introducing spurious noise into the temporal representation.  While this limitation also affects the CNN-LSTM model to some degree, the latter is far less sensitive to it because its convolutional front-end primarily captures local \emph{statistical} regularities across the window (e.g., a sustained elevation in packet counts across 50 flows), rather than relying on precise causal ordering between individual pairs of adjacent rows as TFT's attention mechanism implicitly does.
+
+For the reasons outlined above, TFT was ultimately excluded from the experimental pipeline, and the CNN-LSTM architecture described in the following section was adopted as the time-series model for all subsequent experiments.
+
+% =======================================================================
+\newpage
+\subsubsection{CNN-LSTM}
+\label{Chapter: model cnn-lstm}
+% =======================================================================
+
+The CNN-LSTM model~\supercite{jablaoui2024effective} is a custom multi-task architecture that overcomes the limitations of TFT described above by combining a one-dimensional convolutional front-end with a stacked LSTM backbone, operating directly on fixed-length temporal windows of chronologically ordered flows.  Its design philosophy is well suited to the flow-level IDS classification task: rather than modelling precise causal transitions between individual flow pairs, it extracts statistical regularities within compact windows of consecutive flows, a signal that is both meaningful and robust to the inter-flow independence issue noted in Section~\ref{Chapter: model TFT}.
+
+\paragraph{Temporal processing rationale.}
+The fundamental assumption underpinning the CNN-LSTM's use of temporal structure is that attack campaigns leave identifiable \emph{aggregate} signatures across short windows of consecutive flows, even when those flows do not originate from the same source-destination pair.  A volumetric DDoS flood, for instance, raises the mean packet count, byte rate, and flow density across any 50-flow window captured during the attack period, regardless of whether those 50 flows all belong to the same attacker.  Similarly, a port-scan campaign produces a characteristic elevation of the number of distinct destination ports observed within a window, even when individual flows are interleaved with benign traffic.  These window-level statistical signatures are precisely the patterns that the CNN and LSTM components are designed to detect.
+
+\paragraph{Temporal window construction.}
+The model receives a three-dimensional input tensor of shape $(B \times T \times F)$, where $B$ is the batch size, $T = 50$ is the window length (number of consecutive flows), and $F$ is the number of input features.  Each sample is constructed by a sliding-window procedure applied to the chronologically sorted flow sequence, with a stride of $S = 10$ flows.  The label assigned to each window is that of its \emph{last} (most recent) flow, consistent with a causal streaming scenario in which a detection decision is issued after observing the most recent packet in the context of the preceding $T-1$ packets:
+
+\[
+    X^{(3D)}[j] = X^{(2D)}[jS : jS + T], \quad y^{(3D)}[j] = y^{(2D)}[jS + T - 1].
+\]
+
+If the flows were not sorted chronologically, the windows would contain temporally unrelated packets and the temporal reasoning capacity of the model would be entirely negated.
+
+\paragraph{Convolutional front-end: local pattern extraction.}
+The input is first permuted to $(B \times F \times T)$ so that each feature dimension acts as a channel.  A single \texttt{Conv1d} layer with $n_{\text{filters}}$ output channels and kernel size $k$ (with symmetric zero-padding to preserve the temporal dimension) slides \emph{along the time axis}, computing local dot products between the kernel and groups of $k$ consecutive flow vectors.  This operation is sensitive to short-range temporal regularities: a sudden elevation in packet counts sustained over $k$ consecutive flows (as in the onset of a DDoS burst), or a rapid sequential increase in destination port values (as in a port scan), will produce distinctive activation patterns in specific filter channels.  The output is passed through ReLU activation, \texttt{MaxPool1d} with kernel size 2 (halving the temporal resolution and retaining the dominant local activations), and \texttt{BatchNorm1d} (stabilising the distribution of activations across the batch and accelerating convergence).
+
+\paragraph{LSTM backbone: long-range temporal dependencies.}
+The pooled convolutional output is permuted back to $(B \times T/2 \times n_{\text{filters}})$ and fed sequentially into two stacked LSTM layers with hidden dimensions $h_1$ and $h_2$ respectively.  LSTM cells maintain an explicit \emph{cell state} and a \emph{hidden state} across time steps, updated through input, forget, and output gates.  This allows the model to selectively retain information from earlier positions in the window (e.g., the onset of an elevated-traffic phase) while discarding irrelevant transitions (e.g., a single anomalous flow embedded in otherwise benign traffic).  The two-layer stacking enables the second LSTM to learn higher-order temporal abstractions from the sequential representations produced by the first.  Only the final hidden state (the representation at the last time step, $\mathbf{h}_{T/2}$) is extracted and passed downstream, providing a fixed-length summary of the entire window's temporal dynamics.
+
+\paragraph{Classification heads.}
+A shared fully connected block (linear layer, ReLU, Dropout($p$)) maps the context vector to a common representation, from which two independent linear projection heads produce the $n_{\text{bin}} = 2$ logits for the binary task and the $n_{\text{mul}}$ logits for the multi-class task.  The combined training loss is the sum of the two cross-entropy losses.  Gradient clipping (max norm $= 1.0$) is applied at every backward pass to prevent gradient explosion in the LSTM cells, and a \texttt{ReduceLROnPlateau} scheduler (reduction factor $= 0.5$, patience $= 3$ epochs) adapts the learning rate to the validation loss trajectory.  Early stopping (patience $= 10$ epochs) prevents overfitting.
+
+\paragraph{Temporal signature capture per attack type.}
+Table~\ref{tab:cnn-lstm-attack-patterns} summarises which component of the CNN-LSTM captures the characteristic temporal signature of each major attack category present in the CIC-IDS2018 dataset.
+
+\begin{table}[H]
+\centering
+\caption{Correspondence between attack types and the CNN-LSTM component responsible for capturing their temporal signature.}
+\label{tab:cnn-lstm-attack-patterns}
+\small
+\begin{tabular}{lp{8cm}}
+\toprule
+\textbf{Attack type}   & \textbf{Captured temporal pattern} \\
+\midrule
+DDoS / DoS floods      & \textbf{CNN}: abrupt, sustained elevation in packet counts and byte rates across consecutive flows. \textbf{LSTM}: persistence and decay of the elevated-traffic phase over the full window duration. \\
+Port scan              & \textbf{CNN}: rapid sequential increase in distinct destination ports within a short flow burst. \textbf{LSTM}: temporal distribution and spacing of the scanning activity. \\
+Brute-force (FTP/SSH)  & \textbf{CNN}: repetitive short flows with similar feature vectors (repeated login attempts). \textbf{LSTM}: rhythm and persistence of the repeated authentication pattern. \\
+Web attacks (XSS/SQLi) & \textbf{CNN}: anomalous payload-length patterns in HTTP flows. \textbf{LSTM}: clustering of malicious requests within a short time span. \\
+Benign traffic         & \textbf{LSTM}: stable, predictable, low-variance temporal patterns consistent with routine user activity. \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+% ------------------------------------------------------------
+\subsection{Model Sample Dimensionality: a Structural Asymmetry}
+\label{sec:sample-dimensionality}
+% ------------------------------------------------------------
+
+An important practical consequence of the two models' distinct input representations is that, for identical underlying data, the number of samples available for training and evaluation differs substantially between TabNet and CNN-LSTM.
+
+\textbf{TabNet} operates on 2D data: every flow record constitutes an independent sample.  On the 10\% stratified sub-dataset, the validation partition therefore contains approximately $269\,000$ samples, one per flow.
+
+\textbf{CNN-LSTM} operates on 3D data: consecutive flows are grouped into sliding windows of width $T = 50$ with stride $S = 10$.  Each window yields exactly one prediction (that of its final flow), so the effective number of validation samples is:
+\[
+    N_{\text{windows}} = \left\lfloor \frac{N_{\text{val}} - T}{S} \right\rfloor + 1
+    \approx \frac{N_{\text{val}}}{S} \approx 27\,000.
+\]
+
+The resulting approximately 10:1 ratio between TabNet and CNN-LSTM validation set sizes (summarised in Table~\ref{tab:sample-sizes}) is an inherent consequence of the windowing design and is by construction, not an artefact of unequal data access.  Its practical implication is that evaluation metrics for CNN-LSTM are computed over a substantially smaller sample than those for TabNet, which must be taken into account when comparing the magnitude and stability of observed performance differences across experiments.
+
+\begin{table}[H]
+\centering
+\caption{Effective validation set sizes for the two models on the 10\% sub-dataset.}
+\label{tab:sample-sizes}
+\small
+\begin{tabular}{lrl}
+\toprule
+\textbf{Model}  & \textbf{Validation samples} & \textbf{Sampling unit} \\
+\midrule
+TabNet          & $\approx$269\,000           & 1 flow = 1 sample \\
+CNN-LSTM        & $\approx$27\,000            & 1 window of 50 flows (stride 10) = 1 sample \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+% =======================================================================
+\newpage
+\section{Experimental Protocol and Feature Selection}
+\label{sec:exp-protocol-features}
+% =======================================================================
+
+The complete experimental pipeline — encompassing hyperparameter optimisation, feature importance extraction, combined feature ranking, baseline training, and the systematic noise-injection experiment loop — is described in detail in Chapter~\ref{chap:5-Empiric-analysis-models}.  The present section provides a high-level summary of the two aspects most directly linked to the model architecture choices described above: the selection of the feature set and the construction of the experiment grid.
+
+\subsection{Feature Set for the Experiments}
+\label{sec:feature-set-summary}
+
+Following hyperparameter optimisation on a 0.1\% stratified sample, feature importance scores were extracted from both models (TabNet's native attention-based scores and CNN-LSTM's permutation importance) and combined into a joint average rank.  A stratified selection procedure was then applied to this ranking to derive a compact set of \textbf{9 features} covering the full spectrum of feature types (continuous, categorical, binary) and fragility levels (high, medium, low), as documented in Chapter~\ref{chap:5-Empiric-analysis-models}.  This feature set is used for all baseline and noise-injection experiments.
+
+\subsection{Noise-Injection Experiment Grid}
+\label{sec:exp-grid-summary}
+
+PuckTrick was applied exclusively to the \emph{training partition} of the dataset; the validation and test sets remain clean throughout all experiments.  The experiment grid spans:
+\begin{itemize}
+    \item \textbf{Five corruption methods}: \texttt{missing}, \texttt{noise}, \texttt{outliers}, \texttt{labels}, \texttt{duplicated}.
+    \item \textbf{Six corruption intensities}: $p \in \{5\%,\,10\%,\,20\%,\,35\%,\,50\%,\,75\%\}$.
+    \item \textbf{Ten random seeds}: ensuring statistical robustness of the observed performance deltas.
+\end{itemize}
+
+For each combination, both TabNet and CNN-LSTM are retrained from scratch using the best hyperparameters identified during optimisation, and the resulting evaluation metrics (MCC, F1, AUC, confusion matrices) are persisted to disk for subsequent analysis.
+
+\end{document}

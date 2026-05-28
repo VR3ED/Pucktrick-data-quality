@@ -29,7 +29,7 @@ import shutil
 from datetime import datetime
 
 # ── Configurazione default ────────────────────────────────────────────────────
-DEFAULT_SCRIPT       = "4-4c-cavas_model_Experiment_localhost.py"
+DEFAULT_SCRIPT       = "5-cavas_model_experiment_targets.py"
 COMPLETION_STRING    = "All experiments completed (all seeds)."
 DEFAULT_MAX_RESTARTS = 100      # numero massimo di riavvii prima di arrendersi
 DEFAULT_WAIT_SEC     = 15       # secondi di pausa tra un riavvio e l'altro

@@ -1,10 +1,21 @@
 #!/usr/bin/env python3
 # =============================================================================
-# CAVAS — Deep Learning Model Evaluation
+# CAVAS — Deep Learning Model Evaluation (LABELS-ONLY VARIANT)
 # IDS Intrusion Detection: TabNet (Tabular) + CNN-LSTM (Time Series)
 #
-# Converted from Jupyter notebook for HPC cluster execution.
-# Base directory: /scratch_share/datai/fcavallini/dirtify/
+# Variante derivata da "4-4b-cavas_model_Experiment_cluster" con queste
+# differenze:
+#   • Applica esclusivamente il metodo PuckTrick "labels"
+#     (gli altri 4 metodi — missing/outliers/noise/duplicated — sono esclusi)
+#   • Il noise viene iniettato SOLO sulle y_train. Le 2 colonne target del
+#     dataset sono 'Label' (multiclass) e 'label_generic' (binary): queste
+#     vengono sporcate SINGOLARMENTE (un esperimento per colonna), e poi
+#     formano gli y_target dati in pasto ai modelli.
+#   • JUST_COMPILE_DATASETS = True  → crea e salva i dataset su disco
+#     JUST_COMPILE_DATASETS = False → carica i dataset da disco se presenti;
+#     se NON sono presenti, li crea al volo (in RAM) SENZA salvarli su disco
+#   • Tutti i risultati (modelli, artifacts, immagini, dataset) sono
+#     salvati in:  complete_experiments/experiment_rs{seed}/labels_experiment/
 # =============================================================================
 
 # ── Matplotlib: headless backend (no display on HPC) ─────────────────────────
@@ -16,10 +27,11 @@ import os   # necessario per BASE_DIR prima del blocco CONFIG
 # =============================================================================
 # CONFIG — modifica solo qui
 # =============================================================================
-JUST_COMPILE_DATASETS  = False   # True → crea e salva i dataset su disco (senza addestrare i modelli)
-                                 # False → carica i dataset salvati e addestra i due modelli
-LOCAL_RUN              = True   # True → esecuzione locale | False → HPC cluster
-RUNNING_ON_HPC         = not LOCAL_RUN   # derivato automaticamente da LOCAL_RUN
+JUST_COMPILE_DATASETS  = False   # True  → crea e salva i dataset su disco (senza addestrare i modelli)
+                                 # False → carica dataset da disco se esistono, altrimenti li crea al volo
+                                 #         (SENZA salvarli) e addestra i due modelli
+LOCAL_RUN              = True    # True → esecuzione locale | False → HPC cluster
+RUNNING_ON_HPC         = not LOCAL_RUN
 RANDOM_SEEDS           = []
 TRIALS_ALREADY_EXECUTED= True
 MIN_SAMPLES_PER_CLASS  = 5
@@ -32,16 +44,19 @@ STEP_SIZE         = 10           # overlap tra finestre
 # Percorso base: cartella dello script in locale, path cluster su HPC
 if LOCAL_RUN:
     BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-    RANDOM_SEEDS = [1,11,21,31,41,42,51,61,86,101,202,303,404,505,606,707,808,909,1010,1111] 
+    RANDOM_SEEDS = [1,11,21,31,41,42,51,61,86,101,202,303,404,505,606,707,808,909,1010,1111]
 else:
-    RANDOM_SEEDS = [303, 404, 505, 606, 707, 808, 909, 1010, 1111, 42] 
+    RANDOM_SEEDS = [303, 404, 505, 606, 707, 808, 909, 1010, 1111, 42]
     if PROF_DIR:
         BASE_DIR = "/scratch_share/datai/maurinoa/dirtify/hpc"
     else:
         BASE_DIR = "/scratch_share/datai/fcavallini/dirtify"
 
-DATASETS_DIR = f"{BASE_DIR}/DATASETS"
-CURRENT_RANDOM_SEED    = RANDOM_SEEDS[0]   # aggiornato dinamicamente nel loop
+DATASETS_DIR        = f"{BASE_DIR}/DATASETS"
+CURRENT_RANDOM_SEED = RANDOM_SEEDS[0]   # aggiornato dinamicamente nel loop
+
+# Nome della sotto-cartella dedicata a questo esperimento (LABELS-ONLY)
+LABELS_EXPERIMENT_SUBDIR = "labels_experiment"
 
 # =============================================================================
 # 0. IMPORTS
@@ -105,7 +120,11 @@ TABNET_MAX_EPOCHS   = 20
 CNN_LSTM_MAX_EPOCHS = 50
 
 # Directory per-seed: aggiornata all'inizio di ogni iterazione nel main loop
-CURRENT_RS_DIR = f"{BASE_DIR}/complete_experiments/experiment_rs{CURRENT_RANDOM_SEED}"
+# NOTA: include il sotto-percorso "labels_experiment"
+CURRENT_RS_DIR = (
+    f"{BASE_DIR}/complete_experiments/experiment_rs{CURRENT_RANDOM_SEED}/"
+    f"{LABELS_EXPERIMENT_SUBDIR}"
+)
 
 # Crea le directory fisse (non dipendenti dal seed)
 for d in [f"{BASE_DIR}/models",
@@ -133,10 +152,8 @@ if not java_home:
 os.environ['PYSPARK_PYTHON']        = 'python3'
 os.environ['PYSPARK_DRIVER_PYTHON'] = 'python3'
 
-# Spark usa tutti i core disponibili (SLURM alloca 15 CPU)
-# Riserva ~40 GB per Spark driver, il resto va a PyTorch / OS
 spark = SparkSession.builder \
-    .appName("CAVAS_Models") \
+    .appName("CAVAS_Models_LabelsOnly") \
     .master("local[*]") \
     .config("spark.driver.memory",          "30g") \
     .config("spark.driver.maxResultSize",   "20g") \
@@ -155,9 +172,8 @@ if torch.cuda.is_available():
     GPU_DEVICE = torch.device('cuda:0')
     print(f"✅  GPU disponibile: {torch.cuda.get_device_name(0)}")
     print(f"    VRAM totale : {torch.cuda.get_device_properties(0).total_memory / 1e9:.1f} GB")
-    # Limita la memoria allocata all'80% per evitare OOM
     torch.cuda.set_per_process_memory_fraction(0.80, device=0)
-    torch.backends.cudnn.benchmark = True     # ottimizza convoluzioni (CNN-LSTM)
+    torch.backends.cudnn.benchmark = True
 else:
     GPU_DEVICE = torch.device('cpu')
     print("⚠️  GPU non disponibile — training su CPU")
@@ -283,7 +299,11 @@ def clear_memory():
 
 def experiment_already_exists(tag):
     tabnet_path   = f"{CURRENT_RS_DIR}/tabnet_trial_{tag}_artifacts.json"
+    print(f"Checking if experiment exists: {tabnet_path}")
+    print("esiste: ", os.path.exists(tabnet_path))
     cnn_lstm_path = f"{CURRENT_RS_DIR}/cnn_lstm_trial_{tag}_artifacts.json"
+    print(f"Checking if experiment exists: {cnn_lstm_path}")
+    print("esiste: ", os.path.exists(cnn_lstm_path))
     return os.path.exists(tabnet_path) and os.path.exists(cnn_lstm_path)
 
 
@@ -301,16 +321,6 @@ def dataset_already_saved(label):
 def save_dataset_to_disk(label, dataset_tuple):
     """
     Salva su disco il risultato di prepare_whole_dataset_from_scratch().
-
-    Layout in  <CURRENT_RS_DIR>/datasets/<label>/:
-        metadata.json          -> FEATURE_COLS, CAT_IDXS, CAT_DIMS,
-                                   label_classes, corr_matrix
-        X_train_2d.npy  X_val_2d.npy
-        y_tr_bin_2d.npy y_tr_mul_2d.npy
-        y_val_bin_2d.npy y_val_mul_2d.npy
-        X_train_3d.npy  X_val_3d.npy
-        y_tr_bin_3d.npy y_tr_mul_3d.npy
-        y_val_bin_3d.npy y_val_mul_3d.npy
     """
     (FEATURE_COLS,
      X_train_2d, X_val_2d,
@@ -341,7 +351,6 @@ def save_dataset_to_disk(label, dataset_tuple):
     for name, arr in arrays.items():
         np.save(os.path.join(d, f"{name}.npy"), arr)
 
-    # Salva metadati (inclusi i globali CAT_IDXS, CAT_DIMS, label_classes)
     metadata = {
         "FEATURE_COLS":  FEATURE_COLS,
         "CAT_IDXS":      CAT_IDXS,
@@ -367,7 +376,7 @@ def load_dataset_from_disk(label):
     if not os.path.exists(os.path.join(d, "metadata.json")):
         raise FileNotFoundError(
             f"Dataset '{label}' non trovato in {d}. "
-            "Esegui prima con JUST_COMPILE_DATASETS=True."
+            "Esegui prima con JUST_COMPILE_DATASETS=True oppure lascialo creare al volo."
         )
 
     with open(os.path.join(d, "metadata.json")) as f:
@@ -848,6 +857,12 @@ def reload_all_trial_metadata(models_dir='models'):
 # =============================================================================
 # STEP 3 — Dataset preparation with PuckTrick noise injection
 # =============================================================================
+# NOTA: in questa variante "labels-only" la *column_to_insert_noise* puo'
+# essere 'Label' o 'label_generic' (le 2 colonne target del dataset).
+# Il metodo PuckTrick "labels" corrompe la colonna target indicata; dopo
+# l'encoding, la colonna sporca diventa la corrispondente y_train.
+#   - 'Label'         -> dopo encoding -> y_tr_mul (multiclass target)
+#   - 'label_generic' -> dopo encoding -> y_tr_bin (binary target)
 
 def prepare_whole_dataset_from_scratch(column_to_insert_noise, percentage, noise_type):
     global CAT_IDXS, CAT_DIMS, label_classes
@@ -921,54 +936,70 @@ def prepare_whole_dataset_from_scratch(column_to_insert_noise, percentage, noise
         sdf = sdf.withColumn('Label_enc', col('Label_enc').cast('int'))
         return sdf
 
-    def make_strategy(noise_type, affected, percentage):
-        base = {
+    def make_strategy_labels(affected, percentage):
+        """
+        Strategia specializzata per il metodo PuckTrick "labels".
+        Sporca la colonna target *affected* (es. 'Label' o 'label_generic').
+        """
+        return {
             "selection_criteria": "all",
             "percentage": percentage,
             "mode": "new",
-            "perturbate_data": {"distribution": "random", "param": {}}
+            "perturbate_data": {"distribution": "random", "param": {}},
+            "affected_features": affected,
         }
-        if noise_type == "duplicated":
-            return base
-        elif noise_type == "labels":
-            return {**base, "affected_features": affected}
-        else:
-            return {
-                **base,
-                "affected_features": [affected],
-                "perturbate_data": {
-                    "distribution": "random",
-                    "value": [None],
-                    "param": {}
-                }
-            }
 
-    strategy  = make_strategy(noise_type, column_to_insert_noise, percentage)
-    OBJ       = PuckTrick(dataframe=train_clean, engine=Engine.SPARK)
-    dirty_train = None
+    # Solo metodo "labels" — gli altri rami sono rimossi in questa variante.
+    if noise_type != "labels":
+        raise ValueError(
+            f"In questa variante e' supportato SOLO noise_type='labels' (ricevuto: {noise_type})"
+        )
 
-    if noise_type == "duplicated":
-        _, dirty_train = OBJ.duplicated(OBJ.original, strategy=strategy)
-    elif noise_type == "labels":
-        _, dirty_train = OBJ.labels(OBJ.original, strategy=strategy)
-    elif noise_type == "missing":
-        _, dirty_train = OBJ.missing(OBJ.original, strategy=strategy)
-    elif noise_type == "outliers":
-        _, dirty_train = OBJ.outlier(OBJ.original, strategy=strategy)
-    elif noise_type == "noise":
-        _, dirty_train = OBJ.noise(OBJ.original, strategy=strategy)
-    else:
-        dirty_train = train_clean
+    # ─────────────────────────────────────────────────────────────────────
+    # FIX: PuckTrick "labels" richiede una colonna NUMERICA (internamente
+    # esegue un cast a BIGINT — vedi pucktrick/backends/spark_backend/
+    # utils_spark.py:196). 'Label' nel dataset originale e' una STRING
+    # ('Benign', 'DDoS', ...), quindi sporcarla direttamente fa esplodere
+    # Spark con CAST_INVALID_INPUT.
+    # Soluzione: applichiamo il label encoding PRIMA del noise e poi
+    # sporchiamo la colonna ENCODED corrispondente:
+    #   'Label'         -> 'Label_enc'          (int multiclass)
+    #   'label_generic' -> 'label_generic_enc'  (int binary)
+    # La semantica e' identica a quella richiesta: stiamo sporcando gli
+    # indici di classe che diventeranno y_tr_mul / y_tr_bin.
+    # ─────────────────────────────────────────────────────────────────────
+    TARGET_TO_ENCODED = {
+        'Label':         'Label_enc',
+        'label_generic': 'label_generic_enc',
+    }
+    if column_to_insert_noise not in TARGET_TO_ENCODED:
+        raise ValueError(
+            f"Per il metodo 'labels' la colonna deve essere una tra "
+            f"{list(TARGET_TO_ENCODED.keys())}, ricevuto: {column_to_insert_noise}"
+        )
+    encoded_target_col = TARGET_TO_ENCODED[column_to_insert_noise]
+
+    # 1) Encoding PRIMA del noise (su tutti e tre gli split).
+    train_clean_enc = apply_label_encoding(train_clean)
+    val_clean       = apply_label_encoding(val_clean)
+    test_clean      = apply_label_encoding(test_clean)
+
+    # 2) Applica il noise PuckTrick "labels" sulla colonna ENCODED (int).
+    strategy    = make_strategy_labels(encoded_target_col, percentage)
+    OBJ         = PuckTrick(dataframe=train_clean_enc, engine=Engine.SPARK)
+    _, dirty_train = OBJ.labels(OBJ.original, strategy=strategy)
 
     dirty_train = dirty_train.drop('_pucktrick_row_id')
     dirty_train = dirty_train.orderBy('Timestamp')
     val_clean   = val_clean.orderBy('Timestamp')
     test_clean  = test_clean.orderBy('Timestamp')
-    print(f"sporcato TRAIN con pucktrick: {noise_type} su {column_to_insert_noise} al {percentage*100:.1f}%")
+    print(f"sporcato TRAIN con pucktrick labels su y_target='{column_to_insert_noise}' "
+          f"(colonna encoded: '{encoded_target_col}') al {percentage*100:.1f}%")
 
-    dirty_train = apply_label_encoding(dirty_train)
-    val_clean   = apply_label_encoding(val_clean)
-    test_clean  = apply_label_encoding(test_clean)
+    # NOTA: NON ri-applichiamo apply_label_encoding su dirty_train, perche'
+    # sovrascriverebbe la colonna *_enc sporca con i valori puliti ricavati
+    # dall'indexer_model (che a sua volta legge la colonna 'Label' originale
+    # STRING, rimasta intatta).
 
     dirty_train = dirty_train.drop('Timestamp')
     val_clean   = val_clean.drop('Timestamp')
@@ -1018,6 +1049,8 @@ def prepare_whole_dataset_from_scratch(column_to_insert_noise, percentage, noise
         np.nan_to_num(arr, copy=False, nan=0.0, posinf=0.0, neginf=0.0)
         np.clip(arr, -np.finfo(np.float32).max, np.finfo(np.float32).max, out=arr)
 
+    # ATTENZIONE: in questa variante le y_train sono "sporche" (PuckTrick
+    # labels ha modificato la colonna target prima dell'encoding).
     y_tr_bin_2d  = pdf_train['label_generic_enc'].values.astype(int)
     y_tr_mul_2d  = pdf_train['Label_enc'].values.astype(int)
     y_val_bin_2d = pdf_val['label_generic_enc'].values.astype(int)
@@ -1095,63 +1128,10 @@ def prepare_whole_dataset_from_scratch(column_to_insert_noise, percentage, noise
 # STEP 4 — Run a single experiment
 # =============================================================================
 
-def run_single_experiment(colonna_da_sporcare, metodo, pct):
-    global tabnet_trial_artifacts, cnn_lstm_trial_artifacts
-    tabnet_trial_artifacts   = {}
-    cnn_lstm_trial_artifacts = {}
-    reload_all_trial_metadata()
-
-    best_tabnet_trial_num  = 7
-    best_cnn_lstm_trial_num = 1
-    best_tabnet  = tabnet_trial_artifacts[best_tabnet_trial_num]["params"]
-    best_cnn_lstm = cnn_lstm_trial_artifacts[best_cnn_lstm_trial_num]["params"]
-
-    (FEATURE_NAMES,
-     X_base_train_2d, X_base_val_2d,
-     y_base_tr_bin_2d, y_base_tr_mul_2d,
-     y_base_val_bin_2d, y_base_val_mul_2d,
-     X_base_train, X_base_val,
-     y_base_tr_bin, y_base_tr_mul,
-     y_base_val_bin, y_base_val_mul,
-     corr_matrix) = prepare_whole_dataset_from_scratch(colonna_da_sporcare, pct, metodo)
-
-    new_batch_size = 4096
-    label_model    = f'Experiment_{metodo}_{colonna_da_sporcare.replace("/", "_")}_{pct*100:.1f}'
-
-    tabnet_multitask_objective(
-        X_base_train_2d, X_base_val_2d,
-        y_base_tr_bin_2d, y_base_tr_mul_2d,
-        y_base_val_bin_2d, y_base_val_mul_2d,
-        best_tabnet['N_a'], best_tabnet['N_steps'], best_tabnet['gamma'],
-        (best_tabnet['lambda_sparse'] * ((0.001 / PERCENTAGE_TO_USE) ** 0.5)),
-        best_tabnet['lr'],
-        new_batch_size,
-        best_tabnet['mask_type'],
-        verbose=0, trial=None,
-        label_model=label_model,
-        feature_names=FEATURE_NAMES,
-        corr_matrix=corr_matrix
-    )
-
-    cnn_lstm_multitask_objective(
-        X_base_train, X_base_val,
-        y_base_tr_bin, y_base_tr_mul,
-        y_base_val_bin, y_base_val_mul,
-        best_cnn_lstm['nb_filters'], best_cnn_lstm['kernel_size'],
-        best_cnn_lstm['lstm_units_1'], best_cnn_lstm['lstm_units_2'],
-        best_cnn_lstm['dropout'], best_cnn_lstm['lr'] / 2,
-        batch_size=new_batch_size,
-        verbose=0,
-        label_model=label_model,
-        feature_names=FEATURE_NAMES,
-        corr_matrix=corr_matrix
-    )
-
-def run_single_experiment_from_disk(colonna_da_sporcare, metodo, pct):
+def _run_training_pipeline(dataset_tuple, label_model):
     """
-    Variante di run_single_experiment() che carica il dataset da disco
-    (precedentemente salvato con JUST_COMPILE_DATASETS=True) invece di
-    ricalcolarlo tramite prepare_whole_dataset_from_scratch().
+    Esegue TabNet + CNN-LSTM su una tupla di dataset gia' pronta.
+    Centralizza il blocco di training per evitare duplicazione.
     """
     global tabnet_trial_artifacts, cnn_lstm_trial_artifacts
     tabnet_trial_artifacts   = {}
@@ -1163,8 +1143,6 @@ def run_single_experiment_from_disk(colonna_da_sporcare, metodo, pct):
     best_tabnet   = tabnet_trial_artifacts[best_tabnet_trial_num]["params"]
     best_cnn_lstm = cnn_lstm_trial_artifacts[best_cnn_lstm_trial_num]["params"]
 
-    label_model = f'Experiment_{metodo}_{colonna_da_sporcare.replace("/", "_")}_{pct*100:.1f}'
-
     (FEATURE_NAMES,
      X_base_train_2d, X_base_val_2d,
      y_base_tr_bin_2d, y_base_tr_mul_2d,
@@ -1172,7 +1150,7 @@ def run_single_experiment_from_disk(colonna_da_sporcare, metodo, pct):
      X_base_train, X_base_val,
      y_base_tr_bin, y_base_tr_mul,
      y_base_val_bin, y_base_val_mul,
-     corr_matrix) = load_dataset_from_disk(label_model)
+     corr_matrix) = dataset_tuple
 
     new_batch_size = 4096
 
@@ -1206,31 +1184,60 @@ def run_single_experiment_from_disk(colonna_da_sporcare, metodo, pct):
     )
 
 
+def run_single_experiment_load_or_create(colonna_da_sporcare, metodo, pct):
+    """
+    Variante "smart" per la modalita' JUST_COMPILE_DATASETS = False:
+      1) Se il dataset e' gia' su disco -> lo carica
+      2) Altrimenti -> lo crea al volo (IN RAM, SENZA salvarlo su disco)
+      3) In entrambi i casi, esegue training di TabNet e CNN-LSTM.
+    """
+    label_model = f'Experiment_{metodo}_{colonna_da_sporcare.replace("/", "_")}_{pct*100:.1f}'
+
+    if dataset_already_saved(label_model):
+        print(f"📥  Loading pre-compiled dataset from disk: {label_model}")
+        dataset_tuple = load_dataset_from_disk(label_model)
+    else:
+        print(f"⚙️  Dataset '{label_model}' non presente su disco — "
+              f"creazione al volo (IN RAM, senza salvataggio)")
+        dataset_tuple = prepare_whole_dataset_from_scratch(
+            colonna_da_sporcare, pct, metodo
+        )
+
+    _run_training_pipeline(dataset_tuple, label_model)
+
+
 # =============================================================================
 # STEP 5 — Main experiment loop
 # =============================================================================
 
 if __name__ == '__main__':
 
-    FEATURESS_FOR_EXPERTS = pd.read_csv('models/important_features.csv')['feature'].tolist()
-    FEATURESS_FOR_EXPERTS.append('Timestamp')
+    # ── Colonne y_target da sporcare con PuckTrick "labels" ───────────────
+    # Sono le 2 etichette di classificazione del dataset CAVAS:
+    #   - 'Label'         → label multiclass (poi diventa y_tr_mul)
+    #   - 'label_generic' → label binary    (poi diventa y_tr_bin)
+    Y_TARGET_COLUMNS_TO_DIRTY = ['Label', 'label_generic']
 
-    PUCKTRICK_METHODS_MAIN = ['labels', 'missing', 'outliers', 'noise']
-    PUCKTRICK_METHODS_DUP  = ['duplicated']
-    PERCENTAGES            = [0.05, 0.1, 0.2, 0.35, 0.5, 0.75]
+    # In questa variante usiamo SOLO il metodo "labels"
+    PUCKTRICK_METHOD = 'labels'
+
+    PERCENTAGES = [0.05, 0.1, 0.2, 0.35, 0.5, 0.75]
 
     for seed in RANDOM_SEEDS:
 
         # ── Aggiorna i global per-seed ────────────────────────────────
         CURRENT_RANDOM_SEED = seed
-        CURRENT_RS_DIR      = f"{BASE_DIR}/complete_experiments/experiment_rs{seed}"
-        PATH_IMG            = f"{CURRENT_RS_DIR}/images"
+        CURRENT_RS_DIR = (
+            f"{BASE_DIR}/complete_experiments/experiment_rs{seed}/"
+            f"{LABELS_EXPERIMENT_SUBDIR}"
+        )
+        PATH_IMG = f"{CURRENT_RS_DIR}/images"
 
         # Crea le sottocartelle di questo seed
         os.makedirs(CURRENT_RS_DIR, exist_ok=True)
         os.makedirs(PATH_IMG,       exist_ok=True)
 
-        # Fissa tutti i seed per riproducibilità
+        # Fissa tutti i seed per riproducibilita'
         pl.seed_everything(seed)
 
         print(f"\n{'='*60}")
@@ -1238,10 +1245,13 @@ if __name__ == '__main__':
         if JUST_COMPILE_DATASETS:
             print(f"  MODE: JUST_COMPILE_DATASETS — solo creazione e salvataggio dataset")
         else:
-            print(f"  MODE: TRAINING — carica dataset da disco e addestra i modelli")
+            print(f"  MODE: TRAINING — carica dataset da disco o crea al volo, "
+                  f"poi addestra i modelli")
+        print(f"  PUCKTRICK METHOD: {PUCKTRICK_METHOD} (solo questo)")
+        print(f"  Y-TARGET COLUMNS: {Y_TARGET_COLUMNS_TO_DIRTY}")
         print(f"{'='*60}\n")
 
-        # ── Helper interno per evitare duplicazione del codice ────────
+        # ── Helper interno per costruire i label degli esperimenti ─────
         def _label(colonna, metodo, pct):
             return f'Experiment_{metodo}_{colonna.replace("/", "_")}_{pct*100:.1f}'
 
@@ -1250,40 +1260,10 @@ if __name__ == '__main__':
         # =====================================================================
         if JUST_COMPILE_DATASETS:
 
-            # Esperimenti labels / missing / outliers / noise
-            for colonna_da_sporcare in FEATURESS_FOR_EXPERTS:
-                for metodo in PUCKTRICK_METHODS_MAIN:
-                    for pct in PERCENTAGES:
-
-                        label = _label(colonna_da_sporcare, metodo, pct)
-
-                        if dataset_already_saved(label):
-                            print(f"[SKIP] Dataset gia' presente: {label}")
-                            continue
-
-                        if metodo == 'labels' and (
-                            colonna_da_sporcare != 'FIN Flag Cnt'
-                            and colonna_da_sporcare != 'Protocol'
-                        ):
-                            continue
-
-                        try:
-                            dataset_tuple = prepare_whole_dataset_from_scratch(
-                                colonna_da_sporcare, pct, metodo
-                            )
-                            save_dataset_to_disk(label, dataset_tuple)
-                        except Exception as e:
-                            print(f"[rs={seed}] Errore dataset: {metodo} su "
-                                  f"{colonna_da_sporcare} al {pct*100:.1f}%: {e}")
-                        finally:
-                            clear_memory()
-
-            # Esperimenti duplicated
-            colonna_dup = 'Timestamp'
-            for metodo in PUCKTRICK_METHODS_DUP:
+            for colonna_da_sporcare in Y_TARGET_COLUMNS_TO_DIRTY:
                 for pct in PERCENTAGES:
 
-                    label = _label(colonna_dup, metodo, pct)
+                    label = _label(colonna_da_sporcare, PUCKTRICK_METHOD, pct)
 
                     if dataset_already_saved(label):
                         print(f"[SKIP] Dataset gia' presente: {label}")
@@ -1291,65 +1271,42 @@ if __name__ == '__main__':
 
                     try:
                         dataset_tuple = prepare_whole_dataset_from_scratch(
-                            colonna_dup, pct, metodo
+                            colonna_da_sporcare, pct, PUCKTRICK_METHOD
                         )
                         save_dataset_to_disk(label, dataset_tuple)
                     except Exception as e:
-                        print(f"[rs={seed}] Errore dataset: {metodo} su "
-                              f"{colonna_dup} al {pct*100:.1f}%: {e}")
+                        print(f"[rs={seed}] Errore dataset: {PUCKTRICK_METHOD} su "
+                              f"y='{colonna_da_sporcare}' al {pct*100:.1f}%: {e}")
                     finally:
                         clear_memory()
 
         # =====================================================================
-        # BRANCH B — Carica dataset da disco e addestra i due modelli
+        # BRANCH B — Carica dataset da disco (o crea al volo) e addestra i modelli
         # =====================================================================
         else:
 
-            # Esperimenti labels / missing / outliers / noise
-            for colonna_da_sporcare in FEATURESS_FOR_EXPERTS:
-                for metodo in PUCKTRICK_METHODS_MAIN:
-                    for pct in PERCENTAGES:
-
-                        if experiment_already_exists(
-                            _label(colonna_da_sporcare, metodo, pct)
-                        ):
-                            print(f"[SKIP] Esperimento gia' esistente: "
-                                  f"{metodo} su {colonna_da_sporcare} al {pct*100:.1f}%")
-                            continue
-
-                        if metodo == 'labels' and (
-                            colonna_da_sporcare != 'FIN Flag Cnt'
-                            and colonna_da_sporcare != 'Protocol'
-                        ):
-                            continue
-
-                        try:
-                            run_single_experiment_from_disk(
-                                colonna_da_sporcare, metodo, pct
-                            )
-                        except Exception as e:
-                            print(f"[rs={seed}] Errore training: {metodo} su "
-                                  f"{colonna_da_sporcare} al {pct*100:.1f}%: {e}")
-                        finally:
-                            clear_memory()
-
-            # Esperimenti duplicated
-            colonna_dup = 'Timestamp'
-            for metodo in PUCKTRICK_METHODS_DUP:
+            for colonna_da_sporcare in Y_TARGET_COLUMNS_TO_DIRTY:
                 for pct in PERCENTAGES:
+                    
+                    print("="*44)
+                    print(_label(colonna_da_sporcare, PUCKTRICK_METHOD, pct))
+                    print("="*44)
 
-                    if experiment_already_exists(
-                        _label(colonna_dup, metodo, pct)
-                    ):
+                    if experiment_already_exists(_label(colonna_da_sporcare, PUCKTRICK_METHOD, pct)):
+                        print(f"[SKIP] Esperimento gia' esistente: "
+                              f"{PUCKTRICK_METHOD} su y='{colonna_da_sporcare}' "
+                              f"al {pct*100:.1f}%")
                         continue
 
                     try:
-                        run_single_experiment_from_disk(colonna_dup, metodo, pct)
+                        run_single_experiment_load_or_create(
+                            colonna_da_sporcare, PUCKTRICK_METHOD, pct
+                        )
                     except Exception as e:
-                        print(f"[rs={seed}] Errore training: {metodo} su "
-                              f"{colonna_dup} al {pct*100:.1f}%: {e}")
+                        print(f"[rs={seed}] Errore training: {PUCKTRICK_METHOD} su "
+                              f"y='{colonna_da_sporcare}' al {pct*100:.1f}%: {e}")
                     finally:
                         clear_memory()
 
-    print("\n  All experiments completed (all seeds).")
+    print("\n  All labels-only experiments completed (all seeds).")
     spark.stop()

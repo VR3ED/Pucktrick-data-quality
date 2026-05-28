@@ -1,0 +1,187 @@
+
+
+The Temporal Fusion Transformer~\supercite{lim2021temporal} is a transformer-based architecture developed by Lim \emph{et al.} at Google for interpretable multi-horizon time-series forecasting.  Its architecture comprises several specialised sub-networks:
+
+\begin{itemize}
+    \item \textbf{Variable Selection Networks (VSNs)}: GRN-based (Gated
+          Residual Network) modules that assign learned importance weights to
+          each input variable, independently for the encoder (past inputs) and
+          the decoder (known future inputs).  VSNs provide per-time-step
+          feature importance, enabling the identification of which features are
+          informative and \emph{when}.
+    \item \textbf{Static covariate encoders}: networks that process
+          time-invariant metadata and inject it as context into all
+          time-dependent components, enriching the representation with
+          entity-level information.
+    \item \textbf{Temporal self-attention}: a multi-head attention layer over
+          the encoder's temporal dimension, allowing the model to capture
+          long-range dependencies across time steps.
+    \item \textbf{Gated skip connections and layer normalisation}: used
+          throughout the architecture to facilitate gradient flow and prevent
+          overfitting.
+\end{itemize}
+
+Initially, in this thesis, TFT was repurposed as a sequential classification model for network intrusion detection. The chronologically ordered network flows are treated as a single continuous time series, and the model was asked to predict the labels (binary and multi-class simultaneously via \texttt{MultiLoss}) of the next flow given an encoder window of the preceding 30 flows.  The idea was that this formulation should have allowed TFT to exploit temporal patterns in attack campaigns; for instance: the bursty nature of DDoS attacks or the sequential probing of port scans.
+
+
+Onestamente, per questo dataset TFT non ha vantaggi su LSTM e probabilmente è peggio, per ragioni strutturali.
+TFT è progettato specificamente per forecasting (predire valori futuri) con variabili temporali note in anticipo. Il suo punto di forza è combinare covariabili statiche, covariabili temporali note nel futuro, e covariabili osservate nel passato. Nel tuo caso non hai nulla di tutto questo — hai flow aggregati che vuoi classificare, non prevedere.
+I problemi che hai avuto con TFT (classi collassate, confusion matrix vuote, feature importance assente) non sono bug casuali — sono sintomi del fatto che stai usando lo strumento sbagliato per il problema sbagliato.
+
+ in certi periodi ci sono molti più flow maligni. Questo è utile per capire quando avvengono gli attacchi, ma non è necessariamente quello che LSTM impara.
+LSTM imparerebbe qualcosa di utile solo se i flow consecutivi nel dataset sono dello stesso attacco in corso — cioè se l'ordinamento delle righe riflette la sequenza temporale di flow dello stesso sorgente/destinazione.
+Il problema è che CICFlowMeter aggrega già ogni flow individualmente, e i flow nel dataset sono tipicamente mescolati da sorgenti diverse. Quindi la riga N e la riga N+1 potrebbero essere:
+riga 100: flow DoS da 192.168.1.5 → vittima    ← attacco
+riga 101: flow normale da 10.0.0.2 → server    ← traffico legittimo
+riga 102: flow DoS da 192.168.1.5 → vittima    ← stesso attacco
+LSTM vedrebbe questa sequenza come "attacco → normale → attacco" senza capire che 100 e 102 sono correlati.
+
+% =======================================================================
+\newpage
+\subsubsection{CNN-LSTM}
+\label{Chapter: model cnn-lstm}
+% =======================================================================
+
+
+Il CNN-LSTM è un'architettura progettata specificamente per dati sequenziali/temporali, e sfrutta l'ordinamento cronologico in modo strutturale. Ecco come:
+
+\subsection{Come il CNN-LSTM sfrutta l'ordine temporale}\label{come-il-cnn-lstm-sfrutta-lordine-temporale}
+
+\subsubsection{1. Input 3D --- la finestra temporale}\label{input-3d-la-finestra-temporale}
+
+L'input è \texttt{(batch,\ n\_timesteps,\ n\_features)}. Ogni campione è una \textbf{finestra di pacchetti consecutivi} nel tempo:
+
+\begin{verbatim}
+Finestra i:  [pkt_t, pkt_t+1, pkt_t+2, ..., pkt_t+W-1]
+                                                    ↑
+                                              label da predire
+\end{verbatim}
+
+Se i dati non fossero ordinati, queste finestre conterrebbero pacchetti casuali e il modello non potrebbe catturare pattern temporali.
+
+\subsubsection{2. CNN --- pattern locali a breve termine}\label{cnn-pattern-locali-a-breve-termine}
+
+\begin{verbatim}
+Conv1d(n_features → nb_filters, kernel_size=3)
+\end{verbatim}
+
+La convoluzione 1D scorre \textbf{lungo l'asse temporale} e cattura pattern locali tra timestep adiacenti, ad esempio: - Un burst improvviso di pacchetti (tipico di DDoS) - Una sequenza di porte scansionate (port scan) - Variazioni rapide di \texttt{Flow\ Duration} o \texttt{Pkt\ Len}
+
+\subsubsection{3. LSTM --- dipendenze a lungo termine}\label{lstm-dipendenze-a-lungo-termine}
+
+\begin{verbatim}
+LSTM₁(nb_filters → 64) → LSTM₂(64 → 128) → ultimo hidden state
+\end{verbatim}
+
+Le due LSTM impilate leggono l'output della CNN \textbf{in ordine temporale} e mantengono uno stato interno (cell state + hidden state) che: - \textbf{Ricorda} pattern visti all'inizio della finestra - \textbf{Dimentica} informazioni irrilevanti (forget gate) - \textbf{Combina} contesto passato con input corrente
+
+L'output è l'\textbf{ultimo hidden state} (\texttt{x{[}:,\ -1,\ :{]}}), che è un riassunto dell'intera sequenza temporale.
+
+\subsubsection{4. Pipeline completa}\label{pipeline-completa}
+
+\begin{verbatim}
+Pacchetti ordinati per tempo
+        │
+        ▼
+┌─────────────────────┐
+│  Sliding Windows    │  (batch, W, F)
+│  W=50, step=10      │
+└─────────┬───────────┘
+          ▼
+┌─────────────────────┐
+│  Conv1D + ReLU      │  Pattern locali (burst, scan)
+│  + MaxPool + BN     │
+└─────────┬───────────┘
+          ▼
+┌─────────────────────┐
+│  LSTM₁ → LSTM₂     │  Dipendenze a lungo termine
+│  (bidirezionale     │  nella sequenza
+│   implicito)        │
+└─────────┬───────────┘
+          ▼
+┌─────────────────────┐
+│  FC + Dropout       │
+├──────────┬──────────┤
+│ head_bin │ head_mul │  Multi-task prediction
+└──────────┴──────────┘
+\end{verbatim}
+
+\subsection{Perché funziona per IDS}\label{perchuxe9-funziona-per-ids}
+
+\{\def\LTcaptype{none} \% do not increment counter
+
+\begin{longtable}[]{@{}
+  >{\raggedright\arraybackslash}p{(\linewidth - 2\tabcolsep) * \real{0.5000}}
+  >{\raggedright\arraybackslash}p{(\linewidth - 2\tabcolsep) * \real{0.5000}}@{}}
+\toprule\noalign{}
+\begin{minipage}[b]{\linewidth}\raggedright
+Pattern di attacco
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
+Cosa cattura il modello
+\end{minipage} \\
+\midrule\noalign{}
+\endhead
+\bottomrule\noalign{}
+\endlastfoot
+\textbf{DDoS} & CNN: burst di pacchetti con stesse feature. LSTM: durata e intensità nel tempo \\
+\textbf{Port Scan} & CNN: incremento sequenziale di porte. LSTM: distribuzione temporale della scansione \\
+\textbf{Brute Force} & CNN: pacchetti ripetitivi simili. LSTM: ritmo e persistenza dell'attacco \\
+\textbf{Traffico normale} & LSTM: pattern stabili e prevedibili nel tempo \\
+\end{longtable}
+
+\}
+
+
+
+\subsection{Differenze dimensione dei train/test/validations set tra modelli}
+\begin{itemize}
+\item
+  \textbf{TabNet} opera su dati \textbf{2D} --- ogni riga del dataset è un campione indipendente. Il validation set contiene tutte le righe assegnate dalla temporal split → \textasciitilde269K campioni.
+\item
+  \textbf{CNN-LSTM} opera su dati \textbf{3D} --- finestre scorrevoli di \texttt{WINDOW\_SIZE=50} righe consecutive con \texttt{STEP\_SIZE=10}. Ogni finestra produce \textbf{una sola predizione} (l'etichetta dell'ultimo timestep). Il numero di campioni nella validation diventa:
+\end{itemize}
+
+\[N_{\text{windows}} = \frac{N_{\text{val}} - \text{WINDOW\_SIZE}}{\text{STEP\_SIZE}} + 1 \approx \frac{N_{\text{val}}}{10}\]
+
+Il rapporto \textasciitilde10:1 tra i totali nelle confusion matrix:
+
+{\def\LTcaptype{none} % do not increment counter
+\begin{longtable}[]{@{}lll@{}}
+\toprule\noalign{}
+Modello & Val samples & Spiegazione \\
+\midrule\noalign{}
+\endhead
+\bottomrule\noalign{}
+\endlastfoot
+TabNet & \textasciitilde269K & 1 riga = 1 campione \\
+CNN-LSTM & \textasciitilde27K & 1 finestra di 50 righe (step 10) = 1 campione \\
+\end{longtable}
+}
+
+Così facendo CNN-LSTM ha circa \(\frac{1}{10}\) dei campioni di TabNet perché \texttt{STEP\_SIZE\ =\ 10} determina quante finestre non sovrapposte vengono estratte dalla stessa sequenza di validazione.
+La differenza è nel modo in cui i due modelli consumano i dati, ed è \textbf{by design}
+
+
+
+
+% =======================================================================
+\newpage
+\section{Experimental protocol}
+\label{Chap: model selection}
+% =======================================================================
+
+
+
+% =======================================================================
+\newpage
+\section{Selecting Features for experiments}
+\label{Chap: model selection}
+% =======================================================================
+
+
+
+This is \textcolor{red}{red text} for the introduction.
+
+
+
+\end{document}

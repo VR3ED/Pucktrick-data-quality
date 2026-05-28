@@ -3,367 +3,516 @@
 \begin{document}
 
 % ============================================================
-\chapter{Empirical Analysis and Model Development}
+\chapter{Model Architecture, Training and Experimental Protocol}
 \label{chap:5-Empiric-analysis-models}
 % ============================================================
 
-The experimental evaluation of the impact of controlled data corruption on deep learning models for intrusion detection proceeds through three principal phases: (i)~systematic hyperparameter optimization, (ii)~baseline model creation with feature selection, and (iii)~large-scale noise-injection experiments.  Each phase builds upon the previous, establishing a controlled environment in which the effect of data quality degradation can be rigorously quantified.  This chapter describes the methodology and technical implementation of these three phases in detail.
+
+
+The preceding chapter characterised the statistical properties of the CIC-IDS2018 dataset and established the analytical foundations required to interpret the noise-injection experiments.  The present chapter describes the full pipeline through which those experiments were designed and executed: from the initial hyperparameter optimisation on a small representative sample of the data, through the derivation of the feature set on which all subsequent experiments operate, to the training of baseline models and the systematic protocol used to evaluate the impact of PuckTrick-injected corruptions.
+
+The chapter is organised as follows.  Section~\ref{sec:model-overview} provides a brief summary of the two model architectures employed and the multi-task prediction formulation shared by both.  Section~\ref{sec:hpo} describes the hyperparameter optimisation procedure, including the search spaces and the Optuna configuration adopted for each model.  Section~\ref{sec:feature-selection} explains the combined feature-importance ranking that was used to derive the final feature set for all experiments.  Section~\ref{sec:baseline-training} describes the temporal split strategy, data scaling, and the sliding-window construction used for the sequence model, together with the baseline performance figures against which every noise-injection result is benchmarked.  Finally, Section~\ref{sec:experiment-protocol} provides a detailed description of the systematic experiment loop executed on the HPC cluster.
+
 
 % ============================================================
 \newpage
-\section{Phase 1: Hyperparameter Tuning Strategy}
-\label{sec:hpo-strategy}
+\section{Model Architectures and Multi-Task Formulation}
+\label{sec:model-overview}
 % ============================================================
 
-Modern deep learning architectures exhibit high sensitivity to hyperparameter choices.  While the discovery of optimal hyperparameters remains a computationally expensive endeavor, systematic optimization via machine learning-driven search strategies offers a principled alternative to manual tuning or random search.  This section describes the hyperparameter optimization (HPO) procedure applied to both TabNet and the custom CNN-LSTM architecture.
+In order to develop this work following two models were chose, each for different reasons:
+\begin{itemize}
+    \item
+    \item
+\end{itemize}
 
-% ────────────────────────────────────────────────────────────
-\subsection{Optimization Framework and Search Strategy}
-\label{sec:hpo-framework}
-% ────────────────────────────────────────────────────────────
+Both architectures were configured as \emph{multi-task classifiers}, jointly predicting two distinct output targets from a shared representation of the input flow:
 
-The hyperparameter optimization was conducted using \textbf{Optuna}~\supercite{akiba2019optuna}, an open-source automatic hyperparameter tuning framework that implements sampling and pruning strategies tailored to accelerate the discovery of high-performing configurations.
+\begin{itemize}
+    \item \textbf{Binary task} (\texttt{label\_generic}): the model predicts whether a flow is benign ($0$) or malicious ($1$), irrespective of the specific attack category. This task is analogous to anomaly detection: the classifier must identify any deviation from normal traffic behaviour.
+    \item \textbf{Multi-class task} (\texttt{Label}): the model simultaneously predicts the specific traffic category (Benign or one of 14 mutually exclusive attack types), requiring the classifier to learn fine-grained discriminative representations that distinguish between attack subtypes with often similar flow-level statistics.
+\end{itemize}
 
-The search employed the \emph{Tree-structured Parzen Estimator} (TPE) sampler, a Bayesian optimization algorithm that combines kernel-density estimation with a tree-structured data structure to balance exploration and exploitation of the hyperparameter space.  The TPE sampler iteratively constructs probabilistic models of the objective function (in this case, validation-set performance) conditioned on previous trials, thereby directing subsequent evaluations toward regions of the hyperparameter space that are predicted to yield improved performance.
+The joint training of both tasks on a shared encoder has two advantages.  First, it allows the binary and multi-class signals to act as complementary supervisory gradients, potentially regularising the shared representation and improving generalisation.  Second, it makes it possible to detect \emph{asymmetric} effects of data corruption: noise that does not materially degrade binary detection may nonetheless destroy the classifier's ability to resolve attack subtypes, a phenomenon that would be invisible if only one task were monitored.
 
-To ensure computational tractability while maintaining search diversity, the HPO campaign was conducted on a \emph{stratified 0.1\% subsample} of the unified CIC-IDS2018 dataset (approximately 16,000 instances stratified by the binary label to preserve class proportions).  This reduced dataset enables rapid iteration through many hyperparameter configurations while remaining representative of the class-label structure of the full dataset.
+\subsection{TabNet}
+\label{sec:model-tabnet}
 
-% ────────────────────────────────────────────────────────────
-\subsection{TabNet Hyperparameter Space}
+TabNet~\supercite{arik2021tabnet} is instantiated as a \texttt{TabNetMultiTaskClassifier} from the \texttt{pytorch-tabnet} library.  It processes the 2D input matrix $(N \times F)$ of raw flow features through a series of $N_{\text{steps}}$ sequential attention steps, each applying a learnable sparse mask to select a subset of features relevant to the current decision step.  The two output heads (\texttt{head\_bin} and \texttt{head\_mul}) branch off from the final aggregated step output.  Categorical and binary features are handled natively through an embedding layer parametrised by \texttt{cat\_idxs} and \texttt{cat\_dims}, while continuous features pass through the shared feature transformer without embedding.
+
+\subsection{CNN-LSTM}
+\label{sec:model-cnnlstm}
+
+The CNN-LSTM model is a custom multi-task architecture built on PyTorch.  It receives a 3D input tensor of shape $(B \times T \times F)$, where $B$ is the batch size, $T = 50$ is the temporal window length, and $F$ is the number of features.  The forward pass proceeds as follows:
+
+\begin{enumerate}
+    \item \textbf{CNN block:} the input is permuted to $(B \times F \times T)$ so that each feature is treated as a channel.  A single \texttt{Conv1d} layer with $n_{\text{filters}}$ output channels and kernel size $k$ (with symmetric padding to preserve the time dimension) extracts local temporal patterns, followed by ReLU activation, \texttt{MaxPool1d} with kernel~$2$, and \texttt{BatchNorm1d}.
+    \item \textbf{LSTM stack:} the output is permuted back to $(B \times T/2 \times n_{\text{filters}})$ and passed through two stacked LSTM layers with hidden sizes $h_1$ and $h_2$.  Only the final hidden state (last time step) is retained, yielding a fixed-length context vector of dimension $h_2$.
+    \item \textbf{Shared fully connected block:} a linear layer followed by ReLU and Dropout(p) is applied to the context vector.
+    \item \textbf{Task heads:} two independent linear layers project the shared representation onto $n_{\text{bin}} = 2$ and $n_{\text{mul}}$ logits respectively, where $n_{\text{mul}}$ is the number of active multi-class categories after rare-class filtering.
+\end{enumerate}
+
+The training loss is the sum of the two cross-entropy losses, one per head.  Gradient clipping (max norm $= 1.0$) is applied at every training step to prevent exploding gradients in the LSTM cells.  A \texttt{ReduceLROnPlateau} scheduler (factor $= 0.5$, patience $= 3$) reduces the learning rate when the validation loss stagnates, and early stopping (patience $= 10$ epochs) terminates training if no improvement is recorded over ten consecutive epochs.
+
+
+% ============================================================
+\newpage
+\section{Hyperparameter Optimisation}
+\label{sec:hpo}
+% ============================================================
+
+Hyperparameter optimisation (HPO) was conducted independently for TabNet and CNN-LSTM using Optuna~\supercite{akiba2019optuna} with the Tree-structured Parzen Estimator (TPE) sampler and the Median Pruner.  The primary design requirement was to obtain well-calibrated hyperparameters without incurring the computational cost of training on the full dataset: accordingly, HPO was performed on a \textbf{0.1\% stratified random sample} of the unified CIC-IDS2018 dataset (stratified by the binary \texttt{label\_generic} column to preserve class proportions), yielding approximately 16\,000 flow records.  This sample was further divided using the same temporal splitting strategy described in Section~\ref{sec:baseline-training}, so that the relative ordering of flows was preserved even at this reduced scale.
+
+The objective function for TabNet was the \emph{mean MCC} across both tasks:
+\[
+    \mathcal{O}_{\text{TabNet}} = \frac{\mathrm{MCC}_{\text{bin}} + \mathrm{MCC}_{\text{mul}}}{2},
+\]
+while for CNN-LSTM, because the validation loss is already monitored internally for early stopping and pruning, the objective function returned to Optuna was the \emph{mean F1-score} across both tasks (macro average for the multi-class task):
+\[
+    \mathcal{O}_{\text{CNN-LSTM}} = \frac{F1_{\text{bin}} + F1_{\text{mul}}}{2}.
+\]
+
+Both objectives were maximised. The Median Pruner was configured to discard unpromising trials after a warm-up period of five trials and five internal report steps, allowing early termination of trials whose intermediate metrics fell below the median of all completed trials at the same step.
+
+
+% ------------------------------------------------------------
+\subsection{TabNet Search Space}
 \label{sec:hpo-tabnet}
-% ────────────────────────────────────────────────────────────
-
-TabNet's architecture is governed by three principal hyperparameters that govern the sequential attention mechanism and the learning process:
-
-\begin{enumerate}
-    \item \textbf{Number of attention steps} ($N_a$): Controls the number of sequential decision steps in the TabNet forward pass.  Each step applies an attention mask to select a sparse subset of input features for processing at that step.  The search space was set to $N_a \in \{4, 6, 8, 10\}$, representing a trade-off between model complexity and feature-selection granularity.
-
-    \item \textbf{Feature dimension size} ($N_d$): Determines the dimension of the linear layers within each decision step.  This hyperparameter indirectly controls the model's capacity to learn complex feature combinations.  The search space was $N_d \in \{32, 64, 128\}$.
-
-    \item \textbf{Sparsity regularization coefficient} ($\lambda_{\text{sparse}}$): A float parameter controlling the weight of the sparsity penalty imposed on the attention masks.  Higher values encourage sparser feature selection (fewer features per step), while lower values allow more features.  The search space was $\lambda_{\text{sparse}} \in [0.000001, 0.01]$ (log-uniform).
-
-    \item \textbf{Learning rate}: The optimization step-size for gradient descent.  The search space was $\text{lr} \in [0.0001, 0.01]$ (log-uniform).
-
-    \item \textbf{Batch size}: The number of instances per gradient-accumulation step.  The search was constrained to batch sizes $\in \{256, 512, 1024\}$, balancing gradient stability with memory consumption.
-
-    \item \textbf{Mask type}: A categorical choice between \texttt{softmax} (probabilistic sparse selection) and \texttt{relu} (hard masking via rectified linear activation).  The TabNet architecture supports both variants; the search evaluated both to determine which is more effective on the NIDS task.
-\end{enumerate}
-
-The Optuna trial budget for TabNet was set to 20 trials, allowing thorough exploration of the hyperparameter space within computational limits.
-
-% ────────────────────────────────────────────────────────────
-\subsection{CNN-LSTM Hyperparameter Space}
-\label{sec:hpo-cnnlstm}
-% ────────────────────────────────────────────────────────────
-
-The custom CNN-LSTM architecture combines convolutional layers (designed to extract spatial patterns within time windows) with recurrent layers (designed to model temporal dependencies across windows).  The principal hyperparameters controlling this architecture are:
-
-\begin{enumerate}
-    \item \textbf{Number of convolutional filters} ($n_{\text{filters}}$): Controls the width of the convolutional layer (the number of learned convolution kernels).  The search space was $n_{\text{filters}} \in \{16, 32, 64, 128\}$.
-
-    \item \textbf{Convolutional kernel size} ($k_{\text{size}}$): The temporal window covered by each convolution operation.  The search space was $k_{\text{size}} \in \{3, 5, 7\}$.
-
-    \item \textbf{LSTM hidden units (first layer)} ($n_{\text{LSTM1}}$): The dimensionality of the hidden state in the first LSTM layer.  The search space was $n_{\text{LSTM1}} \in \{32, 64, 128, 256\}$.
-
-    \item \textbf{LSTM hidden units (second layer)} ($n_{\text{LSTM2}}$): The dimensionality of the hidden state in the stacked second LSTM layer.  The search space was $n_{\text{LSTM2}} \in \{16, 32, 64, 128\}$.
-
-    \item \textbf{Dropout rate}: The fraction of units randomly deactivated during training to prevent overfitting.  The search space was dropout $\in [0.1, 0.5]$ (continuous uniform).
-
-    \item \textbf{Learning rate}: The optimization step-size, searched over $\text{lr} \in [0.00001, 0.001]$ (log-uniform).
-
-    \item \textbf{Batch size}: Constrained to batch sizes $\in \{256, 512, 1024\}$.
-\end{enumerate}
-
-The Optuna trial budget for CNN-LSTM was 20 trials, matching TabNet.
-
-% ────────────────────────────────────────────────────────────
-\subsection{Multi-Task Training Configuration}
-\label{sec:hpo-multitask}
-% ────────────────────────────────────────────────────────────
-
-Both models were instantiated as \emph{multi-task classifiers}: each model simultaneously predicts two labels from the same input:
-\begin{itemize}
-    \item The \emph{binary label} (\texttt{Label\_generic}): benign vs.\ malign
-    \item The \emph{multi-class label} (\texttt{Label}): the specific attack type (or benign)
-\end{itemize}
-
-The multi-task setup enables a single model to solve both the anomaly-detection problem (binary classification) and the attack-type identification problem (multi-class classification) within a unified learning framework.  Shared intermediate representations can improve generalization by exploiting commonalities between the two prediction tasks while allowing task-specific output heads to specialize.
-
-Both models employ a \emph{weighted sum} loss combining the two tasks:
-\[
-\mathcal{L}_{\text{total}} = \alpha \cdot \mathcal{L}_{\text{binary}} + (1-\alpha) \cdot \mathcal{L}_{\text{multi-class}}
-]
-where $\alpha = 0.5$ each task receives equal weight.  The loss functions are cross-entropy on both branches, with class weights inversely proportional to the training-set frequencies of each class to accommodate the severe class imbalance present in the CIC-IDS2018 dataset.
-
-% ────────────────────────────────────────────────────────────
-\subsection{HPO Objective Function and Termination Criteria}
-\label{sec:hpo-objective}
-% ────────────────────────────────────────────────────────────
-
-Each Optuna trial trains a candidate model on the 0.1\% subsample using a randomly selected hyperparameter configuration drawn from the search spaces described above.  Training proceeds for up to \textbf{20 epochs} (TabNet) or \textbf{50 epochs} (CNN-LSTM), with \emph{early stopping} triggered if the validation loss does not improve for 5 consecutive epochs.
-
-The objective function optimized by Optuna is the \textbf{F1-score} on the multi-class prediction task (attack-type identification), averaged across all attack classes using macro-averaging (unweighted mean of per-class F1 scores).  F1-score was chosen as the primary optimization metric because it balances precision and recall, both critical for an intrusion-detection system: high precision prevents false alarms that exhaust analyst resources, while high recall minimizes missed attacks.
-
-The optimization campaign terminates after 20 trials per model.  Although larger trial budgets might discover incrementally better configurations, 20 trials represent a practical compromise between search quality and computational cost on the 0.1\% subsample.
-
-% ============================================================
-\newpage
-\section{Phase 2: Feature Importance Analysis and Baseline Model Training}
-\label{sec:baseline-creation}
-% ============================================================
-
-Following the completion of hyperparameter optimization on the 0.1\% subsample, the best-performing hyperparameter configurations for both TabNet and CNN-LSTM were extracted and used to train baseline models on a larger segment of the dataset.  This phase introduces two principal objectives: (i)~automatic feature importance estimationand ranking, and (ii)~creation of reference \emph{baseline} models against which noise-injection experiments will be compared.
-
-% ────────────────────────────────────────────────────────────
-\subsection{Best Hyperparameter Selection and Extraction}
-\label{sec:best-hpo-configs}
-% ────────────────────────────────────────────────────────────
-
-From the 20 Optuna trials per model, the configuration achieving the highest validation F1-score was selected as the ``best'' hyperparameter set.  These best configurations are then held fixed throughout all subsequent experiments, ensuring that any observed changes in model performance stem from data quality manipulation (via PuckTrick) rather than from hyperparameter re-tuning.
-
-Storing the best hyperparameter configurations enables reproducibility and allows different corruption scenarios to be tested under identical architectural and optimization conditions, isolating the effect of noise from confounding hyperparameter variations.
-
-% ────────────────────────────────────────────────────────────
-\subsection{Feature Importance Extraction from Baseline Models}
-\label{sec:feature-importance}
-% ────────────────────────────────────────────────────────────
-
-One of the distinctive properties of the TabNet architecture is that it provides \emph{native}\ interpretability through its attention mechanism: at each decision step, TabNet learns a sparse mask indicating which input features are selected for processing at that step.  By aggregating these per-step masks across all steps and the model's training trajectory, a \emph{feature-importance score} can be computed for each input feature, representing the model's learned assessment of each feature's contribution to the prediction tasks.
-
-Similarly, the CNN-LSTM model's contribution to feature selection decisions can be inferred from the magnitude of learned weights in its first convolutional layer, although this is less interpretable than TabNet's explicit attention mechanism.
-
-After training the best TabNet and CNN-LSTM configurations on the 0.1\% subsample, feature-importance scores were extracted from both models.  The rationale for this multi-model approach is that combining importance rankings from different architectures may capture complementary aspects of feature informativeness: TabNet's sequential attention reveals which features the model attends to during its step-wise decision process, while the CNN-LSTM's convolutional weights capture which features are deemed salient for temporal pattern matching.
-
-The two importance rankings were then \emph{intersected} to identify features that both models agree are important.  This intersection yielded a \emph{top-K consensus feature set}, where K $\approx 8$--10 features (the exact number depends on ties in the ranking).  This reduced set of ``expert-agreed'' features serves two purposes:
-\begin{enumerate}
-    \item It reduces dimensionality for subsequent experiments, lowering computational cost.
-    \item It reduces the dimensionality of the noise-injection space, focusing experiments on the features most likely to impact model performance.
-\end{enumerate}
-
-% ────────────────────────────────────────────────────────────
-\subsection{Baseline Model Training on Expanded Dataset}
-\label{sec:baseline-training}
-% ────────────────────────────────────────────────────────────
-
-With best hyperparameter configurations in hand and the consensus feature set identified, the dataset was scaled up to \textbf{10\% of the full CIC-IDS2018} (approximately 1,617,000 instances).  This 10\% subsample was generated via \emph{stratified sampling} on the binary label to preserve the class proportions of the full dataset.
-
-Critically, the stratified sampling preserves the \emph{temporal sequencing} of the data: rather than randomly shuffling and selecting instances, the sampling strategy selects every $(1/0.1) = 10$-th instance while respecting the temporal order of flow records within the original Parquet file.  This approach ensures that if a malicious campaign occurred as a cluster of consecutive flows in the original dataset, that temporal coherence is preserved in the sampled subset.
-
-Both TabNet and CNN-LSTM models were then re-trained on this 10\% dataset using the previously identified best hyperparameters and the same multi-task training setup.  These models serve as the \emph{baseline} against which all noise-injection experiments will be compared: any performance degradation observed when training on corrupted versions of this dataset directly quantifies the impact of the corruption.
-
-The training protocol is identical to HPO: early stopping is applied with a patience of 5 epochs to avoid overfitting.  The maximum number of epochs was again set to 20 for TabNet and 50 for CNN-LSTM, chosen based on preliminary training curves observed during HPO.
-
-% ────────────────────────────────────────────────────────────
-\subsection{Baseline Model Evaluation Metrics}
-\label{sec:baseline-metrics}
-% ────────────────────────────────────────────────────────────
-
-After training the baseline models, their performance was evaluated on a held-out test set (20\% of the 10\% subsample, approximately 323,400 instances) that remained untouched throughout all experiments.  The evaluation was conducted using a comprehensive set of performance metrics to capture different aspects of model quality:
-
-\begin{itemize}
-    \item \textbf{Accuracy}: overall fraction of correctly classified instances (both labels \emph{binary} and \emph{multi-class}).
-
-    \item \textbf{F1-score}: harmonic mean of precision and recall, micro-averaged (aggregated instance-wise) and macro-averaged (unweighted mean of per-class F1 scores).
-
-    \item \textbf{Precision and Recall}: for each label, computed separately to isolate type-I errors (false positives, triggering unnecessary alerts) and type-II errors (false negatives, missed attacks).
-
-    \item \textbf{Matthews Correlation Coefficient (MCC)}: a correlation measure between predicted and actual class labels that is informative even on imbalanced datasets, accounting for all four cells of the confusion matrix.
-
-    \item \textbf{Receiver Operating Characteristic Area Under Curve (ROC-AUC)}: the area under the curve of true-positive rate vs.\ false-positive rate, aggregating performance across all classification thresholds.
-
-    \item \textbf{Confusion matrices}: structured as separate matrices for each label hierarchy (binary and multi-class) to visualize the distribution of correct and incorrect predictions across classes.
-\end{itemize}
-
-These baseline performance metrics establish the \emph{clean-data ground truth} against which all corrupted-data performance will be measured.  The difference between clean and corrupted performance, denoted $\Delta \text{performance}$, quantifies the fragility of each model-feature-corruption-level combination.
-
-% ============================================================
-\newpage
-\section{Phase 3: Systematic Noise-Injection Experiments}
-\label{sec:noise-injection-experiments}
-% ============================================================
-
-Having established baseline model performance on clean data and identified the most important features for both models, the third phase systematically introduces controlled corruption into selected features and re-trains the models to measure performance degradation.  This controlled experimental setup enables answering the central research question: \emph{how fragile are state-of-the-art deep learning architectures when trained on data corrupted along specific quality dimensions?}
-
-% ────────────────────────────────────────────────────────────
-\subsection{Corruption Strategy: Feature and Method Selection}
-\label{sec:corruption-strategy}
-% ────────────────────────────────────────────────────────────
-
-The noise-injection campaign targets a curated set of features identified in Phase 2 as both \emph{highly important} (high feature-importance scores from both models) and, ideally, \emph{highly fragile} (high skewness and/or kurtosis as characterized in Chapter~\ref{chap:dataset}).  Features were selected from the consensus top-10 list, ensuring that injected corruption is likely to degrade model performance by targeting features that the models rely upon.
-
-The corruption methods employed derive directly from PuckTrick's corruption taxonomy (as described in Section~\ref{sec:pucktrick-limitations} of Chapter~\ref{chap:related}):
-
-\begin{enumerate}
-    \item \textbf{Missing values} (via \texttt{missing.py}): randomly replace feature values with \texttt{NaN}.  Missing values force the model to either employ learned imputation strategies or to propagate missing information through the network, both of which can degrade performance.
-
-    \item \textbf{Noisy values} (via \texttt{noisy.py}): replace feature values with random samples drawn uniformly from the observed range $[\min, \max]$ of that feature.  This introduces statistical noise that mimics real-world measurement uncertainty or sensor drift.
-
-    \item \textbf{Outliers} (via \texttt{outliers.py}): inject extreme values beyond the normal distributional range (e.g., values $> \mu + 4\sigma$ for continuous features).  Outliers can disproportionately influence learning if the model is sensitive to extreme values or if the loss function gives large gradients to misclassifications involving outliers.
-
-    \item \textbf{Label corruptions} (via \texttt{labels.py}): flip or reassign the target label for a fraction of instances.  Applied only to the binary and multi-class labels (not to feature columns), label noise directly corrupts the ground truth, forcing the model to learn from partially mislabeled data.
-
-    \item \textbf{Duplicated records} (via \texttt{duplicated.py}): introduce exact duplicate rows into the training set.  Duplicates create artificial oversampling of particular instances, biasing the model towards memorizing those instances.
-\end{enumerate}
-
-Applications of methods 1--4 are \emph{feature-specific}: the user specifies a target column and a corruption percentage, and the method corrupts exactly that percentage of instances in that column.  The \emph{duplicated} method, by contrast, operates at the row level: it introduces duplicate rows into the dataset.  In this campaign, duplicates are applied once globally (not per-feature).
-
-% ────────────────────────────────────────────────────────────
-\subsection{Experimental Design: Corruption Levels and Combinations}
-\label{sec:experimental-design}
-% ────────────────────────────────────────────────────────────
-
-For each target feature in the consensus set and each corruption method, a \emph{corruption level grid} was defined specifying the percentage of instances to corrupt.  The grid comprises the following percentages:
-\[
-P = \{0.05, 0.10, 0.20, 0.35, 0.50, 0.75\}
-\]
-representing mild (5\%), light (10\%), moderate (20\%), significant (35\%), substantial (50\%), and severe (75\%) corruption levels.
-
-The experimental matrix is thus:
-\[
-|\text{Experiments}| = |\text{consensus features}| \times |\text{corruption methods}| \times |P|
-\]
-
-With approximately 8--10 consensus features, 4 feature-specific methods, and 6 corruption levels, this yields approximately $(8 \text{ to } 10) \times 4 \times 6 = 192 \text{ to } 240$ experiments.  Adding the duplicated method (applied once per seed, independent of features) brings the total to approximately 200--250 experimental runs \emph{per random seed}.
-
-% ────────────────────────────────────────────────────────────
-\subsection{Dataset Preparation and PuckTrick Corruption}
-\label{sec:pucktrick-workflow}
-% ────────────────────────────────────────────────────────────
-
-For each experiment, the following workflow was executed:
-
-\begin{enumerate}
-    \item \textbf{Load clean baseline data}: Re-load the 10\% dataset from disk (the same dataset used for baseline training).
-
-    \item \textbf{Apply PuckTrick corruption}: Invoke the appropriate PuckTrick method with the target feature, corruption method, and corruption percentage.  This produces a corrupted variant of the dataset in which the specified fraction of values in the target feature have been substituted according to the corruption semantics.
-
-    \item \textbf{Train on corrupted data}: Using the \emph{same hyperparameters} as the baseline models (determined in Phase 1), train fresh instances of both TabNet and CNN-LSTM on the corrupted dataset.  Training proceeds identically to the baseline phase: multi-task configuration, early stopping, and the same 20 or 50 epoch budgets.
-
-    \item \textbf{Evaluate on clean test set}: Crucially, the test set remains \emph{uncorrupted}.  Model performance is evaluated on the same held-out 20\% test fraction used for baseline evaluation.  This ensures that performance differences reflect the model's ability to generalize from corrupted training data to unseen clean data, a realistic scenario where training data may be imperfect but test data is presumed clean.
-
-    \item \textbf{Record results}: Accuracy, F1-score, precision, recall, MCC, and ROC-AUC are recorded for both models on both label hierarchies (binary and multi-class).  These results are persisted to disk for post-hoc analysis.
-
-\end{enumerate}
-
-% ────────────────────────────────────────────────────────────
-\subsection{Statistical Robustness via Repeated Runs with Random Seeds}
-\label{sec:robustness-seeds}
-% ────────────────────────────────────────────────────────────
-
-To establish statistical confidence in the experimental results and to account for the inherent randomness in deep learning (Gaussian initialization of weights, stochastic gradient descent, dropout), the entire noise-injection experimental loop was repeated \textbf{multiple times with different random seeds}.  Each iteration of the outer loop (one for each random seed) performs all PuckTrick-based experiments using a different seed for:
-\begin{itemize}
-    \item Dataset splitting (train/validation/test partition generation)
-    \item Neural network weight initialization
-    \item Stochastic regularization mechanisms (dropout, batch normalization)
-    \item Optuna's hyperparameter search (if re-doing HPO per seed)
-    \item PuckTrick's corruption sampling (random selection of which instances to corrupt)
-\end{itemize}
-
-By repeating the entire campaign 10 times with distinct seeds (e.g., $\{51, 303, 404, 505, 606, 707, 808, 909, 1010, 1111\}$), confidence intervals can be computed around the observed performance degradation metrics.  These confidence intervals account for the uncertainty inherent in the experiment and provide a principled statistical basis for distinguishing genuine effects of corruption from noise.
-
-The seed-based replications also enable the calculation of \emph{robustness statistics}, such as the standard deviation of $\Delta \text{performance}$ across seeds, offering a quantitative measure of how consistently a particular corruption affects model performance.
-
-% ────────────────────────────────────────────────────────────
-\subsection{Two Experimental Branches: Reduced vs. Full Feature Set}
-\label{sec:two-branches}
-% ────────────────────────────────────────────────────────────
-
-Following the strategy outlined in Chapter~\ref{chap:dataset}, experiments are conducted along two complementary branches:
-
-\paragraph{\red{Experiment A: Reduced Feature Set (Proof of Concept)}}
-A first set of experiments is conducted using the reduced feature set derived in Section~\ref{sec:reduced-feature-set} of Chapter~\ref{chap:dataset}: the dataset with 44 features (8 zero-variance and 27 high-correlation features removed).  The rationale for this branch is to establish a \emph{proof of concept}: to demonstrate that systematic noise injection, when applied to a curated set of low-redundancy, high-impact features, can either degrade performance (as a null hypothesis) or, in some cases, \emph{improve} performance (if the noise acts as a regularizer).
-
-This branch focuses on identifying noise-injection strategies that consistently improve intrusion-detection performance, a finding that would have immediate practical implications for the development of more robust NIDS systems.
-
-\paragraph{\red{Experiment B: Full Feature Set (Theoretical Depth)}}
-In contrast, the second branch conducts experiments on the \emph{full 79-feature dataset} without any feature removal.  This branch addresses the more theoretical aspects of the thesis: understanding the holistic impact of data corruption across the entire feature space.  It enables analysis of how noise propagates through zero-variance and redundant features, how models exploit or ignore such features, and how the presence of feature redundancy affects the overall resilience to corruption.
-
-The two branches produce divergent experimental footprints and lead to distinct conclusions in the final analysis phase (Chapter~\ref{chap:6-conclusions}), as the reduced-feature experiments may reveal promising regularization effects while the full-feature experiments reveal broader patterns of vulnerability and robustness.
-
-% ────────────────────────────────────────────────────────────
-\subsection{Computational Infrastructure and Distributed Execution}
-\label{sec:computational-infrastructure}
-% ────────────────────────────────────────────────────────────
-
-The large-scale noise-injection experiments necessitate significant computational resources.  To manage the workload efficiently, the experimental pipeline was implemented as a scalable Python application that leverages:
-
-\begin{itemize}
-    \item \textbf{Apache Spark} (via PySpark) for distributed data loading and PuckTrick corruption operations.  The Spark-extended PuckTrick library (as described in Chapter~\ref{chap:oth}) enables distributed dataset preparation, allowing large datasets to be corrupted in place without collecting all data to a single node.
-
-    \item \textbf{PyTorch and PyTorch Lightning} for distributed multi-GPU training.  While the primary experimental runs have been conducted on single-GPU or CPU environments, the architecture supports seamless scaling to multi-GPU setups via PyTorch Lightning's distributed training utilities.
-
-    \item \textbf{Optuna} within the training loop to manage hyperparameter search results and best-configuration persistence.
-
-    \item \textbf{Checkpoint and artifact persistence}: After each experiment, model checkpoints, training logs, and performance metrics are persisted to local disk (or distributed storage on HPC systems) to enable post-experiment analysis without re-running training.
-\end{itemize}
-
-The modular architecture separates \emph{dataset preparation} (executed once per seed, storing results to disk) from \emph{model training} (executed on-demand using pre-prepared datasets).  This decoupling enables:
-\begin{enumerate}
-    \item Rapid iteration during development without re-executing expensive PuckTrick operations.
-    \item Deterministic reproducibility: identical corrupted datasets, when stored, produce identical training behavior given identical random seeds.
-    \item Efficient resource allocation: datasets and models can be distributed across compute nodes according to resource availability.
-\end{enumerate}
-
-% ========== RESULTS PLACEHOLDER ==========
-\subsection{Experiment Execution Summary}
-\label{sec:execution-summary}
-
-The full experimental campaign encompasses:
-\begin{itemize}
-    \item \textbf{Phase 1 (HPO):} 40 hyperparameter optimization trials (20 per model) on a 0.1\% dataset subsample.
-
-    \item \textbf{Phase 2 (Baseline):} 2 baseline model trainings (one per architecture) on a 10\% dataset subsample with fixed best hyperparameters.
-
-    \item \textbf{Phase 3 (Noise Injection):} Approximately 200--250 noise-injection experiments per random seed, conducted across 10 distinct random seeds, for a total of approximately 2,000--2,500 model training runs comprising \red{Experiment A} (reduced features) and \red{Experiment B} (full features).
-\end{itemize}
-
-All experiments generate detailed logs, model checkpoints, and performance metrics that form the basis for the analysis presented in the following chapter.
-
-% ============================================================
-\newpage
-\section{Summary: Experimental Methodology}
-\label{sec:methodology-summary}
-% ============================================================
-
-Table~\ref{tab:methodology-summary} consolidates the key parameters and design choices of the three-phase empirical investigation:
-
-\begin{table}[htbp]
-  \centering
-  \caption{Summary of empirical investigation methodology.}
-  \label{tab:methodology-summary}
-  \begin{tabular}{lll}
-    \toprule
-    \textbf{Phase} & \textbf{Component} & \textbf{Specification} \\
-    \midrule
-    \multirow{4}{*}{\textbf{Phase 1: HPO}}
-    & Dataset size & 0.1\% ($\approx$16,000 instances) \\
-    & Optimization method & Optuna (TPE sampler) \\
-    & Trials per model & 20 \\
-    & Optimization metric & Macro-averaged F1 (multi-class) \\
-    \midrule
-    \multirow{5}{*}{\textbf{Phase 2: Baseline}}
-    & Dataset size & 10\% ($\approx$1,617,000 instances) \\
-    & Models & TabNet + CNN-LSTM \\
-    & Training setup & Multi-task (binary + multi-class) \\
-    & Epochs & 20 (TabNet), 50 (CNN-LSTM) \\
-    & Early stopping patience & 5 epochs \\
-    & Test set size & 20\% of 10\% subsample \\
-    \midrule
-    \multirow{6}{*}{\textbf{Phase 3: Noise}}
-    & Target features & 8--10 consensus features \\
-    & Corruption methods & 4 feature-specific + 1 row-level \\
-    & Corruption percentages & \{0.05, 0.10, 0.20, 0.35, 0.50, 0.75\} \\
-    & Experiments per seed & $\approx$200--250 \\
-    & Random seeds & 10 distinct seeds \\
-    & Total training runs & $\approx$2,000--2,500 \\
-    \midrule
-    \textbf{Evaluation} & Metrics & Accuracy, F1, Precision, Recall, MCC, ROC-AUC \\
-    & Test (clean) & All trained models \\
-    & Confidence intervals & Via 10-fold seed-based replication \\
-    \bottomrule
-  \end{tabular}
+% ------------------------------------------------------------
+
+A total of \textbf{9 trials} were executed for TabNet (limited by computational budget on the local development machine). The search space is summarised in Table~\ref{tab:hpo-tabnet-space}.
+
+\begin{table}[H]
+\centering
+\caption{TabNet hyperparameter search space.}
+\label{tab:hpo-tabnet-space}
+\small
+\begin{tabular}{llll}
+\toprule
+\textbf{Hyperparameter} & \textbf{Type}      & \textbf{Range / Choices} & \textbf{Scale} \\
+\midrule
+$N_a$ (= $N_d$)         & Categorical        & \{8, 16, 32, 64, 128\}   & —              \\
+$N_{\text{steps}}$      & Integer            & $[3, 10]$                & Linear         \\
+$\gamma$                & Float              & $[1.0, 2.0]$             & Step 0.1       \\
+$\lambda_{\text{sparse}}$ & Float            & $[10^{-4}, 10^{-1}]$     & Log            \\
+Learning rate           & Float              & $[10^{-4}, 10^{-2}]$     & Log            \\
+Batch size              & Categorical        & \{256, 512, 1024, 2048\} & —              \\
+Mask type               & Categorical        & \{\texttt{sparsemax}, \texttt{entmax}\} & — \\
+\bottomrule
+\end{tabular}
 \end{table}
 
-This structured, three-phase methodology establishes a rigorous experimental foundation for investigating the interplay between data quality and deep learning performance on a realistic cybersecurity application domain.  The results of these experiments, including performance degradation patterns, model-specific vulnerabilities, and potential noise-driven improvements, are analysed in the following chapter.
+The best trial was \textbf{Trial 7}, which achieved a mean MCC of $0.870$ on the 0.1\% validation set.  The corresponding hyperparameters were persisted to disk for reuse during baseline training and all subsequent experiments.
+
+% ------------------------------------------------------------
+\subsection{CNN-LSTM Search Space}
+\label{sec:hpo-cnnlstm}
+% ------------------------------------------------------------
+
+A total of \textbf{10 trials} were executed for CNN-LSTM.  The search space is described in Table~\ref{tab:hpo-cnnlstm-space}.
+
+\begin{table}[H]
+\centering
+\caption{CNN-LSTM hyperparameter search space.}
+\label{tab:hpo-cnnlstm-space}
+\small
+\begin{tabular}{llll}
+\toprule
+\textbf{Hyperparameter}  & \textbf{Type}      & \textbf{Range / Choices}   & \textbf{Scale} \\
+\midrule
+$n_{\text{filters}}$     & Categorical        & \{32, 64, 128\}             & —              \\
+Kernel size $k$          & Categorical        & \{3, 5, 7\}                 & —              \\
+LSTM units $h_1$         & Categorical        & \{32, 64, 128\}             & —              \\
+LSTM units $h_2$         & Categorical        & \{64, 128, 256\}            & —              \\
+Dropout $p$              & Float              & $[0.1, 0.4]$                & Step 0.05      \\
+Learning rate            & Float              & $[10^{-4}, 10^{-2}]$        & Log            \\
+Batch size               & Categorical        & \{64, 512, 1024\}           & —              \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+The best trial was \textbf{Trial 1}, which yielded the highest mean F1 score across both tasks on the 0.1\% validation set.  As with TabNet, the best hyperparameters were persisted for subsequent use.
+
+% ------------------------------------------------------------
+\subsection{Batch Size Scaling}
+\label{sec:batch-scaling}
+% ------------------------------------------------------------
+
+A practical challenge arising from HPO on a $0.1\%$ sample is that the optimal batch size identified on the small sample may be suboptimal when training on the full $10\%$ dataset.  To address this, the linear scaling rule (He et al.) was applied:
+\[
+    B_{\text{scaled}} = \min\!\Bigl( B_{\text{HPO}} \cdot \frac{0.10}{0.001},\; 4096 \Bigr),
+\]
+capping the scaled batch size at 4\,096 to avoid excessive GPU memory consumption and prevent the per-batch gradient estimates from becoming excessively noisy at very large sizes.
+
+For TabNet, the sparsity regularisation coefficient $\lambda_{\text{sparse}}$ was also rescaled according to:
+\[
+    \lambda_{\text{scaled}} = \lambda_{\text{HPO}} \cdot \sqrt{\frac{0.001}{0.10}},
+\]
+a conservative correction that accounts for the increase in effective gradient magnitude at larger batch sizes while preventing over-regularisation on the larger dataset.
+
+For CNN-LSTM, the learning rate was halved relative to the HPO value to ensure stable convergence at the higher data volume, following common practice in large-batch training protocols.
+
+
+% ============================================================
+\newpage
+\section{Feature Importance and Feature Set Selection}
+\label{sec:feature-selection}
+% ============================================================
+
+A central design choice of the experimental protocol is the selection of the feature set on which both baseline models and all noise-injection experiments operate.  Rather than using the full reduced feature set described in Chapter~\ref{chap:dataset} (44 features for Experiment~A, 79 for Experiment~B), a compact set of \textbf{9 features} was constructed for the baseline experiments through a principled importance-based selection procedure.  This compact set serves three purposes: (i) it makes the computational cost of training both models across hundreds of noise-injection experiments tractable; (ii) it ensures that the features selected for corruption are directly linked to the models' predictive behaviour; and (iii) it provides a controlled experimental setting in which the contribution of each feature can be assessed in isolation.
+
+% ------------------------------------------------------------
+\subsection{Feature Importance Extraction}
+\label{sec:fi-extraction}
+% ------------------------------------------------------------
+
+After identifying the best trial for each model, feature importance scores were extracted using the two mechanisms natively available in the respective architectures:
+
+\begin{itemize}
+    \item \textbf{TabNet:} the library exposes \texttt{feature\_importances\_}, an array of shape $(F,)$ representing the mean attention mask weight assigned to each feature across all decision steps and all validation samples.  Features with a high average attention weight are those most frequently selected by the sparse attention mechanism, and can therefore be interpreted as carrying the most discriminative information for both tasks jointly.
+    \item \textbf{CNN-LSTM:} since the architecture does not expose a native feature importance measure, \emph{permutation importance}~\supercite{goodfellow2016deep} was employed.  For each feature $i$, the values along feature dimension 2 of the entire validation tensor were randomly permuted across samples (while leaving all other features intact) and the resulting drop in binary classification accuracy, $\Delta_i = \mathrm{acc}_{\text{base}} - \mathrm{acc}_{\text{permuted},i}$, was recorded.  The raw $\Delta_i$ values were normalised to $[0, 1]$ by dividing by the maximum observed drop, yielding a relative importance score $\hat{\Delta}_i \in [0, 1]$.  Negative drops (i.e.\ permuting the feature actually improved accuracy) were clipped to zero.
+\end{itemize}
+
+Both models were thus endowed with a ranked list of features ordered by their respective importance scores.
+
+% ------------------------------------------------------------
+\subsection{Combined Ranking and Stratified Feature Selection}
+\label{sec:combined-ranking}
+% ------------------------------------------------------------
+
+Rather than taking the intersection of two top-$k$ lists (which would discard features ranked highly by only one model), a \emph{combined average rank} was computed.  Denoting the rank of feature $f$ in TabNet's list as $r_{\text{TN}}(f)$ and in CNN-LSTM's list as $r_{\text{CL}}(f)$, the combined score is:
+\[
+    \bar{r}(f) = \frac{r_{\text{TN}}(f) + r_{\text{CL}}(f)}{2}.
+\]
+The full ranking (78 features) was then sorted in ascending order of $\bar{r}(f)$ (rank 1 = most important).  The top of this ranking is reproduced in Table~\ref{tab:combined-ranking}.
+
+\begin{table}[H]
+\centering
+\caption{Top entries of the combined feature ranking.  Column \emph{Combined rank} is the position in the $\bar{r}$-sorted list.}
+\label{tab:combined-ranking}
+\small
+\begin{tabular}{rlrrl}
+\toprule
+\textbf{Rank} & \textbf{Feature}     & \textbf{TabNet} & \textbf{CNN-LSTM} & \textbf{Avg.\ rank} \\
+\midrule
+1  & \texttt{Fwd Act Data Pkts}   & 1  & 1  & 1.0  \\
+2  & \texttt{Dst Port}            & 2  & 2  & 2.0  \\
+3  & \texttt{Init Fwd Win Byts}   & 8  & 3  & 5.5  \\
+4  & \texttt{CWE Flag Count}      & 4  & 8  & 6.0  \\
+5  & \texttt{Flow Pkts/s}         & 7  & 7  & 7.0  \\
+6  & \texttt{Pkt Len Mean}        & 3  & 12 & 7.5  \\
+7  & \texttt{Fwd IAT Std}         & 11 & 15 & 13.0 \\
+8  & \texttt{Bwd Pkt Len Max}     & 6  & 24 & 15.0 \\
+9  & \texttt{FIN Flag Cnt}        & 13 & 20 & 16.5 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+A purely top-$k$ selection from this combined ranking would, however, produce a feature set dominated by high-importance, high-fragility continuous features.  To guarantee a broader coverage of feature types and fragility levels (as classified in Chapter~\ref{chap:dataset}), and to explicitly include features that constitute experimental controls (low-importance or zero-variance features), a \emph{stratified selection} strategy was applied:
+
+\begin{enumerate}
+    \item \textbf{Top tier (ranks 1–3):} the three features with the lowest combined rank: \texttt{Fwd Act Data Pkts}, \texttt{Dst Port}, and \texttt{Init Fwd Win Byts}.  These are the most informative features according to both models and are therefore the most likely candidates for performance degradation under noise injection.
+    \item \textbf{Middle tier (forced selection for type coverage):} three features were manually selected from the middle of the ranking to ensure adequate coverage of distinct feature types:
+    \begin{itemize}
+        \item \texttt{Protocol} (combined rank~29): the only low-cardinality categorical feature, essential for the categorical \texttt{labels} noise experiments.
+        \item \texttt{PSH Flag Cnt} (combined rank~38): a binary-valued flag feature, included to assess how noise injection interacts with binary features.
+        \item \texttt{Fwd Seg Size Min} (combined rank~54): the \emph{only low-fragility} feature in the dataset (see Section~\ref{sec:fragility}), included as a structural control to compare noise sensitivity across fragility classes.
+    \end{itemize}
+    \item \textbf{Bottom tier (last 3 in combined ranking):} \texttt{Bwd Byts/b Avg}, \texttt{Fwd Blk Rate Avg}, and \texttt{Idle Mean}.  These features are ranked last by both models and include zero-variance bulk-transfer statistics that carry no discriminative information.  Their inclusion provides a negative control: noise injection on features that are already irrelevant to the classifier should, in principle, produce no measurable performance change.
+\end{enumerate}
+
+After de-duplication, the final feature set comprises exactly \textbf{9 features}, which are listed in Table~\ref{tab:final-features}.
+
+\begin{table}[H]
+\centering
+\caption{Final feature set used for all baseline and noise-injection experiments.}
+\label{tab:final-features}
+\small
+\begin{tabular}{lllr}
+\toprule
+\textbf{Feature}          & \textbf{Type}      & \textbf{Fragility}  & \textbf{Combined rank} \\
+\midrule
+\texttt{Fwd Act Data Pkts}  & Continuous         & High                & 1   \\
+\texttt{Dst Port}           & Continuous         & Not in fragility CSV & 2  \\
+\texttt{Init Fwd Win Byts}  & Continuous         & Medium              & 3   \\
+\texttt{Protocol}           & Categorical        & —                   & 29  \\
+\texttt{PSH Flag Cnt}       & Binary             & —                   & 38  \\
+\texttt{Fwd Seg Size Min}   & Categorical        & Low                 & 54  \\
+\texttt{Bwd Byts/b Avg}     & Continuous (zero-var.) & High            & 76  \\
+\texttt{Fwd Blk Rate Avg}   & Continuous (zero-var.) & High            & 77  \\
+\texttt{Idle Mean}          & Continuous         & High                & 78  \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+This nine-feature set was saved to disk (\texttt{models/important\_features.csv}) and is loaded by all subsequent experiment scripts as the authoritative column selection for both the 10\%-sampled baseline training and the full-scale HPC experiment loop.
+
+
+% ============================================================
+\newpage
+\section{Baseline Model Training}
+\label{sec:baseline-training}
+% ============================================================
+
+The baseline models constitute the reference against which every noise-injection experiment is evaluated.  They were trained on a \textbf{10\% stratified sample} of the CIC-IDS2018 dataset (stratified by \texttt{label\_generic}) using the nine features selected in Section~\ref{sec:feature-selection} and the hyperparameters from the best HPO trials described in Section~\ref{sec:hpo}.
+
+The 10\% sample was chosen as the largest data volume computationally tractable for iterative model training on a local machine.  It yields approximately \textbf{1\,614\,745 flow records}, retaining the full 15-class label distribution of the original dataset.
+
+% ------------------------------------------------------------
+\subsection{Temporal Dataset Split}
+\label{sec:temporal-split}
+% ------------------------------------------------------------
+
+A fundamental requirement of the experimental design is that the train/validation/test partition \emph{preserves the chronological ordering} of flows.  Shuffling the data before splitting would allow flows from the same temporal burst (e.g., a concentrated DDoS campaign) to appear in both the training and validation sets, artificially inflating performance estimates by contaminating the evaluation with temporally proximate train examples.  This is a well-documented form of data leakage in time-series settings that is particularly dangerous for the CNN-LSTM model, which explicitly exploits temporal context through its sliding-window input representation.
+
+The adopted split strategy is therefore entirely \emph{shuffle-free} and proceeds as follows:
+
+\begin{enumerate}
+    \item Flows are sorted in ascending order of \texttt{Timestamp}.
+    \item A group index is assigned to each flow: $g_i = i \bmod 3$, where $i$ is the 0-based position in the sorted sequence.
+    \item Flows with $g_i \in \{0, 1\}$ (two thirds of the data) form the \emph{training set}.
+    \item Flows with $g_i = 2$ (one third, the \emph{temporary set}) are further divided in an interleaved fashion: even-positioned temporary flows ($\text{pos} \bmod 2 = 0$) go to the \emph{validation set}, and odd-positioned flows go to the \emph{test set}.
+\end{enumerate}
+
+This produces three non-overlapping partitions that collectively cover all flows in strict chronological order, with no temporal gap between them.  The resulting sizes on the 10\% sample are summarised in Table~\ref{tab:split-sizes}.
+
+\begin{table}[H]
+\centering
+\caption{Dataset partition sizes after the temporal split on the 10\% stratified sample.}
+\label{tab:split-sizes}
+\small
+\begin{tabular}{lrr}
+\toprule
+\textbf{Partition} & \textbf{Rows}       & \textbf{Fraction (\%)} \\
+\midrule
+Training           & 1\,076\,497         & 66.7                   \\
+Validation         & 269\,124            & 16.7                   \\
+Test               & 269\,124            & 16.7                   \\
+\midrule
+Total              & 1\,614\,745         & 100.0                  \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+% ------------------------------------------------------------
+\subsection{Data Preprocessing and Scaling}
+\label{sec:preprocessing}
+% ------------------------------------------------------------
+
+Following the split, a \texttt{StandardScaler} was fit \emph{exclusively on the training partition} and subsequently applied to both validation and test sets, preventing any target leakage from the evaluation data into the normalisation statistics.  Scaling was applied only to the six continuous features (\texttt{Fwd Act Data Pkts}, \texttt{Dst Port}, \texttt{Init Fwd Win Byts}, \texttt{Bwd Byts/b Avg}, \texttt{Fwd Blk Rate Avg}, \texttt{Idle Mean}); categorical and binary features were left in their integer-encoded form and consumed directly by the respective model heads (through TabNet's native embedding layer, and as integer inputs to the CNN-LSTM channel dimension).
+
+Values containing \texttt{NaN}, \texttt{+inf}, or \texttt{-inf} (arising from division-by-zero artifacts in CICFlowMeter) were replaced with $0$ prior to scaling.
+
+% ------------------------------------------------------------
+\subsection{Sliding Window Construction for CNN-LSTM}
+\label{sec:windowing}
+% ------------------------------------------------------------
+
+The CNN-LSTM model requires a 3D input tensor of shape $(N_{\text{windows}} \times T \times F)$.  Starting from the sorted 2D array of each partition, a sliding window of length $T = 50$ flows with stride $S = 10$ flows was applied:
+
+\[
+    X^{(3D)}[j] = X^{(2D)}[jS : jS + T],  \quad
+    y^{(3D)}[j] = y^{(2D)}[jS + T - 1],
+\]
+
+where the label of each window is the label of its \emph{last} (most recent) flow.  This labelling convention is consistent with a causal streaming detection scenario, in which a decision is made upon observing the most recent packet in the window, using the preceding $T-1$ packets as temporal context.
+
+The resulting tensor dimensions for the 10\% sample baseline are:
+\begin{itemize}
+    \item Training: $(107\,645 \times 50 \times 9)$
+    \item Validation: $(26\,908 \times 50 \times 9)$
+\end{itemize}
+
+% ------------------------------------------------------------
+\newpage
+\subsection{Baseline Performance}
+\label{sec:baseline-performance}
+% ------------------------------------------------------------
+
+After training both models with the scaled batch sizes and learning rates described in Section~\ref{sec:batch-scaling}, the baseline performance on the validation set was as follows.
+
+\paragraph{TabNet Baseline.}
+TabNet converged after 11 epochs (early stopping), achieving the results reported in Table~\ref{tab:tabnet-baseline}.
+
+\begin{table}[H]
+\centering
+\caption{TabNet baseline performance on the validation set.}
+\label{tab:tabnet-baseline}
+\small
+\begin{tabular}{lrrrr}
+\toprule
+\textbf{Task}   & \textbf{Accuracy} & \textbf{F1 (macro)} & \textbf{MCC}   & \textbf{AUC}   \\
+\midrule
+Binary          & 0.9677            & 0.8967              & 0.8833         & 0.9730         \\
+Multi-class     & 0.9574            & 0.5040              & 0.8558         & 0.9266         \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+The binary task is handled with high proficiency: the MCC of $0.883$ and AUC of $0.973$ indicate strong discriminative power across both classes despite the severe class imbalance.  The macro F1 on the multi-class task ($0.504$) is substantially lower, reflecting the inherent difficulty of resolving 15 classes from only nine features on a 10\% dataset subsample.  The high MCC ($0.856$) for the multi-class task is not contradictory: MCC measures overall correlation between predicted and true label matrices and is less sensitive to macro-averaging artefacts caused by minority classes.
+
+\paragraph{CNN-LSTM Baseline.}
+The CNN-LSTM model trained for more epochs before early stopping was triggered, owing to the greater complexity of the sequential pattern learning task.  Its baseline performance is summarised in Table~\ref{tab:cnnlstm-baseline}.
+
+\begin{table}[H]
+\centering
+\caption{CNN-LSTM baseline performance on the validation set.}
+\label{tab:cnnlstm-baseline}
+\small
+\begin{tabular}{lrrrr}
+\toprule
+\textbf{Task}   & \textbf{F1 (macro)} & \textbf{MCC}   \\
+\midrule
+Binary          & 0.7593              & 0.7373         \\
+Multi-class     & 0.2525              & 0.6352         \\
+\midrule
+Mean MCC        & —                   & 0.6863         \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+The CNN-LSTM performs below TabNet on both tasks, which is expected given the combined effect of the reduced dataset size (10\% instead of the full corpus used in the reference work~\supercite{kim2020cnn}) and the restriction to only 9 features out of the original 80.  Furthermore, unlike TabNet, the CNN-LSTM does not benefit from a native attention mechanism that can explicitly focus on discriminative features; the temporal patterns captured in a 50-flow window on a dataset as heterogeneous as CIC-IDS2018 represent a harder learning problem.  These performance figures nonetheless constitute adequate baselines for the noise-injection experiments: the goal is not to achieve state-of-the-art detection rates, but rather to establish stable reference points against which the \emph{relative} impact of controlled corruption can be measured.
+
+
+% ============================================================
+\newpage
+\section{Experimental Protocol}
+\label{sec:experiment-protocol}
+% ============================================================
+
+With the baselines established, the principal experimental campaign was executed following a fully automated pipeline implemented in the \texttt{4-4c-cavas\_model\_Experiment\_localhost.py} script.  The pipeline iterates over all combinations of noise injection method, target feature, corruption percentage, and random seed, and for each combination retrains both TabNet and CNN-LSTM from scratch using the best hyperparameters identified in Section~\ref{sec:hpo}.
+
+% ------------------------------------------------------------
+\subsection{Experimental Variables}
+\label{sec:exp-variables}
+% ------------------------------------------------------------
+
+The experimental grid was defined by four independent variables:
+
+\paragraph{Noise injection methods.}
+All five PuckTrick corruption methods were employed:
+\begin{itemize}
+    \item \texttt{missing}: a fraction of values in the target feature column is replaced with \texttt{null}.
+    \item \texttt{noise}: values are replaced with uniform random draws from the column's observed range $[\min, \max]$.
+    \item \texttt{outliers}: extreme values beyond $\mu \pm 4\sigma$ are injected into numeric columns; the next integer beyond the observed maximum is used for categorical integer columns.
+    \item \texttt{labels}: binary labels ($0 \leftrightarrow 1$) are flipped or categorical labels are replaced with a randomly chosen different category.
+    \item \texttt{duplicated}: a fraction of rows is duplicated and appended to the dataset.
+\end{itemize}
+
+\paragraph{Target features.}
+Experiments for the methods \texttt{missing}, \texttt{noise}, \texttt{outliers}, and \texttt{labels} were applied to every feature in the nine-feature set (plus the \texttt{Timestamp} column, for a total of 10 columns), with the constraint that the \texttt{labels} method was applied exclusively to features with binary or categorical semantics (\texttt{FIN Flag Cnt} and \texttt{Protocol}).  The \texttt{duplicated} method operates at the row level rather than the column level and was therefore applied once globally using the \texttt{Timestamp} column as the reference for row selection.
+
+\paragraph{Corruption percentages.}
+Six levels of corruption intensity were evaluated:
+\[
+    p \in \{5\%,\; 10\%,\; 20\%,\; 35\%,\; 50\%,\; 75\%\},
+\]
+spanning a range from mild, practically plausible degradation to severe corruption that approaches the limits of identifiable signal in the data.
+
+\paragraph{Random seeds.}
+To establish confidence intervals around the observed performance deltas and ensure statistical robustness, the entire grid was repeated across \textbf{10 independent random seeds} on the HPC cluster:
+\[
+    S = \{303,\; 404,\; 505,\; 606,\; 707,\; 808,\; 909,\; 1010,\; 1111,\; 42\}.
+\]
+Each seed governs the stratified sampling, the temporal split ordering, the PuckTrick noise realisation, and the PyTorch and Lightning random states (via \texttt{pl.seed\_everything}).
+
+% ------------------------------------------------------------
+\subsection{Experiment Naming Convention}
+\label{sec:exp-naming}
+% ------------------------------------------------------------
+
+Each experiment is uniquely identified by a label of the form:
+\begin{center}
+    \texttt{Experiment\_\{method\}\_\{feature\}\_\{percentage\}}
+\end{center}
+for example: \texttt{Experiment\_missing\_Dst Port\_50.0}.  For each label, two artifact files are produced: a \texttt{.pt} checkpoint file containing the CNN-LSTM model weights, and a \texttt{\_artifacts.json} file recording all evaluation metrics (MCC, F1, AUC, confusion matrices), the model hyperparameters, the feature importance scores, and the per-feature correlation matrix of the training set.  The TabNet model is persisted as a \texttt{.zip} archive following the \texttt{pytorch-tabnet} serialisation convention.
+
+% ------------------------------------------------------------
+\subsection{Dataset Preparation and Caching}
+\label{sec:dataset-caching}
+% ------------------------------------------------------------
+
+Calling \texttt{prepare\_whole\_dataset\_from\_scratch()} for each experiment would entail: reading the full Parquet file from disk, performing stratified sampling, applying PuckTrick noise injection, converting the Spark DataFrame to Pandas, remapping labels, scaling features, and constructing the sliding windows.  Multiplied across hundreds of experiments and ten random seeds, this would represent a prohibitive I/O and CPU bottleneck.
+
+To circumvent this, the pipeline was executed in two sequential phases:
+
+\begin{enumerate}
+    \item \textbf{Dataset compilation phase} (\texttt{JUST\_COMPILE\_DATASETS = True}): all datasets for all experiment combinations were pre-computed and serialised to disk in NumPy binary format (\texttt{.npy} arrays).  For each experiment label, a directory \texttt{<RS\_DIR>/datasets/<label>/} is created, containing the 12 split arrays (train/val $\times$ 2D/3D $\times$ binary/multiclass labels) plus a \texttt{metadata.json} file recording the \texttt{FEATURE\_COLS}, \texttt{CAT\_IDXS}, \texttt{CAT\_DIMS}, \texttt{label\_classes}, and the training-set correlation matrix.  A checkpointing mechanism skips any dataset for which the corresponding \texttt{metadata.json} already exists, making the compilation phase resumable after interruption.
+
+    \item \textbf{Training phase} (\texttt{JUST\_COMPILE\_DATASETS = False}): the training script loads each pre-computed dataset from disk and immediately passes the arrays to the model training functions.  If a model artifact already exists on disk for a given experiment label, training is skipped and the artifact is reloaded directly, making the training phase equally resumable.
+\end{enumerate}
+
+This two-phase design decoupled the Spark-intensive data preparation from the GPU-intensive model training, allowing each phase to be scheduled independently on the HPC cluster and enabling efficient use of both the distributed Spark infrastructure and the GPU nodes.
+
+% ------------------------------------------------------------
+\subsection{Noise Injection and Dataset Construction per Experiment}
+\label{sec:noise-construction}
+% ------------------------------------------------------------
+
+For each experiment, the dataset is constructed as follows:
+
+\begin{enumerate}
+    \item The full 10\%-sampled Spark DataFrame is loaded from the Parquet archive and restricted to the nine important features plus the mandatory columns (\texttt{Label}, \texttt{label\_generic}, \texttt{Timestamp}).
+    \item The data is ordered chronologically and divided into training, validation, and test partitions using the temporal split described in Section~\ref{sec:temporal-split}.  The \emph{validation and test partitions remain entirely clean} throughout: only the training partition is subjected to PuckTrick noise injection.
+    \item A PuckTrick \texttt{OBJ} is instantiated on the training partition, and the selected corruption method is invoked with a strategy dictionary specifying the target feature, the desired corruption percentage $p$, and the \texttt{"new"} mode (corruption applied from zero).
+    \item The corrupted training DataFrame is converted to Pandas, preprocessed with the same label encoder fitted on the global sample, scaled with the same \texttt{StandardScaler} fitted on the clean training partition, and assembled into 2D and 3D arrays.
+    \item Rare classes (fewer than five samples in the training set) are filtered and the multi-class label index space is remapped to a contiguous integer range $[0, n_{\text{classes}}-1]$, ensuring that the CrossEntropyLoss does not encounter out-of-range target indices.
+\end{enumerate}
+
+This design guarantees that each experiment measures exclusively the effect of corrupting the training data: the evaluation is always performed on the same clean held-out validation flows, making all performance numbers directly comparable across experiments and seeds.
+
+% ------------------------------------------------------------
+\subsection{Computational Infrastructure}
+\label{sec:infra}
+% ------------------------------------------------------------
+
+Local development and prototyping (including hyperparameter optimisation and baseline training) were carried out on a single workstation with a consumer GPU.  The full experiment grid, comprising hundreds of training runs across ten random seeds, was executed on an HPC cluster (\texttt{scratch\_share/datai/} filesystem) equipped with dedicated GPU nodes.  The Spark session was configured with 30\,GB of driver memory, a \texttt{local[*]} master (exploiting all allocated SLURM CPU cores), and a per-process GPU memory limit of 80\% to avoid out-of-memory errors during concurrent GPU-accelerated model evaluation.
+
+
+% ============================================================
+\newpage
+\section{Summary}
+\label{sec:pipeline-summary}
+% ============================================================
+
+Table~\ref{tab:pipeline-summary} provides a consolidated overview of the full experimental pipeline described in this chapter.
+
+\begin{table}[H]
+\centering
+\caption{Summary of the experimental pipeline.}
+\label{tab:pipeline-summary}
+\small
+\begin{tabular}{ll}
+\toprule
+\textbf{Stage}                    & \textbf{Key parameters} \\
+\midrule
+HPO dataset                       & 0.1\% stratified sample ($\approx$16\,000 flows) \\
+TabNet trials / best trial        & 9 trials / Trial 7 \\
+CNN-LSTM trials / best trial      & 10 trials / Trial 1 \\
+HPO objective (TabNet)            & Mean MCC (binary + multi-class) \\
+HPO objective (CNN-LSTM)          & Mean F1 (binary + multi-class) \\
+\midrule
+Feature selection strategy        & Combined average rank, stratified by type and fragility \\
+Final feature set size            & 9 features \\
+\midrule
+Baseline training dataset         & 10\% stratified sample ($\approx$1\,614\,745 flows) \\
+Split strategy                    & Temporal modular split (no shuffling) \\
+Train / Val / Test fractions      & 66.7\% / 16.7\% / 16.7\% \\
+Window size / stride (CNN-LSTM)   & $T = 50$, $S = 10$ \\
+\midrule
+TabNet baseline MCC (bin / mul)   & 0.883 / 0.856 \\
+CNN-LSTM baseline MCC (bin / mul) & 0.737 / 0.635 \\
+\midrule
+PuckTrick methods                 & \{missing, noise, outliers, labels, duplicated\} \\
+Corruption percentages            & \{5\%, 10\%, 20\%, 35\%, 50\%, 75\%\} \\
+Random seeds (HPC)                & 10 seeds \\
+\midrule
+Clean validation / test sets      & Always corruption-free \\
+Artifact persistence              & \texttt{.pt}, \texttt{.zip}, \texttt{\_artifacts.json} per experiment \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+The pipeline described in this chapter constitutes the methodological backbone of Chapter~\ref{chap:Empiric-analysis-models}, where the quantitative results of all noise-injection experiments are presented, visualised, and interpreted.
 
 \end{document}
