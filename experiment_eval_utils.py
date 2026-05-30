@@ -166,6 +166,17 @@ def _seed_from_path(path: str) -> Optional[int]:
     return int(m.group(1)) if m else None
 
 
+def _is_baseline_path(path: str) -> bool:
+    """True for the clean-baseline artifacts under a ``Baselines/`` sub-folder.
+
+    Baseline runs (one per model, ``*_trial_Baseline_artifacts.json``) carry no
+    noise/method/feature coordinates, so they must be kept out of the noisy-run
+    loaders and handled separately via :func:`load_baselines`.
+    """
+    low = path.replace("\\", "/").lower()
+    return "/baselines/" in low or "trial_baseline" in os.path.basename(low)
+
+
 # --------------------------------------------------------------------------- #
 # Loading                                                                      #
 # --------------------------------------------------------------------------- #
@@ -187,7 +198,11 @@ def load_experiment_dataframe(root: str, verbose: bool = True) -> pd.DataFrame:
 
     rows = []
     n_bad = 0
+    n_baseline = 0
     for f in files:
+        if _is_baseline_path(f):
+            n_baseline += 1   # handled by load_baselines(), not here
+            continue
         try:
             with open(f, "r") as fh:
                 d = json.load(fh)
@@ -229,14 +244,15 @@ def load_experiment_dataframe(root: str, verbose: bool = True) -> pd.DataFrame:
     df = pd.DataFrame(rows)
     if verbose:
         n_files = len(files)
-        n_ok = n_files - n_bad
+        n_ok = n_files - n_bad - n_baseline
         if df.empty:
-            print(f"[load] No artifacts found under '{root}'.")
+            print(f"[load] No noisy-run artifacts found under '{root}'.")
             print("       The notebook will run but every section stays empty "
                   "until experiments are written here.")
         else:
             print(f"[load] {n_ok}/{n_files} artifact files parsed "
-                  f"({n_bad} skipped) -> {len(df)} task-rows.")
+                  f"({n_bad} skipped, {n_baseline} baselines handled separately) "
+                  f"-> {len(df)} task-rows.")
             print(f"       models   : {sorted(df['model'].dropna().unique())}")
             print(f"       methods  : {sorted(df['method'].dropna().unique())}")
             print(f"       features : {sorted(df['feature'].dropna().unique())}")
@@ -379,6 +395,106 @@ def paired_delta_significance(df: pd.DataFrame, model: str, task: str,
 
 
 # --------------------------------------------------------------------------- #
+# Clean baseline (0% noise) -- loaded from the Baselines/ sub-folder           #
+# --------------------------------------------------------------------------- #
+
+def load_baselines(root: str, verbose: bool = True) -> pd.DataFrame:
+    """Load the clean-baseline artifacts under ``<root>/Baselines/``.
+
+    These are the models trained on the *uncorrupted* dataset (one file per
+    model, ``*_trial_Baseline_artifacts.json``). Returns one row per
+    (model x task) with columns ``model, task, accuracy, f1, mcc, auc, path``.
+
+    The baseline is the genuine clean reference the noise experiments are
+    measured against; before it existed the notebooks fell back to the lowest
+    available noise level as a proxy.
+    """
+    files = sorted(glob.glob(os.path.join(root, "**", "*_artifacts.json"),
+                             recursive=True))
+    files = [f for f in files if _is_baseline_path(f)]
+    rows = []
+    for f in files:
+        try:
+            with open(f) as fh:
+                d = json.load(fh)
+        except (json.JSONDecodeError, OSError):
+            continue
+        model = _model_from_path(f) or _model_from_type(d.get("model_type"))
+        for task, mkey in (("binary", "metrics_binary"),
+                           ("multiclass", "metrics_multiclass")):
+            block = d.get(mkey, {}) or {}
+            row = {"model": model, "task": task, "path": f}
+            for met in _BASE_METRICS:
+                row[met] = _to_float(block.get(met))
+            if not np.isfinite(row["mcc"]):
+                row["mcc"] = _to_float(d.get("mcc_bin" if task == "binary" else "mcc_mul"))
+            rows.append(row)
+    bl = pd.DataFrame(rows)
+    if verbose:
+        if bl.empty:
+            print(f"[baseline] No clean baseline found under '{root}/Baselines'.")
+        else:
+            print(f"[baseline] loaded {len(files)} baseline file(s) -> "
+                  f"models={sorted(bl['model'].dropna().unique())}")
+    return bl
+
+
+def baseline_value(baselines: pd.DataFrame, model: str, task: str,
+                   metric: str) -> float:
+    """Scalar clean-baseline value for (model, task, metric), or NaN if absent."""
+    if baselines is None or baselines.empty:
+        return float("nan")
+    sel = baselines[(baselines["model"] == model) & (baselines["task"] == task)]
+    if sel.empty or metric not in sel.columns:
+        return float("nan")
+    return float(sel[metric].iloc[0])
+
+
+def baseline_delta_significance(df: pd.DataFrame, baselines: pd.DataFrame,
+                                model: str, task: str, metric: str) -> pd.DataFrame:
+    """Per (method, feature, noise%): one-sample test vs. the *clean* baseline.
+
+    The baseline is a single deterministic value (no seeds), so we cannot pair
+    by seed as in :func:`paired_delta_significance`. Instead we take the
+    per-seed metric values at each noise cell and run a one-sample Wilcoxon
+    signed-rank test of ``(value - baseline)`` against zero. This answers the
+    headline question of the thesis directly: *does injecting this noise beat
+    (or hurt) the model trained on clean data?*
+
+    Columns: ``model, method, feature, noise_percentage, n, baseline,
+    median_value, median_delta, mean_delta, p_value, significant``.
+    """
+    base = baseline_value(baselines, model, task, metric)
+    sub = df[(df["model"] == model) & (df["task"] == task)].dropna(subset=[metric])
+    if sub.empty or not np.isfinite(base):
+        return pd.DataFrame()
+
+    records = []
+    for (method, feature, pct), g in sub.groupby(["method", "feature", "noise_percentage"]):
+        vals = g[metric].values
+        deltas = vals - base
+        n = len(deltas)
+        p_value = np.nan
+        if n >= 2 and np.any(deltas != 0):
+            try:
+                p_value = float(stats.wilcoxon(deltas).pvalue)
+            except ValueError:
+                p_value = np.nan
+        records.append({
+            "model": model, "method": method, "feature": feature,
+            "noise_percentage": pct, "n": n, "baseline": base,
+            "median_value": float(np.median(vals)),
+            "median_delta": float(np.median(deltas)),
+            "mean_delta": float(np.mean(deltas)), "p_value": p_value,
+            "significant": (p_value < 0.05) if np.isfinite(p_value) else False,
+        })
+    res = pd.DataFrame(records)
+    if not res.empty:
+        res = res.sort_values(["method", "feature", "noise_percentage"]).reset_index(drop=True)
+    return res
+
+
+# --------------------------------------------------------------------------- #
 # Per-class behaviour, derived from the multiclass confusion matrix           #
 # --------------------------------------------------------------------------- #
 
@@ -394,6 +510,8 @@ def per_class_dataframe(root: str) -> pd.DataFrame:
                              recursive=True))
     rows = []
     for f in files:
+        if _is_baseline_path(f):
+            continue
         try:
             with open(f) as fh:
                 d = json.load(fh)
@@ -444,6 +562,8 @@ def feature_importance_dataframe(root: str) -> pd.DataFrame:
                              recursive=True))
     rows = []
     for f in files:
+        if _is_baseline_path(f):
+            continue
         try:
             with open(f) as fh:
                 d = json.load(fh)
@@ -482,6 +602,7 @@ def _ordered_hue_values(values: Iterable[str]) -> list:
 def plot_metric_vs_noise(df: pd.DataFrame, model: str, task: str, metric: str,
                          conf: float = 0.95, facet_by: str = "feature",
                          hue: str = "method", extra_filter: Optional[dict] = None,
+                         baselines: Optional[pd.DataFrame] = None,
                          figsize_per=(5.2, 4.0), ncols: int = 3,
                          title_suffix: str = "", savepath: Optional[str] = None):
     """Line plots of ``metric`` vs. noise %, with shaded t-CI bands.
@@ -490,9 +611,19 @@ def plot_metric_vs_noise(df: pd.DataFrame, model: str, task: str, metric: str,
     This is the central figure requested for the thesis: *for each feature, how
     does F1 / MCC evolve as the noise threshold grows, and how does that depend
     on the PuckTrick method used?* (Swap ``facet_by``/``hue`` to pivot the view.)
+
+    If ``baselines`` is provided, the clean-baseline value for this
+    (model, task, metric) is drawn as a horizontal dashed reference line in
+    every subplot, so one can see at a glance whether each noise curve sits
+    above or below the model trained on clean data.
+
+    The legend is built from proxy handles covering *all* ``hue`` values across
+    the whole figure (not just those present in the first subplot), so no curve
+    is ever missing from it.
     """
     import matplotlib.pyplot as plt
     import seaborn as sns
+    from matplotlib.lines import Line2D
 
     sub = df[(df["model"] == model) & (df["task"] == task)].copy()
     if extra_filter:
@@ -512,6 +643,9 @@ def plot_metric_vs_noise(df: pd.DataFrame, model: str, task: str, metric: str,
     hue_vals = _ordered_hue_values(agg[hue].dropna().unique())
     palette = dict(zip(hue_vals, sns.color_palette("tab10", max(len(hue_vals), 3))))
 
+    base_val = baseline_value(baselines, model, task, metric)
+    has_base = np.isfinite(base_val)
+
     ncols = max(1, min(ncols, len(facets)))
     nrows = math.ceil(len(facets) / ncols)
     fig, axes = plt.subplots(nrows, ncols,
@@ -525,11 +659,13 @@ def plot_metric_vs_noise(df: pd.DataFrame, model: str, task: str, metric: str,
             if g.empty:
                 continue
             ax.plot(g["noise_percentage"], g["mean"], marker="o", ms=5,
-                    label=str(h), color=palette[h])
+                    color=palette[h])
             band = g.dropna(subset=["ci_low", "ci_high"])
             if not band.empty:
                 ax.fill_between(band["noise_percentage"], band["ci_low"],
                                 band["ci_high"], alpha=0.18, color=palette[h])
+        if has_base:
+            ax.axhline(base_val, ls="--", lw=1.4, color="0.35", zorder=0)
         ax.set_title(f"{facet_by} = {fac}", fontsize=11)
         ax.set_xlabel("Noise level (%)")
         ax.set_ylabel(METRIC_LABELS.get(metric, metric))
@@ -538,10 +674,17 @@ def plot_metric_vs_noise(df: pd.DataFrame, model: str, task: str, metric: str,
     for j in range(len(facets), nrows * ncols):
         axes[j // ncols][j % ncols].axis("off")
 
-    handles, labels = axes[0][0].get_legend_handles_labels()
+    # Build the legend from proxy handles spanning EVERY hue value present
+    # anywhere in the figure (reading handles off the first subplot alone would
+    # drop any method/feature missing from that particular facet).
+    handles = [Line2D([0], [0], marker="o", color=palette[h], label=str(h))
+               for h in hue_vals]
+    if has_base:
+        handles.append(Line2D([0], [0], ls="--", color="0.35",
+                              label=f"clean baseline ({base_val:.3f})"))
     if handles:
-        fig.legend(handles, labels, title=hue.capitalize(),
-                   loc="upper center", ncol=min(len(labels), 6),
+        fig.legend(handles=handles, title=hue.capitalize(),
+                   loc="upper center", ncol=min(len(handles), 6),
                    bbox_to_anchor=(0.5, 1.02))
     metric_name = METRIC_LABELS.get(metric, metric)
     fig.suptitle(f"{metric_name} vs. noise level - {model.upper()} / {task}"
@@ -558,12 +701,20 @@ def plot_metric_vs_noise(df: pd.DataFrame, model: str, task: str, metric: str,
 def plot_metric_heatmap(df: pd.DataFrame, model: str, task: str, metric: str,
                         feature: Optional[str] = None, delta_vs_ref: bool = False,
                         ref_pct: Optional[float] = None,
+                        delta_vs_baseline: bool = False,
+                        baselines: Optional[pd.DataFrame] = None,
                         figsize=(9, 4.5), savepath: Optional[str] = None):
     """Heatmap of mean ``metric`` over (method x noise%).
 
-    If ``delta_vs_ref`` is True, cells show the change relative to ``ref_pct``
-    (defaults to the reference level), which makes "noise helped / hurt"
-    immediately legible (diverging colormap centred at zero).
+    Three display modes:
+
+    * default -> absolute mean metric per cell;
+    * ``delta_vs_baseline=True`` (with ``baselines``) -> change vs. the genuine
+      clean baseline scalar (diverging map, blue = beats clean, red = worse);
+    * ``delta_vs_ref=True`` -> change vs. ``ref_pct`` / the lowest noise level
+      (legacy proxy reference, used when no clean baseline is available).
+
+    ``delta_vs_baseline`` takes precedence when a baseline value exists.
     """
     import matplotlib.pyplot as plt
     import seaborn as sns
@@ -588,7 +739,12 @@ def plot_metric_heatmap(df: pd.DataFrame, model: str, task: str, metric: str,
     if feature is not None:
         title += f" - feature '{feature}'"
 
-    if delta_vs_ref:
+    base_val = baseline_value(baselines, model, task, metric)
+    if delta_vs_baseline and np.isfinite(base_val):
+        pivot = pivot - base_val
+        cmap, center = "RdBu_r", 0.0
+        title += f"\n(delta vs. clean baseline = {base_val:.3f})"
+    elif delta_vs_ref:
         rp = ref_pct if ref_pct is not None else reference_level(sub)
         if rp is not None and rp in pivot.columns:
             pivot = pivot.sub(pivot[rp], axis=0)

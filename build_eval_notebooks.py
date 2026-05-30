@@ -201,6 +201,28 @@ else:
           f"(n={df['seed'].nunique()})")""")
 
     # ------------------------------------------------------------------ #
+    # 1b. Clean baseline                                                 #
+    # ------------------------------------------------------------------ #
+    md(r"""### 1b. Clean baseline (0% noise)
+
+The `Baselines/` sub-folder holds the models trained on the **uncorrupted**
+dataset (one per model). This is the *genuine* clean reference the noise
+experiments are measured against &mdash; earlier versions of this notebook had to
+fall back to the lowest available noise level as a proxy. It is loaded
+separately (it carries no method/feature/noise coordinates) and is **excluded**
+from the noisy-run `DataFrame`, then used as a reference line in the trend plots,
+as the centre of the heatmaps, and as the null value in the significance tests
+below.""")
+    co(r"""BL = eu.load_baselines(ROOT_DIR)
+HAS_BASELINE = not BL.empty
+if HAS_BASELINE:
+    display(BL[["model", "task", "accuracy", "f1", "mcc", "auc"]]
+            .round(4).reset_index(drop=True))
+else:
+    print("[!] No clean baseline found under Baselines/ - "
+          "plots fall back to the lowest-noise proxy reference.")""")
+
+    # ------------------------------------------------------------------ #
     # 2. Coverage                                                        #
     # ------------------------------------------------------------------ #
     md(r"""## 2. Coverage &mdash; how trustworthy is each cell?
@@ -271,12 +293,16 @@ with:
 
 * **one subplot per corrupted feature**,
 * **one line per PuckTrick method**,
-* a **shaded band** = the Student-t confidence interval across seeds.
+* a **shaded band** = the Student-t confidence interval across seeds,
+* a **dashed horizontal line** = the clean-baseline value for this model/task.
 
-Reading guide: a line that *rises* with noise is evidence that the corresponding
-corruption *helps* the model (the surprising effect the proof of concept is
-after); a line that *falls* is the intuitive degradation; flat-within-band means
-the model is *robust* to that corruption.""")
+Reading guide: a curve **above** the dashed baseline means that corruption makes
+the model *better than training on clean data* (the surprising effect the proof
+of concept is after); a curve that *falls* with noise is the intuitive
+degradation; flat-within-band means the model is *robust* to that corruption.
+
+(The legend lists every method present anywhere in the figure plus the baseline,
+so no curve is omitted even when a method is missing from the first subplot.)""")
     co(r"""def trend_figs(metric):
     if not HAS_DATA:
         print("No data yet."); return
@@ -287,7 +313,7 @@ the model is *robust* to that corruption.""")
                     if SAVE_FIGURES else None)
             fig = eu.plot_metric_vs_noise(df, model, task, metric,
                                           conf=CONF_LEVEL, facet_by="feature",
-                                          hue="method", savepath=save)
+                                          hue="method", baselines=BL, savepath=save)
             if fig is not None:
                 plt.show()
 
@@ -303,7 +329,7 @@ method, which features are the most sensitive?* (shown for the binary task; edit
     for model in MODELS:
         fig = eu.plot_metric_vs_noise(df, model, "binary", "mcc",
                                       conf=CONF_LEVEL, facet_by="method",
-                                      hue="feature")
+                                      hue="feature", baselines=BL)
         if fig is not None:
             plt.show()""")
 
@@ -313,42 +339,70 @@ method, which features are the most sensitive?* (shown for the binary task; edit
     md(r"""## 5. Heatmaps &mdash; method &times; noise level
 
 Heatmaps condense the same information into compact, manuscript-friendly
-figures. We show the **delta vs. the reference noise level** (diverging colour
-map centred at zero): **blue = better than reference, red = worse**. This makes
-the "noise helped here" cells pop out at a glance.
+figures. We show the **delta vs. the clean baseline** (diverging colour map
+centred at zero): **blue = beats the clean model, red = worse than clean**. This
+makes the "noise helped here" cells pop out at a glance.
 
-> **About the reference.** These experiments do **not** include a clean (0%
-> noise) run, so the *lowest available* noise level is used as a near-clean
-> proxy and labelled as such. If you later add genuine 0% baselines to the
-> folder, `reference_level()` will pick them up automatically.""")
+> If the clean baseline is missing the function falls back to the lowest noise
+> level as a proxy reference (`delta_vs_ref`).""")
     co(r"""if HAS_DATA:
-    ref = eu.reference_level(df)
-    print(f"Reference noise level (proxy baseline): {ref:g}%")
+    if HAS_BASELINE:
+        print("Heatmaps show the change vs the CLEAN baseline (blue = beats clean).")
+    else:
+        ref = eu.reference_level(df)
+        print(f"No clean baseline; using lowest noise level {ref:g}% as proxy reference.")
     for model in MODELS:
         for task in TASKS:
             fig = eu.plot_metric_heatmap(df, model, task, "mcc",
-                                         delta_vs_ref=True, ref_pct=ref)
+                                         delta_vs_baseline=HAS_BASELINE, baselines=BL,
+                                         delta_vs_ref=not HAS_BASELINE)
             if fig is not None:
                 plt.show()""")
 
     # ------------------------------------------------------------------ #
     # 6. Significance                                                    #
     # ------------------------------------------------------------------ #
-    md(r"""## 6. Is the change real? &mdash; paired significance vs. reference
+    md(r"""## 6. Is the change real? &mdash; significance tests
 
-Overlapping error bars are not a verdict. For every `(method, feature, noise%)`
-we pair **each seed's** metric with the *same seed's* metric at the reference
-level and run a **Wilcoxon signed-rank test** on the per-seed differences.
-Pairing by seed cancels seed-to-seed variance, so this is a proper
-repeated-measures test of *"does this noise level move the metric?"*
+Overlapping error bars are not a verdict. We run **two complementary Wilcoxon
+signed-rank tests**, both at the 5% level:
 
-We then list the configurations with a **statistically significant
-improvement** (`median_delta > 0` and `p < 0.05`) &mdash; the defensible "noise
-helped" claims for the thesis.
+**(6a) vs. the clean baseline &mdash; the headline test.** For each
+`(method, feature, noise%)` we test whether the per-seed metric values differ
+from the **clean-baseline scalar** (one-sample Wilcoxon of `value - baseline`
+against zero). This answers the thesis' core question directly: *does injecting
+this noise beat (or hurt) the model trained on clean data?* The configurations
+with `median_delta > 0` and `p < 0.05` are the defensible **"noise helped vs.
+clean"** claims.
 
-> With few seeds the Wilcoxon test has limited power, so absence of significance
-> here is *not* evidence of no effect; always read it next to `n_pairs`.""")
-    co(r"""def significance(metric, task="binary"):
+**(6b) vs. the lowest noise level &mdash; a within-grid trend check.** Pairs each
+seed's metric with the *same seed's* metric at the lowest noise level. Pairing by
+seed cancels seed-to-seed variance; it tells us whether *increasing* the noise
+beyond the mildest setting moves the metric.
+
+> With few seeds the test has limited power, so absence of significance is *not*
+> evidence of no effect; always read it next to `n`.""")
+    co(r"""# (6a) vs the CLEAN baseline -- the headline 'does noise beat clean?' test.
+def baseline_significance(metric, task="binary"):
+    if not (HAS_DATA and HAS_BASELINE):
+        return pd.DataFrame()
+    out = [eu.baseline_delta_significance(df, BL, m, task, metric) for m in MODELS]
+    out = [o for o in out if not o.empty]
+    return pd.concat(out, ignore_index=True) if out else pd.DataFrame()
+
+bsig_mcc = baseline_significance("mcc", task="binary")
+if HAS_DATA and HAS_BASELINE and not bsig_mcc.empty:
+    beats = bsig_mcc[(bsig_mcc["median_delta"] > 0) & (bsig_mcc["significant"])]
+    print(f"Configurations that SIGNIFICANTLY BEAT the clean baseline "
+          f"(binary MCC): {len(beats)} of {len(bsig_mcc)} tested")
+    display(beats.sort_values("median_delta", ascending=False).reset_index(drop=True))
+    print("\nConfigurations significantly WORSE than clean (for completeness):")
+    worse = bsig_mcc[(bsig_mcc["median_delta"] < 0) & (bsig_mcc["significant"])]
+    display(worse.sort_values("median_delta").head(20).reset_index(drop=True))
+elif HAS_DATA and not HAS_BASELINE:
+    print("No clean baseline available - skipping the vs-baseline test (see 6b).")""")
+    co(r"""# (6b) vs the lowest noise level -- paired within-grid trend check.
+def significance(metric, task="binary"):
     if not HAS_DATA:
         return pd.DataFrame()
     ref = eu.reference_level(df)
@@ -362,15 +416,13 @@ helped" claims for the thesis.
 
 sig_mcc = significance("mcc", task="binary")
 if HAS_DATA and not sig_mcc.empty:
+    ref = eu.reference_level(df)
     improved = sig_mcc[(sig_mcc["median_delta"] > 0) & (sig_mcc["significant"])]
-    print(f"Significant MCC improvements vs reference (binary): "
-          f"{len(improved)} of {len(sig_mcc)} tested configs")
+    print(f"Significant MCC changes vs the {ref:g}% level (binary): "
+          f"{len(improved)} improvements of {len(sig_mcc)} tested configs")
     display(improved.sort_values("median_delta", ascending=False).reset_index(drop=True))
-    print("\nSignificant DEGRADATIONS (for completeness):")
-    worsened = sig_mcc[(sig_mcc["median_delta"] < 0) & (sig_mcc["significant"])]
-    display(worsened.sort_values("median_delta").reset_index(drop=True))
 elif HAS_DATA:
-    print("Not enough paired data to run the significance test yet.")""")
+    print("Not enough paired data to run the within-grid test yet.")""")
 
     # ------------------------------------------------------------------ #
     # 7. Model comparison                                                #
@@ -480,9 +532,16 @@ straight into the LaTeX sources in `temp-latex` (e.g. with `pandas.to_latex` or
     for metric in ["mcc", "f1", "accuracy"]:
         eu.export_aggregate(df, metric, RESULTS_DIR, conf=CONF_LEVEL)
     if not sig_mcc.empty:
-        sig_mcc.to_csv(os.path.join(RESULTS_DIR, "significance_mcc_binary.csv"),
+        sig_mcc.to_csv(os.path.join(RESULTS_DIR, "significance_mcc_binary_vs_lownoise.csv"),
                        index=False)
-        print("[export] significance_mcc_binary.csv")
+        print("[export] significance_mcc_binary_vs_lownoise.csv")
+    if HAS_BASELINE and not bsig_mcc.empty:
+        bsig_mcc.to_csv(os.path.join(RESULTS_DIR, "significance_mcc_binary_vs_baseline.csv"),
+                        index=False)
+        print("[export] significance_mcc_binary_vs_baseline.csv")
+    if HAS_BASELINE:
+        BL.to_csv(os.path.join(RESULTS_DIR, "baseline_metrics.csv"), index=False)
+        print("[export] baseline_metrics.csv")
     print("\nExports written to:", RESULTS_DIR)""")
 
     # ------------------------------------------------------------------ #
@@ -503,7 +562,12 @@ scaffolding to be edited into academic English, not as final text.""")
     lines.append("=" * 60)
     lines.append(f"Runs parsed        : {len(df)//2} artifacts "
                  f"({df['seed'].nunique()} seeds, models={sorted(df['model'].dropna().unique())})")
-    lines.append(f"Reference level    : {ref:g}% (near-clean proxy; no 0% baseline on disk)")
+    if HAS_BASELINE:
+        for model in sorted(BL['model'].dropna().unique()):
+            bv = eu.baseline_value(BL, model, 'binary', 'mcc')
+            lines.append(f"Clean baseline MCC : {bv:.3f}  ({model}, binary)")
+    else:
+        lines.append(f"Reference level    : {ref:g}% (no clean baseline on disk; proxy)")
 
     bb = eu.aggregate_with_ci(df[df.task == 'binary'],
                               ['model','method','feature','noise_percentage'], 'mcc')
@@ -514,13 +578,20 @@ scaffolding to be edited into academic English, not as final text.""")
                      f"({top['model']}, {top['method']} on {top['feature']} "
                      f"@ {top['noise_percentage']:g}%, n={int(top['n'])})")
 
+    if HAS_BASELINE:
+        n_beat = 0
+        for model in df['model'].dropna().unique():
+            s = eu.baseline_delta_significance(df, BL, model, 'binary', 'mcc')
+            if not s.empty:
+                n_beat += int(((s['median_delta'] > 0) & s['significant']).sum())
+        lines.append(f"Beat clean baseline: {n_beat} (model x method x feature x level) "
+                     f"configurations significantly beat clean (Wilcoxon p<0.05)")
     n_imp = 0
     for model in df['model'].dropna().unique():
         s = eu.paired_delta_significance(df, model, 'binary', 'mcc', ref)
         if not s.empty:
             n_imp += int(((s['median_delta'] > 0) & s['significant']).sum())
-    lines.append(f"Sig. MCC gains     : {n_imp} (model x method x feature x level) "
-                 f"configurations beat the reference (Wilcoxon p<0.05)")
+    lines.append(f"Sig. vs {ref:g}% level : {n_imp} configs improve over the lowest noise level")
     print("\n".join(lines))
 
 auto_summary()""")
@@ -533,9 +604,9 @@ auto_summary()""")
 * **Small sample (5 seeds).** Confidence intervals are wide and the Wilcoxon
   test has little power; phrase Experiment A findings as *indicative*. The
   larger Experiment B (`6B`) is where firm conclusions belong.
-* **No clean baseline on disk.** Improvement is measured against the lowest
-  noise level as a proxy. To make absolute "noise helps vs. clean" claims, add
-  0%-noise runs to the folder &mdash; the notebook will use them automatically.
+* **Clean baseline is a single deterministic run** (no seeds), so the
+  vs-baseline test (6a) is a one-sample test: it asks whether the *seed
+  distribution* of a noisy config sits above/below a fixed clean value.
 * **Feature-reduced dataset.** Results here are not directly comparable to
   Experiment B, which keeps the full feature set.""")
     else:
@@ -543,10 +614,10 @@ auto_summary()""")
 
 ### Caveats to carry into the write-up
 
-* **No clean baseline on disk.** Improvement is measured against the lowest
-  noise level as a proxy. Add 0%-noise runs to the folder to enable absolute
-  "noise helps vs. clean" claims &mdash; the notebook will pick them up
-  automatically.
+* **Clean baseline is a single deterministic run** (no seeds), so the
+  vs-baseline test (6a) is a one-sample Wilcoxon over the noisy config's seed
+  distribution against a fixed clean value &mdash; the primary "noise beats
+  clean" evidence for the thesis.
 * **Single- vs. multiple-feature scenarios** are aggregated together by default.
   Filter `df[df.scenario == "single"]` (or `"multi"`) before any section to
   analyse them separately; the multiple-feature scenario is still in progress.
