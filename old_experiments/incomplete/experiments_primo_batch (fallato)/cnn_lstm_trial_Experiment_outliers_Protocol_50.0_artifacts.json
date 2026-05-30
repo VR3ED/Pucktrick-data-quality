@@ -1,0 +1,417 @@
+{
+    "model": "experiments/cnn_lstm_trial_Experiment_outliers_Protocol_50.0.pt",
+    "model_type": "CNN-LSTM",
+    "label": "Experiment_outliers_Protocol_50.0",
+<<<<<<< HEAD:experiments/cnn_lstm_trial_Experiment_outliers_Protocol_50.0_artifacts.json
+    "mcc_bin": 0.7464277005353682,
+    "mcc_mul": 0.7266600089259514,
+    "mean_mcc": 0.7365438547306598,
+    "val_loss": 0.622147041506001,
+    "cm_bin": [
+        [
+            22159,
+            84
+        ],
+        [
+            1739,
+            2881
+=======
+    "mcc_bin": 0.7606052559806361,
+    "mcc_mul": 0.7588630201223502,
+    "mean_mcc": 0.7597341380514931,
+    "val_loss": 0.565642944404057,
+    "cm_bin": [
+        [
+            22160,
+            171
+        ],
+        [
+            1542,
+            3044
+>>>>>>> a448b70f92ad6f09c001173f0f5fcb64bd2e2232:experiments3/cnn_lstm_trial_Experiment_outliers_Protocol_50.0_artifacts.json
+        ]
+    ],
+    "cm_mul": [
+        [
+<<<<<<< HEAD:experiments/cnn_lstm_trial_Experiment_outliers_Protocol_50.0_artifacts.json
+            22217,
+            1,
+            0,
+            0,
+            0,
+            5,
+            15,
+=======
+            22228,
+            1,
+            0,
+            0,
+            26,
+            22,
+            49,
+>>>>>>> a448b70f92ad6f09c001173f0f5fcb64bd2e2232:experiments3/cnn_lstm_trial_Experiment_outliers_Protocol_50.0_artifacts.json
+            0,
+            0,
+            5,
+            0,
+            0,
+            0
+        ],
+        [
+            1,
+<<<<<<< HEAD:experiments/cnn_lstm_trial_Experiment_outliers_Protocol_50.0_artifacts.json
+            1170,
+=======
+            1158,
+>>>>>>> a448b70f92ad6f09c001173f0f5fcb64bd2e2232:experiments3/cnn_lstm_trial_Experiment_outliers_Protocol_50.0_artifacts.json
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0
+        ],
+        [
+<<<<<<< HEAD:experiments/cnn_lstm_trial_Experiment_outliers_Protocol_50.0_artifacts.json
+            988,
+=======
+            941,
+>>>>>>> a448b70f92ad6f09c001173f0f5fcb64bd2e2232:experiments3/cnn_lstm_trial_Experiment_outliers_Protocol_50.0_artifacts.json
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0
+        ],
+        [
+<<<<<<< HEAD:experiments/cnn_lstm_trial_Experiment_outliers_Protocol_50.0_artifacts.json
+            120,
+            0,
+            0,
+            633,
+=======
+            23,
+            12,
+            0,
+            741,
+>>>>>>> a448b70f92ad6f09c001173f0f5fcb64bd2e2232:experiments3/cnn_lstm_trial_Experiment_outliers_Protocol_50.0_artifacts.json
+            0,
+            0,
+            0,
+            0,
+            0,
+<<<<<<< HEAD:experiments/cnn_lstm_trial_Experiment_outliers_Protocol_50.0_artifacts.json
+            8,
+=======
+            6,
+>>>>>>> a448b70f92ad6f09c001173f0f5fcb64bd2e2232:experiments3/cnn_lstm_trial_Experiment_outliers_Protocol_50.0_artifacts.json
+            0,
+            0,
+            0
+        ],
+        [
+<<<<<<< HEAD:experiments/cnn_lstm_trial_Experiment_outliers_Protocol_50.0_artifacts.json
+            469,
+=======
+            388,
+            0,
+            0,
+            0,
+            78,
+>>>>>>> a448b70f92ad6f09c001173f0f5fcb64bd2e2232:experiments3/cnn_lstm_trial_Experiment_outliers_Protocol_50.0_artifacts.json
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+<<<<<<< HEAD:experiments/cnn_lstm_trial_Experiment_outliers_Protocol_50.0_artifacts.json
+            0,
+            5,
+            0,
+=======
+            0
+        ],
+        [
+            12,
+            0,
+            0,
+            0,
+            0,
+            304,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0
+        ],
+        [
+            2,
+            1,
+            0,
+            0,
+            5,
+            0,
+            317,
+            0,
+            0,
+            1,
+            0,
+>>>>>>> a448b70f92ad6f09c001173f0f5fcb64bd2e2232:experiments3/cnn_lstm_trial_Experiment_outliers_Protocol_50.0_artifacts.json
+            0,
+            0
+        ],
+        [
+<<<<<<< HEAD:experiments/cnn_lstm_trial_Experiment_outliers_Protocol_50.0_artifacts.json
+            20,
+            0,
+            0,
+            0,
+            0,
+            281,
+            8,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0
+        ],
+        [
+            27,
+            0,
+            0,
+            0,
+            0,
+            0,
+            229,
+            0,
+            0,
+            58,
+            0,
+            0,
+            0
+        ],
+        [
+            273,
+            0,
+            0,
+            0,
+            0,
+            2,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0
+        ],
+        [
+            0,
+=======
+            270,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0
+        ],
+        [
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            235,
+            0,
+            0,
+            0,
+            0
+        ],
+        [
+            13,
+            6,
+            0,
+            0,
+            12,
+            0,
+            16,
+            0,
+            0,
+            20,
+            0,
+            0,
+            0
+        ],
+        [
+            18,
+>>>>>>> a448b70f92ad6f09c001173f0f5fcb64bd2e2232:experiments3/cnn_lstm_trial_Experiment_outliers_Protocol_50.0_artifacts.json
+            1,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+<<<<<<< HEAD:experiments/cnn_lstm_trial_Experiment_outliers_Protocol_50.0_artifacts.json
+            229,
+=======
+            0,
+>>>>>>> a448b70f92ad6f09c001173f0f5fcb64bd2e2232:experiments3/cnn_lstm_trial_Experiment_outliers_Protocol_50.0_artifacts.json
+            0,
+            0,
+            0,
+            0
+        ],
+        [
+<<<<<<< HEAD:experiments/cnn_lstm_trial_Experiment_outliers_Protocol_50.0_artifacts.json
+            38,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            37,
+            0,
+            0,
+            0
+        ],
+        [
+            19,
+=======
+            3,
+>>>>>>> a448b70f92ad6f09c001173f0f5fcb64bd2e2232:experiments3/cnn_lstm_trial_Experiment_outliers_Protocol_50.0_artifacts.json
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0
+        ],
+        [
+            2,
+            0,
+            0,
+<<<<<<< HEAD:experiments/cnn_lstm_trial_Experiment_outliers_Protocol_50.0_artifacts.json
+            1,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0
+        ],
+        [
+            1,
+            0,
+            0,
+=======
+>>>>>>> a448b70f92ad6f09c001173f0f5fcb64bd2e2232:experiments3/cnn_lstm_trial_Experiment_outliers_Protocol_50.0_artifacts.json
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0
+        ]
+    ],
+    "feature_importance": {
+<<<<<<< HEAD:experiments/cnn_lstm_trial_Experiment_outliers_Protocol_50.0_artifacts.json
+        "Down/Up Ratio": 0.17948717948717938,
+        "Dst Port": 0.49822485207100603,
+        "FIN Flag Cnt": 0.0,
+        "Flow Pkts/s": 0.21735700197238653,
+        "Fwd Pkt Len Max": 0.37909270216962476,
+        "Init Bwd Win Byts": 0.09704142011834224,
+        "Init Fwd Win Byts": 1.0,
+        "Protocol": 0.002366863905324933
+=======
+        "Down/Up Ratio": 0.036746343203710355,
+        "Dst Port": 0.4923296468069922,
+        "FIN Flag Cnt": 0.0,
+        "Flow Pkts/s": 0.07813057438458833,
+        "Fwd Pkt Len Max": 0.3410631466286127,
+        "Init Bwd Win Byts": 0.05208704958972591,
+        "Init Fwd Win Byts": 1.0,
+        "Protocol": 0.006064930431681385
+>>>>>>> a448b70f92ad6f09c001173f0f5fcb64bd2e2232:experiments3/cnn_lstm_trial_Experiment_outliers_Protocol_50.0_artifacts.json
+    },
+    "params": {
+        "nb_filters": 32,
+        "kernel_size": 3,
+        "lstm_units_1": 128,
+        "lstm_units_2": 256,
+        "dropout": 0.1,
+        "lr": 0.0008204643365323959,
+        "batch_size": 4096
+    },
+    "metrics_binary": {
+        "task": "Trial Experiment_outliers_Protocol_50.0 - Binary Task",
+<<<<<<< HEAD:experiments/cnn_lstm_trial_Experiment_outliers_Protocol_50.0_artifacts.json
+        "accuracy": 0.932137140304508,
+        "f1": 0.7596572181938036,
+        "mcc": 0.7464277005353682,
+        "auc": 0.9506215925122997
+    },
+    "metrics_multiclass": {
+        "task": "Trial Experiment_outliers_Protocol_50.0 - Multiclass Task",
+        "accuracy": 0.9230540148159178,
+        "f1": 0.4619618167532902,
+        "mcc": 0.7266600089259514,
+=======
+        "accuracy": 0.9363599212393655,
+        "f1": 0.7804127675938982,
+        "mcc": 0.7606052559806361,
+        "auc": 0.9532307236582814
+    },
+    "metrics_multiclass": {
+        "task": "Trial Experiment_outliers_Protocol_50.0 - Multiclass Task",
+        "accuracy": 0.93179031838615,
+        "f1": 0.4951979974087246,
+        "mcc": 0.7588630201223502,
+>>>>>>> a448b70f92ad6f09c001173f0f5fcb64bd2e2232:experiments3/cnn_lstm_trial_Experiment_outliers_Protocol_50.0_artifacts.json
+        "auc": NaN
+    }
+}
