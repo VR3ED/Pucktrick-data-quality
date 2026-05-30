@@ -1,0 +1,525 @@
+{
+    "model": "tabnet_trial_Experiment_missing_Protocol_50.0",
+    "model_type": "TabNet",
+    "label": "Experiment_missing_Protocol_50.0",
+<<<<<<< HEAD:experiments/tabnet_trial_Experiment_missing_Protocol_50.0_artifacts.json
+    "mcc_bin": 0.8352067129506309,
+    "mcc_mul": 0.7824987156883234,
+    "mean_mcc": 0.8088527143194771,
+    "cm_bin": [
+        [
+            212378,
+            10685
+        ],
+        [
+            2948,
+            42664
+=======
+    "mcc_bin": 0.933271670741083,
+    "mcc_mul": 0.907173985045285,
+    "mean_mcc": 0.920222827893184,
+    "cm_bin": [
+        [
+            221752,
+            1443
+        ],
+        [
+            3583,
+            42433
+>>>>>>> a448b70f92ad6f09c001173f0f5fcb64bd2e2232:experiments3/tabnet_trial_Experiment_missing_Protocol_50.0_artifacts.json
+        ]
+    ],
+    "cm_mul": [
+        [
+<<<<<<< HEAD:experiments/tabnet_trial_Experiment_missing_Protocol_50.0_artifacts.json
+            217304,
+            140,
+            5221,
+            0,
+            192,
+            18,
+            133,
+            43,
+            3,
+            8,
+            0,
+            0,
+            1,
+            0,
+            0
+        ],
+        [
+            6,
+            11451,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+=======
+            222011,
+            55,
+            928,
+            5,
+            80,
+            18,
+            74,
+            0,
+            5,
+            4,
+            15,
+>>>>>>> a448b70f92ad6f09c001173f0f5fcb64bd2e2232:experiments3/tabnet_trial_Experiment_missing_Protocol_50.0_artifacts.json
+            0,
+            0,
+            0
+        ],
+        [
+<<<<<<< HEAD:experiments/tabnet_trial_Experiment_missing_Protocol_50.0_artifacts.json
+            9,
+            0,
+            9574,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0
+        ],
+        [
+            540,
+            0,
+            6925,
+            10,
+            0,
+            0,
+            2,
+            0,
+            0,
+            167,
+            0,
+            0,
+            0,
+            0,
+            0
+        ],
+        [
+            90,
+            0,
+            0,
+            0,
+            4656,
+=======
+            10,
+            11579,
+>>>>>>> a448b70f92ad6f09c001173f0f5fcb64bd2e2232:experiments3/tabnet_trial_Experiment_missing_Protocol_50.0_artifacts.json
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+<<<<<<< HEAD:experiments/tabnet_trial_Experiment_missing_Protocol_50.0_artifacts.json
+            0,
+            0,
+            0,
+            0
+        ],
+        [
+            0,
+            0,
+            0,
+            0,
+            0,
+            2802,
+            0,
+            0,
+            356,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0
+        ],
+        [
+            37,
+            0,
+            0,
+            0,
+            0,
+            0,
+            3097,
+            6,
+=======
+>>>>>>> a448b70f92ad6f09c001173f0f5fcb64bd2e2232:experiments3/tabnet_trial_Experiment_missing_Protocol_50.0_artifacts.json
+            1,
+            0,
+            0,
+            0,
+            0,
+<<<<<<< HEAD:experiments/tabnet_trial_Experiment_missing_Protocol_50.0_artifacts.json
+=======
+            0
+        ],
+        [
+            252,
+            0,
+            9307,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+>>>>>>> a448b70f92ad6f09c001173f0f5fcb64bd2e2232:experiments3/tabnet_trial_Experiment_missing_Protocol_50.0_artifacts.json
+            0,
+            0
+        ],
+        [
+<<<<<<< HEAD:experiments/tabnet_trial_Experiment_missing_Protocol_50.0_artifacts.json
+            2557,
+            1,
+            41,
+            0,
+            3,
+            0,
+            12,
+            8,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0
+        ],
+        [
+            0,
+            0,
+            0,
+            0,
+            0,
+            1270,
+            0,
+            0,
+            1043,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0
+        ],
+        [
+            58,
+            0,
+            234,
+            0,
+            0,
+            0,
+            257,
+            0,
+            0,
+            146,
+            0,
+            0,
+            0,
+            0,
+            0
+        ],
+        [
+            149,
+            39,
+            2,
+            0,
+            0,
+            0,
+            10,
+            6,
+            0,
+            0,
+            0,
+            0,
+=======
+            579,
+            0,
+            0,
+            7133,
+            0,
+            0,
+            0,
+            0,
+            0,
+            52,
+            0,
+            0,
+            0,
+            0
+        ],
+        [
+            95,
+            0,
+            0,
+            0,
+            4679,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0
+        ],
+        [
+            0,
+            0,
+            0,
+            0,
+            0,
+            1410,
+            0,
+            0,
+            1793,
+            0,
+            0,
+            0,
+            0,
+            0
+        ],
+        [
+            57,
+            0,
+            0,
+            0,
+            0,
+            0,
+            3116,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0
+        ],
+        [
+            2671,
+            1,
+            5,
+            7,
+            0,
+            1,
+            7,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0
+        ],
+        [
+            0,
+            0,
+            0,
+            0,
+            0,
+            273,
+            0,
+            0,
+            2080,
+            0,
+            0,
+            0,
+            0,
+            0
+        ],
+        [
+            15,
+            0,
+            0,
+            338,
+            0,
+            0,
+            68,
+            0,
+            0,
+            258,
+            4,
+            0,
+            0,
+            0
+        ],
+        [
+            91,
+            0,
+            0,
+            3,
+            0,
+            0,
+            4,
+            0,
+            0,
+            6,
+            84,
+>>>>>>> a448b70f92ad6f09c001173f0f5fcb64bd2e2232:experiments3/tabnet_trial_Experiment_missing_Protocol_50.0_artifacts.json
+            0,
+            0,
+            0
+        ],
+        [
+<<<<<<< HEAD:experiments/tabnet_trial_Experiment_missing_Protocol_50.0_artifacts.json
+            29,
+            0,
+=======
+            27,
+>>>>>>> a448b70f92ad6f09c001173f0f5fcb64bd2e2232:experiments3/tabnet_trial_Experiment_missing_Protocol_50.0_artifacts.json
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0
+        ],
+        [
+<<<<<<< HEAD:experiments/tabnet_trial_Experiment_missing_Protocol_50.0_artifacts.json
+            11,
+            0,
+            2,
+=======
+            7,
+            0,
+>>>>>>> a448b70f92ad6f09c001173f0f5fcb64bd2e2232:experiments3/tabnet_trial_Experiment_missing_Protocol_50.0_artifacts.json
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0
+        ],
+        [
+            3,
+            0,
+<<<<<<< HEAD:experiments/tabnet_trial_Experiment_missing_Protocol_50.0_artifacts.json
+            1,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0
+        ],
+        [
+            1,
+            0,
+            0,
+=======
+>>>>>>> a448b70f92ad6f09c001173f0f5fcb64bd2e2232:experiments3/tabnet_trial_Experiment_missing_Protocol_50.0_artifacts.json
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0
+        ]
+    ],
+    "feature_importance": {
+<<<<<<< HEAD:experiments/tabnet_trial_Experiment_missing_Protocol_50.0_artifacts.json
+        "Down/Up Ratio": 0.1194164362381074,
+        "Dst Port": 0.1932688378461893,
+        "FIN Flag Cnt": 0.06205307176452555,
+        "Flow Pkts/s": 0.13154598562733372,
+        "Fwd Pkt Len Max": 0.13226878885112162,
+        "Init Bwd Win Byts": 0.10644456358400912,
+        "Init Fwd Win Byts": 0.11768690626329316,
+        "Protocol": 0.13731540982542
+=======
+        "Down/Up Ratio": 0.11742364811417769,
+        "Dst Port": 0.1429432334779301,
+        "FIN Flag Cnt": 0.029202521963672963,
+        "Flow Pkts/s": 0.10563250531515073,
+        "Fwd Pkt Len Max": 0.16702296298860603,
+        "Init Bwd Win Byts": 0.1599731643906504,
+        "Init Fwd Win Byts": 0.18082436427594362,
+        "Protocol": 0.09697759947386854
+>>>>>>> a448b70f92ad6f09c001173f0f5fcb64bd2e2232:experiments3/tabnet_trial_Experiment_missing_Protocol_50.0_artifacts.json
+    },
+    "params": {
+        "N_a": 16,
+        "N_steps": 4,
+        "gamma": 1.0,
+        "lambda_sparse": 0.003967605077052991,
+        "lr": 0.0015930522616241021,
+        "batch_size": 4096,
+        "mask_type": "sparsemax"
+    },
+    "metrics_binary": {
+        "task": "Trial Experiment_missing_Protocol_50.0 - Binary Task",
+<<<<<<< HEAD:experiments/tabnet_trial_Experiment_missing_Protocol_50.0_artifacts.json
+        "accuracy": 0.9492583976923793,
+        "f1": 0.862238659674013,
+        "mcc": 0.8352067129506309,
+        "auc": 0.9719743916374639
+    },
+    "metrics_multiclass": {
+        "task": "Trial Experiment_missing_Protocol_50.0 - Multiclass Task",
+        "accuracy": 0.9308309295617382,
+        "f1": 0.40728947155904777,
+        "mcc": 0.7824987156883234,
+        "auc": 0.886012103172748
+=======
+        "accuracy": 0.9813306291347679,
+        "f1": 0.944088461709607,
+        "mcc": 0.933271670741083,
+        "auc": 0.9758995722223447
+    },
+    "metrics_multiclass": {
+        "task": "Trial Experiment_missing_Protocol_50.0 - Multiclass Task",
+        "accuracy": 0.9719402253251167,
+        "f1": 0.5817778543894211,
+        "mcc": 0.907173985045285,
+        "auc": NaN
+>>>>>>> a448b70f92ad6f09c001173f0f5fcb64bd2e2232:experiments3/tabnet_trial_Experiment_missing_Protocol_50.0_artifacts.json
+    }
+}
