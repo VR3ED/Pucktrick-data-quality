@@ -1,0 +1,467 @@
+{
+    "model": "tabnet_trial_Experiment_noise_Down_Up Ratio_50.0",
+    "model_type": "TabNet",
+    "label": "Experiment_noise_Down_Up Ratio_50.0",
+<<<<<<< HEAD:experiments/tabnet_trial_Experiment_noise_Down_Up Ratio_50.0_artifacts.json
+    "mcc_bin": 0.8911071344495578,
+    "mcc_mul": 0.8671166238001974,
+    "mean_mcc": 0.8791118791248775,
+    "cm_bin": [
+        [
+            218173,
+            4890
+        ],
+        [
+            3471,
+            42141
+=======
+    "mcc_bin": 0.9379665593627206,
+    "mcc_mul": 0.9168996897499175,
+    "mean_mcc": 0.927433124556319,
+    "cm_bin": [
+        [
+            222766,
+            429
+        ],
+        [
+            4241,
+            41775
+>>>>>>> a448b70f92ad6f09c001173f0f5fcb64bd2e2232:experiments3/tabnet_trial_Experiment_noise_Down_Up Ratio_50.0_artifacts.json
+        ]
+    ],
+    "cm_mul": [
+        [
+<<<<<<< HEAD:experiments/tabnet_trial_Experiment_noise_Down_Up Ratio_50.0_artifacts.json
+            218332,
+            81,
+            885,
+            3524,
+            83,
+            54,
+            71,
+            0,
+            2,
+            31,
+            0,
+            0,
+            0,
+            0,
+            0
+        ],
+        [
+            6,
+            11451,
+            0,
+=======
+            222904,
+            58,
+            14,
+            38,
+            84,
+            8,
+            53,
+            0,
+            0,
+            35,
+            0,
+            0,
+            1,
+            0
+        ],
+        [
+            10,
+            11580,
+>>>>>>> a448b70f92ad6f09c001173f0f5fcb64bd2e2232:experiments3/tabnet_trial_Experiment_noise_Down_Up Ratio_50.0_artifacts.json
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0
+        ],
+        [
+            9,
+            0,
+<<<<<<< HEAD:experiments/tabnet_trial_Experiment_noise_Down_Up Ratio_50.0_artifacts.json
+            9353,
+            221,
+            0,
+=======
+            9307,
+            243,
+>>>>>>> a448b70f92ad6f09c001173f0f5fcb64bd2e2232:experiments3/tabnet_trial_Experiment_noise_Down_Up Ratio_50.0_artifacts.json
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0
+        ],
+        [
+<<<<<<< HEAD:experiments/tabnet_trial_Experiment_noise_Down_Up Ratio_50.0_artifacts.json
+            1011,
+            0,
+            0,
+            6404,
+            0,
+            0,
+            0,
+            0,
+            0,
+            229,
+            0,
+=======
+            1091,
+            0,
+            0,
+            6624,
+            0,
+            0,
+            2,
+            0,
+            0,
+            47,
+>>>>>>> a448b70f92ad6f09c001173f0f5fcb64bd2e2232:experiments3/tabnet_trial_Experiment_noise_Down_Up Ratio_50.0_artifacts.json
+            0,
+            0,
+            0,
+            0
+        ],
+        [
+            20,
+            0,
+            0,
+            0,
+<<<<<<< HEAD:experiments/tabnet_trial_Experiment_noise_Down_Up Ratio_50.0_artifacts.json
+            4726,
+            0,
+=======
+            4754,
+>>>>>>> a448b70f92ad6f09c001173f0f5fcb64bd2e2232:experiments3/tabnet_trial_Experiment_noise_Down_Up Ratio_50.0_artifacts.json
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0
+        ],
+        [
+            0,
+            0,
+            0,
+            0,
+            0,
+<<<<<<< HEAD:experiments/tabnet_trial_Experiment_noise_Down_Up Ratio_50.0_artifacts.json
+            2818,
+            0,
+            0,
+            340,
+=======
+            2860,
+            0,
+            0,
+            343,
+            0,
+            0,
+            0,
+            0,
+            0
+        ],
+        [
+            61,
+            0,
+            0,
+            0,
+            0,
+            0,
+            3112,
+            0,
+>>>>>>> a448b70f92ad6f09c001173f0f5fcb64bd2e2232:experiments3/tabnet_trial_Experiment_noise_Down_Up Ratio_50.0_artifacts.json
+            0,
+            0,
+            0,
+            0,
+            0,
+            0
+        ],
+        [
+<<<<<<< HEAD:experiments/tabnet_trial_Experiment_noise_Down_Up Ratio_50.0_artifacts.json
+            38,
+            0,
+            0,
+            0,
+            0,
+            0,
+            3102,
+            0,
+            1,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0
+        ],
+        [
+            2531,
+            1,
+            11,
+            41,
+            32,
+            1,
+            5,
+            0,
+=======
+            2619,
+            1,
+            3,
+            32,
+            35,
+            0,
+            2,
+>>>>>>> a448b70f92ad6f09c001173f0f5fcb64bd2e2232:experiments3/tabnet_trial_Experiment_noise_Down_Up Ratio_50.0_artifacts.json
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0
+        ],
+        [
+            0,
+            0,
+            0,
+            0,
+            0,
+<<<<<<< HEAD:experiments/tabnet_trial_Experiment_noise_Down_Up Ratio_50.0_artifacts.json
+            1287,
+            0,
+            0,
+            1026,
+            0,
+=======
+            1369,
+            0,
+            0,
+            984,
+>>>>>>> a448b70f92ad6f09c001173f0f5fcb64bd2e2232:experiments3/tabnet_trial_Experiment_noise_Down_Up Ratio_50.0_artifacts.json
+            0,
+            0,
+            0,
+            0,
+            0
+        ],
+        [
+            15,
+            0,
+            0,
+<<<<<<< HEAD:experiments/tabnet_trial_Experiment_noise_Down_Up Ratio_50.0_artifacts.json
+            234,
+            0,
+            0,
+            40,
+            0,
+            0,
+            406,
+            0,
+            0,
+=======
+            364,
+            0,
+            0,
+            24,
+            0,
+            0,
+            269,
+            11,
+>>>>>>> a448b70f92ad6f09c001173f0f5fcb64bd2e2232:experiments3/tabnet_trial_Experiment_noise_Down_Up Ratio_50.0_artifacts.json
+            0,
+            0,
+            0
+        ],
+        [
+<<<<<<< HEAD:experiments/tabnet_trial_Experiment_noise_Down_Up Ratio_50.0_artifacts.json
+            58,
+            0,
+            0,
+            2,
+            1,
+            39,
+            6,
+            0,
+            0,
+            100,
+            0,
+            0,
+            0,
+=======
+            57,
+            0,
+            0,
+            43,
+            0,
+            0,
+            4,
+            0,
+            0,
+            0,
+            84,
+            0,
+>>>>>>> a448b70f92ad6f09c001173f0f5fcb64bd2e2232:experiments3/tabnet_trial_Experiment_noise_Down_Up Ratio_50.0_artifacts.json
+            0,
+            0
+        ],
+        [
+<<<<<<< HEAD:experiments/tabnet_trial_Experiment_noise_Down_Up Ratio_50.0_artifacts.json
+            29,
+            0,
+=======
+            27,
+>>>>>>> a448b70f92ad6f09c001173f0f5fcb64bd2e2232:experiments3/tabnet_trial_Experiment_noise_Down_Up Ratio_50.0_artifacts.json
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0
+        ],
+        [
+<<<<<<< HEAD:experiments/tabnet_trial_Experiment_noise_Down_Up Ratio_50.0_artifacts.json
+            12,
+            0,
+            1,
+=======
+            7,
+            0,
+>>>>>>> a448b70f92ad6f09c001173f0f5fcb64bd2e2232:experiments3/tabnet_trial_Experiment_noise_Down_Up Ratio_50.0_artifacts.json
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0
+        ],
+        [
+            3,
+            0,
+<<<<<<< HEAD:experiments/tabnet_trial_Experiment_noise_Down_Up Ratio_50.0_artifacts.json
+            1,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0
+        ],
+        [
+            1,
+            0,
+            0,
+=======
+>>>>>>> a448b70f92ad6f09c001173f0f5fcb64bd2e2232:experiments3/tabnet_trial_Experiment_noise_Down_Up Ratio_50.0_artifacts.json
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0
+        ]
+    ],
+    "feature_importance": {
+<<<<<<< HEAD:experiments/tabnet_trial_Experiment_noise_Down_Up Ratio_50.0_artifacts.json
+        "Down/Up Ratio": 0.04479103829838512,
+        "Dst Port": 0.15279063820122676,
+        "FIN Flag Cnt": 0.051190890654930696,
+        "Flow Pkts/s": 0.13407947660879238,
+        "Fwd Pkt Len Max": 0.1071802930659716,
+        "Init Bwd Win Byts": 0.17891465357028177,
+        "Init Fwd Win Byts": 0.13827304972973314,
+        "Protocol": 0.19277995987067856
+=======
+        "Down/Up Ratio": 0.06249087397474182,
+        "Dst Port": 0.18026158768737163,
+        "FIN Flag Cnt": 0.06427503759325504,
+        "Flow Pkts/s": 0.09437797602691703,
+        "Fwd Pkt Len Max": 0.11223678611537238,
+        "Init Bwd Win Byts": 0.1694397724077365,
+        "Init Fwd Win Byts": 0.19699666761967838,
+        "Protocol": 0.11992129857492735
+>>>>>>> a448b70f92ad6f09c001173f0f5fcb64bd2e2232:experiments3/tabnet_trial_Experiment_noise_Down_Up Ratio_50.0_artifacts.json
+    },
+    "params": {
+        "N_a": 16,
+        "N_steps": 4,
+        "gamma": 1.0,
+        "lambda_sparse": 0.003967605077052991,
+        "lr": 0.0015930522616241021,
+        "batch_size": 4096,
+        "mask_type": "sparsemax"
+    },
+    "metrics_binary": {
+        "task": "Trial Experiment_noise_Down_Up Ratio_50.0 - Binary Task",
+<<<<<<< HEAD:experiments/tabnet_trial_Experiment_noise_Down_Up Ratio_50.0_artifacts.json
+        "accuracy": 0.968880617846841,
+        "f1": 0.9097503319193031,
+        "mcc": 0.8911071344495578,
+        "auc": 0.9769481815314977
+    },
+    "metrics_multiclass": {
+        "task": "Trial Experiment_noise_Down_Up Ratio_50.0 - Multiclass Task",
+        "accuracy": 0.9588461896343166,
+        "f1": 0.4979178828480866,
+        "mcc": 0.8671166238001974,
+        "auc": 0.8949576377004215
+=======
+        "accuracy": 0.9826530119497346,
+        "f1": 0.9470641577873498,
+        "mcc": 0.9379665593627206,
+        "auc": 0.978030220086398
+    },
+    "metrics_multiclass": {
+        "task": "Trial Experiment_noise_Down_Up Ratio_50.0 - Multiclass Task",
+        "accuracy": 0.9749898778281719,
+        "f1": 0.5878953927763237,
+        "mcc": 0.9168996897499175,
+        "auc": NaN
+>>>>>>> a448b70f92ad6f09c001173f0f5fcb64bd2e2232:experiments3/tabnet_trial_Experiment_noise_Down_Up Ratio_50.0_artifacts.json
+    }
+}

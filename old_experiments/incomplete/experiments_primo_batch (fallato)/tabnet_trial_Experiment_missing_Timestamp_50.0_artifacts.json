@@ -1,0 +1,497 @@
+{
+    "model": "tabnet_trial_Experiment_missing_Timestamp_50.0",
+    "model_type": "TabNet",
+    "label": "Experiment_missing_Timestamp_50.0",
+<<<<<<< HEAD:experiments/tabnet_trial_Experiment_missing_Timestamp_50.0_artifacts.json
+    "mcc_bin": 0.8830892808409426,
+    "mcc_mul": 0.8720107238352718,
+    "mean_mcc": 0.8775500023381072,
+    "cm_bin": [
+        [
+            217184,
+            5879
+        ],
+        [
+            3221,
+            42391
+=======
+    "mcc_bin": 0.8766619354703654,
+    "mcc_mul": 0.8589105088463399,
+    "mean_mcc": 0.8677862221583527,
+    "cm_bin": [
+        [
+            216716,
+            6479
+        ],
+        [
+            3252,
+            42764
+>>>>>>> a448b70f92ad6f09c001173f0f5fcb64bd2e2232:experiments3/tabnet_trial_Experiment_missing_Timestamp_50.0_artifacts.json
+        ]
+    ],
+    "cm_mul": [
+        [
+<<<<<<< HEAD:experiments/tabnet_trial_Experiment_missing_Timestamp_50.0_artifacts.json
+            218368,
+            62,
+            883,
+            3514,
+            109,
+            12,
+            76,
+            0,
+            2,
+            37,
+            0,
+            0,
+=======
+            217171,
+            60,
+            1059,
+            4709,
+            48,
+            19,
+            49,
+            33,
+            2,
+            29,
+            16,
+>>>>>>> a448b70f92ad6f09c001173f0f5fcb64bd2e2232:experiments3/tabnet_trial_Experiment_missing_Timestamp_50.0_artifacts.json
+            0,
+            0,
+            0
+        ],
+        [
+<<<<<<< HEAD:experiments/tabnet_trial_Experiment_missing_Timestamp_50.0_artifacts.json
+            10,
+            11447,
+            0,
+=======
+            13,
+            11577,
+>>>>>>> a448b70f92ad6f09c001173f0f5fcb64bd2e2232:experiments3/tabnet_trial_Experiment_missing_Timestamp_50.0_artifacts.json
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0
+        ],
+        [
+            9,
+            0,
+<<<<<<< HEAD:experiments/tabnet_trial_Experiment_missing_Timestamp_50.0_artifacts.json
+            9353,
+            221,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0
+        ],
+        [
+            455,
+            0,
+            0,
+            6968,
+            0,
+            0,
+            0,
+            0,
+            0,
+            221,
+            0,
+            0,
+            0,
+            0,
+            0
+        ],
+        [
+            86,
+            0,
+            0,
+            0,
+            4660,
+=======
+            9307,
+            243,
+>>>>>>> a448b70f92ad6f09c001173f0f5fcb64bd2e2232:experiments3/tabnet_trial_Experiment_missing_Timestamp_50.0_artifacts.json
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0
+        ],
+        [
+<<<<<<< HEAD:experiments/tabnet_trial_Experiment_missing_Timestamp_50.0_artifacts.json
+=======
+            516,
+            0,
+            0,
+            7001,
+>>>>>>> a448b70f92ad6f09c001173f0f5fcb64bd2e2232:experiments3/tabnet_trial_Experiment_missing_Timestamp_50.0_artifacts.json
+            0,
+            0,
+            0,
+            0,
+            0,
+<<<<<<< HEAD:experiments/tabnet_trial_Experiment_missing_Timestamp_50.0_artifacts.json
+            2699,
+            0,
+            0,
+            459,
+            0,
+            0,
+=======
+            247,
+>>>>>>> a448b70f92ad6f09c001173f0f5fcb64bd2e2232:experiments3/tabnet_trial_Experiment_missing_Timestamp_50.0_artifacts.json
+            0,
+            0,
+            0,
+            0
+        ],
+        [
+<<<<<<< HEAD:experiments/tabnet_trial_Experiment_missing_Timestamp_50.0_artifacts.json
+            41,
+            0,
+            0,
+            0,
+            0,
+            0,
+            3099,
+            0,
+=======
+            18,
+            0,
+            0,
+            0,
+            4755,
+>>>>>>> a448b70f92ad6f09c001173f0f5fcb64bd2e2232:experiments3/tabnet_trial_Experiment_missing_Timestamp_50.0_artifacts.json
+            1,
+            0,
+            0,
+            0,
+            0,
+            0,
+<<<<<<< HEAD:experiments/tabnet_trial_Experiment_missing_Timestamp_50.0_artifacts.json
+            0
+        ],
+        [
+            2578,
+            1,
+            7,
+            25,
+            3,
+            0,
+            8,
+=======
+            0,
+            0,
+            0
+        ],
+        [
+>>>>>>> a448b70f92ad6f09c001173f0f5fcb64bd2e2232:experiments3/tabnet_trial_Experiment_missing_Timestamp_50.0_artifacts.json
+            0,
+            0,
+            0,
+            0,
+            0,
+<<<<<<< HEAD:experiments/tabnet_trial_Experiment_missing_Timestamp_50.0_artifacts.json
+=======
+            2857,
+            0,
+            0,
+            346,
+            0,
+            0,
+            0,
+            0,
+            0
+        ],
+        [
+            70,
+            0,
+            0,
+            0,
+            0,
+            0,
+            3103,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0
+        ],
+        [
+            2624,
+            0,
+            6,
+            47,
+            0,
+            0,
+            4,
+            11,
+            0,
+            0,
+            0,
+>>>>>>> a448b70f92ad6f09c001173f0f5fcb64bd2e2232:experiments3/tabnet_trial_Experiment_missing_Timestamp_50.0_artifacts.json
+            0,
+            0,
+            0
+        ],
+        [
+            0,
+            0,
+            0,
+            0,
+            0,
+<<<<<<< HEAD:experiments/tabnet_trial_Experiment_missing_Timestamp_50.0_artifacts.json
+            1246,
+            0,
+            0,
+            1067,
+            0,
+=======
+            1367,
+            0,
+            0,
+            986,
+>>>>>>> a448b70f92ad6f09c001173f0f5fcb64bd2e2232:experiments3/tabnet_trial_Experiment_missing_Timestamp_50.0_artifacts.json
+            0,
+            0,
+            0,
+            0,
+            0
+        ],
+        [
+            15,
+            0,
+            0,
+<<<<<<< HEAD:experiments/tabnet_trial_Experiment_missing_Timestamp_50.0_artifacts.json
+            257,
+            0,
+            0,
+            105,
+            0,
+            0,
+            318,
+            0,
+=======
+            225,
+            0,
+            0,
+            61,
+            0,
+            0,
+            382,
+>>>>>>> a448b70f92ad6f09c001173f0f5fcb64bd2e2232:experiments3/tabnet_trial_Experiment_missing_Timestamp_50.0_artifacts.json
+            0,
+            0,
+            0,
+            0
+        ],
+        [
+<<<<<<< HEAD:experiments/tabnet_trial_Experiment_missing_Timestamp_50.0_artifacts.json
+            98,
+            0,
+            0,
+            2,
+            0,
+            0,
+            6,
+            0,
+            0,
+=======
+>>>>>>> a448b70f92ad6f09c001173f0f5fcb64bd2e2232:experiments3/tabnet_trial_Experiment_missing_Timestamp_50.0_artifacts.json
+            100,
+            0,
+            0,
+            0,
+            0,
+<<<<<<< HEAD:experiments/tabnet_trial_Experiment_missing_Timestamp_50.0_artifacts.json
+            0
+        ],
+        [
+            29,
+            0,
+=======
+            0,
+            4,
+            0,
+            0,
+            84,
+            0,
+            0,
+            0,
+            0
+        ],
+        [
+            27,
+>>>>>>> a448b70f92ad6f09c001173f0f5fcb64bd2e2232:experiments3/tabnet_trial_Experiment_missing_Timestamp_50.0_artifacts.json
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0
+        ],
+        [
+<<<<<<< HEAD:experiments/tabnet_trial_Experiment_missing_Timestamp_50.0_artifacts.json
+            12,
+=======
+            7,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0
+        ],
+        [
+            2,
+>>>>>>> a448b70f92ad6f09c001173f0f5fcb64bd2e2232:experiments3/tabnet_trial_Experiment_missing_Timestamp_50.0_artifacts.json
+            0,
+            1,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+<<<<<<< HEAD:experiments/tabnet_trial_Experiment_missing_Timestamp_50.0_artifacts.json
+            0,
+            0
+        ],
+        [
+            3,
+            0,
+            1,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0
+        ],
+        [
+            1,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+=======
+>>>>>>> a448b70f92ad6f09c001173f0f5fcb64bd2e2232:experiments3/tabnet_trial_Experiment_missing_Timestamp_50.0_artifacts.json
+            0
+        ]
+    ],
+    "feature_importance": {
+<<<<<<< HEAD:experiments/tabnet_trial_Experiment_missing_Timestamp_50.0_artifacts.json
+        "Down/Up Ratio": 0.06485843134921197,
+        "Dst Port": 0.12171043512414356,
+        "FIN Flag Cnt": 0.13497975060822576,
+        "Flow Pkts/s": 0.08574951913273109,
+        "Fwd Pkt Len Max": 0.15656501298115066,
+        "Init Bwd Win Byts": 0.19480302358242804,
+        "Init Fwd Win Byts": 0.16340387608573392,
+        "Protocol": 0.07792995113637492
+=======
+        "Down/Up Ratio": 0.10626072063758145,
+        "Dst Port": 0.15237890845259236,
+        "FIN Flag Cnt": 0.12827688725015904,
+        "Flow Pkts/s": 0.14326721231106754,
+        "Fwd Pkt Len Max": 0.0936681482923077,
+        "Init Bwd Win Byts": 0.1512636452361479,
+        "Init Fwd Win Byts": 0.09785675151134578,
+        "Protocol": 0.1270277263087983
+>>>>>>> a448b70f92ad6f09c001173f0f5fcb64bd2e2232:experiments3/tabnet_trial_Experiment_missing_Timestamp_50.0_artifacts.json
+    },
+    "params": {
+        "N_a": 16,
+        "N_steps": 4,
+        "gamma": 1.0,
+        "lambda_sparse": 0.003967605077052991,
+        "lr": 0.0015930522616241021,
+        "batch_size": 4096,
+        "mask_type": "sparsemax"
+    },
+    "metrics_binary": {
+        "task": "Trial Experiment_missing_Timestamp_50.0 - Binary Task",
+<<<<<<< HEAD:experiments/tabnet_trial_Experiment_missing_Timestamp_50.0_artifacts.json
+        "accuracy": 0.9661300828138085,
+        "f1": 0.9030698110393899,
+        "mcc": 0.8830892808409426,
+        "auc": 0.9737041617228273
+    },
+    "metrics_multiclass": {
+        "task": "Trial Experiment_missing_Timestamp_50.0 - Multiclass Task",
+        "accuracy": 0.9601898204149996,
+        "f1": 0.49270385570665165,
+        "mcc": 0.8720107238352718,
+        "auc": 0.8438843481864122
+=======
+        "accuracy": 0.9638536315380872,
+        "f1": 0.8978469226004892,
+        "mcc": 0.8766619354703654,
+        "auc": 0.9633922617993471
+    },
+    "metrics_multiclass": {
+        "task": "Trial Experiment_missing_Timestamp_50.0 - Multiclass Task",
+        "accuracy": 0.9551987103052996,
+        "f1": 0.5299930531335411,
+        "mcc": 0.8589105088463399,
+        "auc": NaN
+>>>>>>> a448b70f92ad6f09c001173f0f5fcb64bd2e2232:experiments3/tabnet_trial_Experiment_missing_Timestamp_50.0_artifacts.json
+    }
+}
