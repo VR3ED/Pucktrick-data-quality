@@ -1,0 +1,410 @@
+{
+    "model": "experiments/cnn_lstm_trial_Experiment_noise_Down_Up Ratio_50.0.pt",
+    "model_type": "CNN-LSTM",
+    "label": "Experiment_noise_Down_Up Ratio_50.0",
+<<<<<<< HEAD:experiments/cnn_lstm_trial_Experiment_noise_Down_Up Ratio_50.0_artifacts.json
+    "mcc_bin": 0.7032973057709379,
+    "mcc_mul": 0.4442092330783586,
+    "mean_mcc": 0.5737532694246482,
+    "val_loss": 0.8936331410493169,
+    "cm_bin": [
+        [
+            21893,
+            350
+        ],
+        [
+            1751,
+            2869
+=======
+    "mcc_bin": 0.7329781735111058,
+    "mcc_mul": 0.5915838011179028,
+    "mean_mcc": 0.6622809873145044,
+    "val_loss": 0.8300866205245256,
+    "cm_bin": [
+        [
+            22171,
+            160
+        ],
+        [
+            1735,
+            2851
+>>>>>>> a448b70f92ad6f09c001173f0f5fcb64bd2e2232:experiments3/cnn_lstm_trial_Experiment_noise_Down_Up Ratio_50.0_artifacts.json
+        ]
+    ],
+    "cm_mul": [
+        [
+<<<<<<< HEAD:experiments/cnn_lstm_trial_Experiment_noise_Down_Up Ratio_50.0_artifacts.json
+            22008,
+            68,
+            28,
+            0,
+            0,
+            17,
+            0,
+            0,
+            122,
+=======
+            22270,
+            11,
+            12,
+            0,
+            0,
+            36,
+            2,
+            0,
+            0,
+>>>>>>> a448b70f92ad6f09c001173f0f5fcb64bd2e2232:experiments3/cnn_lstm_trial_Experiment_noise_Down_Up Ratio_50.0_artifacts.json
+            0,
+            0,
+            0,
+            0
+        ],
+        [
+<<<<<<< HEAD:experiments/cnn_lstm_trial_Experiment_noise_Down_Up Ratio_50.0_artifacts.json
+            0,
+            621,
+            1,
+=======
+            1,
+            1158,
+>>>>>>> a448b70f92ad6f09c001173f0f5fcb64bd2e2232:experiments3/cnn_lstm_trial_Experiment_noise_Down_Up Ratio_50.0_artifacts.json
+            0,
+            0,
+            0,
+            0,
+            0,
+<<<<<<< HEAD:experiments/cnn_lstm_trial_Experiment_noise_Down_Up Ratio_50.0_artifacts.json
+            549,
+            0,
+            0,
+            0,
+            0
+        ],
+        [
+            983,
+            0,
+            5,
+            0,
+            0,
+            0,
+            0,
+=======
+>>>>>>> a448b70f92ad6f09c001173f0f5fcb64bd2e2232:experiments3/cnn_lstm_trial_Experiment_noise_Down_Up Ratio_50.0_artifacts.json
+            0,
+            0,
+            0,
+            0,
+            0,
+            0
+        ],
+        [
+<<<<<<< HEAD:experiments/cnn_lstm_trial_Experiment_noise_Down_Up Ratio_50.0_artifacts.json
+            53,
+            77,
+            631,
+=======
+            935,
+            0,
+            6,
+>>>>>>> a448b70f92ad6f09c001173f0f5fcb64bd2e2232:experiments3/cnn_lstm_trial_Experiment_noise_Down_Up Ratio_50.0_artifacts.json
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0
+        ],
+        [
+<<<<<<< HEAD:experiments/cnn_lstm_trial_Experiment_noise_Down_Up Ratio_50.0_artifacts.json
+            472,
+            0,
+            2,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0
+        ],
+        [
+            4,
+            159,
+            0,
+            0,
+            0,
+            2,
+            0,
+            0,
+            144,
+            0,
+            0,
+            0,
+            0
+        ],
+        [
+            35,
+            220,
+            52,
+            0,
+            0,
+            3,
+            4,
+=======
+            56,
+            30,
+            518,
+            175,
+            0,
+            0,
+            3,
+>>>>>>> a448b70f92ad6f09c001173f0f5fcb64bd2e2232:experiments3/cnn_lstm_trial_Experiment_noise_Down_Up Ratio_50.0_artifacts.json
+            0,
+            0,
+            0,
+            0,
+            0,
+            0
+        ],
+        [
+<<<<<<< HEAD:experiments/cnn_lstm_trial_Experiment_noise_Down_Up Ratio_50.0_artifacts.json
+            272,
+            1,
+=======
+            460,
+            0,
+            6,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0
+        ],
+        [
+            40,
+>>>>>>> a448b70f92ad6f09c001173f0f5fcb64bd2e2232:experiments3/cnn_lstm_trial_Experiment_noise_Down_Up Ratio_50.0_artifacts.json
+            2,
+            0,
+            0,
+            0,
+<<<<<<< HEAD:experiments/cnn_lstm_trial_Experiment_noise_Down_Up Ratio_50.0_artifacts.json
+            0,
+            0,
+            0,
+=======
+            124,
+            0,
+            0,
+            150,
+>>>>>>> a448b70f92ad6f09c001173f0f5fcb64bd2e2232:experiments3/cnn_lstm_trial_Experiment_noise_Down_Up Ratio_50.0_artifacts.json
+            0,
+            0,
+            0,
+            0
+        ],
+        [
+<<<<<<< HEAD:experiments/cnn_lstm_trial_Experiment_noise_Down_Up Ratio_50.0_artifacts.json
+            0,
+            1,
+            0,
+            0,
+            0,
+=======
+            51,
+            16,
+>>>>>>> a448b70f92ad6f09c001173f0f5fcb64bd2e2232:experiments3/cnn_lstm_trial_Experiment_noise_Down_Up Ratio_50.0_artifacts.json
+            0,
+            0,
+            0,
+            229,
+<<<<<<< HEAD:experiments/cnn_lstm_trial_Experiment_noise_Down_Up Ratio_50.0_artifacts.json
+=======
+            19,
+            0,
+            11,
+>>>>>>> a448b70f92ad6f09c001173f0f5fcb64bd2e2232:experiments3/cnn_lstm_trial_Experiment_noise_Down_Up Ratio_50.0_artifacts.json
+            0,
+            0,
+            0,
+            0
+        ],
+        [
+<<<<<<< HEAD:experiments/cnn_lstm_trial_Experiment_noise_Down_Up Ratio_50.0_artifacts.json
+            25,
+            26,
+=======
+            266,
+            2,
+            2,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0
+        ],
+        [
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            235,
+            0,
+            0,
+            0,
+            0
+        ],
+        [
+            42,
+>>>>>>> a448b70f92ad6f09c001173f0f5fcb64bd2e2232:experiments3/cnn_lstm_trial_Experiment_noise_Down_Up Ratio_50.0_artifacts.json
+            24,
+            0,
+            0,
+            0,
+            0,
+<<<<<<< HEAD:experiments/cnn_lstm_trial_Experiment_noise_Down_Up Ratio_50.0_artifacts.json
+=======
+            1,
+>>>>>>> a448b70f92ad6f09c001173f0f5fcb64bd2e2232:experiments3/cnn_lstm_trial_Experiment_noise_Down_Up Ratio_50.0_artifacts.json
+            0,
+            0,
+            0,
+            0,
+            0,
+            0
+        ],
+        [
+<<<<<<< HEAD:experiments/cnn_lstm_trial_Experiment_noise_Down_Up Ratio_50.0_artifacts.json
+            18,
+            0,
+            1,
+=======
+            19,
+            0,
+            0,
+>>>>>>> a448b70f92ad6f09c001173f0f5fcb64bd2e2232:experiments3/cnn_lstm_trial_Experiment_noise_Down_Up Ratio_50.0_artifacts.json
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0
+        ],
+        [
+            3,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0
+        ],
+        [
+<<<<<<< HEAD:experiments/cnn_lstm_trial_Experiment_noise_Down_Up Ratio_50.0_artifacts.json
+            1,
+=======
+            2,
+>>>>>>> a448b70f92ad6f09c001173f0f5fcb64bd2e2232:experiments3/cnn_lstm_trial_Experiment_noise_Down_Up Ratio_50.0_artifacts.json
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0
+        ]
+    ],
+    "feature_importance": {
+<<<<<<< HEAD:experiments/cnn_lstm_trial_Experiment_noise_Down_Up Ratio_50.0_artifacts.json
+        "Down/Up Ratio": 0.0,
+        "Dst Port": 0.5093873517786558,
+        "FIN Flag Cnt": 0.0029644268774711856,
+        "Flow Pkts/s": 0.15316205533596852,
+        "Fwd Pkt Len Max": 0.4688735177865614,
+        "Init Bwd Win Byts": 0.19318181818181923,
+        "Init Fwd Win Byts": 1.0,
+        "Protocol": 0.17984189723320182
+=======
+        "Down/Up Ratio": 0.0005252100840323192,
+        "Dst Port": 0.6901260504201673,
+        "FIN Flag Cnt": 0.003151260504201763,
+        "Flow Pkts/s": 0.23686974789915827,
+        "Fwd Pkt Len Max": 0.6197478991596639,
+        "Init Bwd Win Byts": 0.0714285714285712,
+        "Init Fwd Win Byts": 1.0,
+        "Protocol": 0.20430672268907443
+>>>>>>> a448b70f92ad6f09c001173f0f5fcb64bd2e2232:experiments3/cnn_lstm_trial_Experiment_noise_Down_Up Ratio_50.0_artifacts.json
+    },
+    "params": {
+        "nb_filters": 32,
+        "kernel_size": 3,
+        "lstm_units_1": 128,
+        "lstm_units_2": 256,
+        "dropout": 0.1,
+        "lr": 0.0008204643365323959,
+        "batch_size": 4096
+    },
+    "metrics_binary": {
+        "task": "Trial Experiment_noise_Down_Up Ratio_50.0 - Binary Task",
+<<<<<<< HEAD:experiments/cnn_lstm_trial_Experiment_noise_Down_Up Ratio_50.0_artifacts.json
+        "accuracy": 0.9217883333953766,
+        "f1": 0.7319811200408215,
+        "mcc": 0.7032973057709379,
+        "auc": 0.9377012087853701
+    },
+    "metrics_multiclass": {
+        "task": "Trial Experiment_noise_Down_Up Ratio_50.0 - Multiclass Task",
+        "accuracy": 0.851319659010535,
+        "f1": 0.1451393789854698,
+        "mcc": 0.4442092330783586,
+        "auc": 0.8584542537699054
+=======
+        "accuracy": 0.9295983950663149,
+        "f1": 0.750559431354482,
+        "mcc": 0.7329781735111058,
+        "auc": 0.9425587300751571
+    },
+    "metrics_multiclass": {
+        "task": "Trial Experiment_noise_Down_Up Ratio_50.0 - Multiclass Task",
+        "accuracy": 0.891146858862429,
+        "f1": 0.26932555643052036,
+        "mcc": 0.5915838011179028,
+        "auc": NaN
+>>>>>>> a448b70f92ad6f09c001173f0f5fcb64bd2e2232:experiments3/cnn_lstm_trial_Experiment_noise_Down_Up Ratio_50.0_artifacts.json
+    }
+}
