@@ -1,0 +1,160 @@
+{
+    "FEATURE_COLS": [
+        "Fwd Act Data Pkts",
+        "Dst Port",
+        "Init Fwd Win Byts",
+        "Protocol",
+        "PSH Flag Cnt",
+        "Fwd Seg Size Min",
+        "Bwd Byts/b Avg",
+        "Fwd Blk Rate Avg",
+        "Idle Mean"
+    ],
+    "CAT_IDXS": [
+        5,
+        3
+    ],
+    "CAT_DIMS": [
+        10,
+        3
+    ],
+    "label_classes": [
+        "Benign",
+        "DDOS attack-HOIC",
+        "DDoS attacks-LOIC-HTTP",
+        "DoS attacks-Hulk",
+        "Bot",
+        "FTP-BruteForce",
+        "SSH-Bruteforce",
+        "Infilteration",
+        "DoS attacks-SlowHTTPTest",
+        "DoS attacks-GoldenEye",
+        "DoS attacks-Slowloris",
+        "DDOS attack-LOIC-UDP",
+        "Brute Force -Web",
+        "Brute Force -XSS",
+        "SQL Injection"
+    ],
+    "corr_matrix": {
+        "Fwd Act Data Pkts": {
+            "Fwd Act Data Pkts": 1.0,
+            "Dst Port": -0.006,
+            "Init Fwd Win Byts": -0.0064,
+            "Protocol": -0.017,
+            "PSH Flag Cnt": -0.0084,
+            "Fwd Seg Size Min": 0.0186,
+            "Bwd Byts/b Avg": NaN,
+            "Fwd Blk Rate Avg": NaN,
+            "Idle Mean": -0.0033,
+            "label_generic_enc": 0.0264
+        },
+        "Dst Port": {
+            "Fwd Act Data Pkts": -0.006,
+            "Dst Port": 1.0,
+            "Init Fwd Win Byts": 0.2072,
+            "Protocol": 0.2801,
+            "PSH Flag Cnt": -0.177,
+            "Fwd Seg Size Min": -0.2634,
+            "Bwd Byts/b Avg": NaN,
+            "Fwd Blk Rate Avg": NaN,
+            "Idle Mean": 0.0143,
+            "label_generic_enc": -0.184
+        },
+        "Init Fwd Win Byts": {
+            "Fwd Act Data Pkts": -0.0064,
+            "Dst Port": 0.2072,
+            "Init Fwd Win Byts": 1.0,
+            "Protocol": 0.325,
+            "PSH Flag Cnt": 0.3072,
+            "Fwd Seg Size Min": -0.3073,
+            "Bwd Byts/b Avg": NaN,
+            "Fwd Blk Rate Avg": NaN,
+            "Idle Mean": 0.2459,
+            "label_generic_enc": 0.2249
+        },
+        "Protocol": {
+            "Fwd Act Data Pkts": -0.017,
+            "Dst Port": 0.2801,
+            "Init Fwd Win Byts": 0.325,
+            "Protocol": 1.0,
+            "PSH Flag Cnt": 0.4812,
+            "Fwd Seg Size Min": -0.801,
+            "Bwd Byts/b Avg": NaN,
+            "Fwd Blk Rate Avg": NaN,
+            "Idle Mean": 0.0406,
+            "label_generic_enc": 0.2511
+        },
+        "PSH Flag Cnt": {
+            "Fwd Act Data Pkts": -0.0084,
+            "Dst Port": -0.177,
+            "Init Fwd Win Byts": 0.3072,
+            "Protocol": 0.4812,
+            "PSH Flag Cnt": 1.0,
+            "Fwd Seg Size Min": -0.4646,
+            "Bwd Byts/b Avg": NaN,
+            "Fwd Blk Rate Avg": NaN,
+            "Idle Mean": 0.002,
+            "label_generic_enc": 0.0205
+        },
+        "Fwd Seg Size Min": {
+            "Fwd Act Data Pkts": 0.0186,
+            "Dst Port": -0.2634,
+            "Init Fwd Win Byts": -0.3073,
+            "Protocol": -0.801,
+            "PSH Flag Cnt": -0.4646,
+            "Fwd Seg Size Min": 1.0,
+            "Bwd Byts/b Avg": NaN,
+            "Fwd Blk Rate Avg": NaN,
+            "Idle Mean": -0.2043,
+            "label_generic_enc": -0.11
+        },
+        "Bwd Byts/b Avg": {
+            "Fwd Act Data Pkts": NaN,
+            "Dst Port": NaN,
+            "Init Fwd Win Byts": NaN,
+            "Protocol": NaN,
+            "PSH Flag Cnt": NaN,
+            "Fwd Seg Size Min": NaN,
+            "Bwd Byts/b Avg": NaN,
+            "Fwd Blk Rate Avg": NaN,
+            "Idle Mean": NaN,
+            "label_generic_enc": NaN
+        },
+        "Fwd Blk Rate Avg": {
+            "Fwd Act Data Pkts": NaN,
+            "Dst Port": NaN,
+            "Init Fwd Win Byts": NaN,
+            "Protocol": NaN,
+            "PSH Flag Cnt": NaN,
+            "Fwd Seg Size Min": NaN,
+            "Bwd Byts/b Avg": NaN,
+            "Fwd Blk Rate Avg": NaN,
+            "Idle Mean": NaN,
+            "label_generic_enc": NaN
+        },
+        "Idle Mean": {
+            "Fwd Act Data Pkts": -0.0033,
+            "Dst Port": 0.0143,
+            "Init Fwd Win Byts": 0.2459,
+            "Protocol": 0.0406,
+            "PSH Flag Cnt": 0.002,
+            "Fwd Seg Size Min": -0.2043,
+            "Bwd Byts/b Avg": NaN,
+            "Fwd Blk Rate Avg": NaN,
+            "Idle Mean": 1.0,
+            "label_generic_enc": -0.0566
+        },
+        "label_generic_enc": {
+            "Fwd Act Data Pkts": 0.0264,
+            "Dst Port": -0.184,
+            "Init Fwd Win Byts": 0.2249,
+            "Protocol": 0.2511,
+            "PSH Flag Cnt": 0.0205,
+            "Fwd Seg Size Min": -0.11,
+            "Bwd Byts/b Avg": NaN,
+            "Fwd Blk Rate Avg": NaN,
+            "Idle Mean": -0.0566,
+            "label_generic_enc": 1.0
+        }
+    }
+}
