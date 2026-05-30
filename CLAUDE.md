@@ -13,6 +13,23 @@ Both models are **multi-task**: they simultaneously predict a binary label (`lab
 
 The primary evaluation metric is **MCC** (Matthews Correlation Coefficient), reported separately for binary/multiclass tasks.
 
+## Thesis Helper
+
+All the thesis chapeters written so far are insede the `temp-latex` folder. Those require to be:
+1. Be writtent in latex
+2. Use english as language to write down any further chapters
+3. Use academic language
+
+our main goal for this thesis will be developing following experiment:
+
+- **Experiment A**: **Experiments performed using a reduced dataset**: These experiments serve as a proof of concept, providing evidence that the introduction of controlled noise into the dataset may positively influence the effectiveness of deep learning-based Intrusion Detection Systems (IDSs). The main objective of this phase was to investigate whether specific noise injection techniques could systematically improve model performance; consequently this set of experiments was carried out on a preprocessed version of the dataset in which redundant features (i.e., highly correlated features) as well as zero-variance features had been removed. Note that this is not main focus of the thesis, yet, just a way to prove one of the many applications of the newly developed Pucktrick functionality. For this reason those experiment are more limited and they're experiment were conducted only on 5 random seeds. This is just to arrive to a proof of concept. 
+
+- **Experiment B**: **Experiments performed using the complete dataset**: unlike the previous scenario, this experimental setting relied on the original dataset without applying feature reduction procedures (this means that no feature from the original dataset was discarded before starting HPO, yet all experiments were conducted on dataset composed only of 10 features). The purpose of this phase is primarily analytical, focusing on the theoretical aspects of the study. More specifically, it aims to provide a comprehensive understanding of the behavior of the selected models when exposed to noise generated through the `Pucktrick` library. Those are the main focus of the thesis and have been developed using a wider range of 20 random seeds. 
+
+Please note that all results from those experiments in following folders:
+- Experiment A: are allocated `complete_experiments\Experiment_A`
+- Experiment B: are allocated `complete_experiments\Experiment_B`
+
 ## Running the Experiments
 
 ### Local execution (localhost)
@@ -37,7 +54,7 @@ python3 watchdog.py
 python3 watchdog.py --script 5-cavas_model_experiment_targets.py --max-restarts 50 --wait 30
 ```
 
-The watchdog launches each run in an isolated tmux session (`exp_run_N`), monitors `run_N.log` for the completion string, and auto-restarts on crash.
+The watchdog launches each run in an isolated tmux session (`exp_run_N`), monitors `run_N.log` for the completion string, and auto-restarts on crash. 
 
 ### Install dependencies
 ```bash
@@ -75,20 +92,35 @@ Loaded via PySpark. Key columns: `Timestamp`, `Label` (string multiclass), `labe
 Same pipeline but noise is applied to the encoded **target columns** (`Label_enc`, `label_generic_enc`), not to features. PuckTrick `labels` requires an integer column, so encoding must happen before noise injection.
 
 ### Experiment output structure
+
+Results are filed under `complete_experiments/` by thesis experiment (see **Thesis Helper** above). The experiment scripts write per-seed folders named `experiment_rs{seed}/`; the two top-level buckets correspond to the two thesis phases:
+
 ```
 complete_experiments/
-  experiment_rs{seed}/          # one folder per random seed
-    labels_experiment/          # only for the labels-only variant
-      cnn_lstm_trial_Experiment_labels_{col}_{pct}.pt
-      cnn_lstm_trial_Experiment_labels_{col}_{pct}_artifacts.json
-      tabnet_trial_Experiment_labels_{col}_{pct}.zip
-      tabnet_trial_Experiment_labels_{col}_{pct}_artifacts.json
+  Experiment_A/                          # reduced (feature-pruned) dataset — proof of concept, 5 seeds
+    experiment_rs{seed}/                 # rs1, rs2, rs42, rs51, rs84
+      cnn_lstm_trial_Experiment_{method}_{col}_{pct}.pt   (+ _artifacts.json)
+      tabnet_trial_Experiment_{method}_{col}_{pct}.zip    (+ _artifacts.json)
+
+  Experiment_B/                          # complete dataset — main thesis focus, 20 seeds
+    Pucktrick_on_single_feature/         # noise injected into one feature/column at a time
+      experiment_rs{seed}/               # 20 seeds (1, 11, 21, 31, 41, 42, 51, 61, 86, 101, ...)
+        cnn_lstm_trial_Experiment_{method}_{col}_{pct}.pt  (+ _artifacts.json)
+        tabnet_trial_Experiment_{method}_{col}_{pct}.zip   (+ _artifacts.json)
+        images/                          # confusion matrices + validation-loss curves (verbose runs)
+        labels_experiment/               # labels-only variant; corrupts the Label / label_generic targets
+          cnn_lstm_trial_Experiment_labels_{Label|label_generic}_{pct}.pt  (+ _artifacts.json)
+          tabnet_trial_Experiment_labels_{Label|label_generic}_{pct}.zip   (+ _artifacts.json)
+    Pucktrick_on_multiple_features/      # noise injected into several features at once (work in progress)
+
 models/
   important_features.csv        # ranked feature list; drives dataset column selection
   cnn_lstm_trial_{N}.pt         # hyperparameter tuning trial checkpoints
   tabnet_trial_{N}.zip
   *_artifacts.json
 ```
+
+`{method}` ∈ `missing | outliers | noise | duplicated | labels`; `{col}` is the corrupted column (`Timestamp` for `duplicated`, since it acts row-wide); `{pct}` is the noise percentage (e.g. `10.0`). Note the percentage grids differ between phases — Experiment A uses `1.0, 5.0, 10.0, 20.0, 30.0, 50.0, 75.0`, Experiment B uses `5.0, 10.0, 20.0, 35.0, 50.0, 75.0`.
 
 Best hyperparameters from tuning are hard-coded: TabNet trial 7, CNN-LSTM trial 1. These are read from `models/` via `reload_all_trial_metadata()` at the start of each experiment run.
 
