@@ -488,6 +488,16 @@ def seed_root_dir(seed):
             f"{MULTI_EXPERIMENT_SUBDIR}/experiment_rs{seed}")
 
 
+def seed_datasets_zip_path(seed):
+    """Percorso del file zip dei dataset compilati per il seed."""
+    return os.path.join(seed_root_dir(seed), f"datasets_rs{seed}.zip")
+
+
+def seed_datasets_already_zipped(seed):
+    """True se lo zip dei dataset per il seed esiste gia' su disco."""
+    return os.path.exists(seed_datasets_zip_path(seed))
+
+
 def zip_and_remove_seed_datasets(seed):
     """
     Modalita' JUST_COMPILE_DATASETS: a fine seed comprime in un unico file zip
@@ -506,7 +516,7 @@ def zip_and_remove_seed_datasets(seed):
         print(f"[ZIP] Nessun dataset da comprimere per rs{seed}")
         return
 
-    zip_path = os.path.join(seed_root, f"datasets_rs{seed}.zip")
+    zip_path = seed_datasets_zip_path(seed)
     with zipfile.ZipFile(zip_path, "w", zipfile.ZIP_DEFLATED) as zf:
         for d in dataset_dirs:
             for root, _dirs, files in os.walk(d):
@@ -1436,6 +1446,14 @@ if __name__ == '__main__':
                   f"poi addestra i modelli")
         print(f"  FEATURE GROUPS: {len(FEATURE_GROUPS)} gruppi")
         print(f"{'='*60}\n")
+
+        # ── JUST_COMPILE: salta l'intero seed se lo zip e' gia' stato creato ──
+        # (i dataset sono gia' stati compilati, zippati e rimossi in una run
+        #  precedente: non c'e' nulla da ricompilare per questo seed).
+        if JUST_COMPILE_DATASETS and seed_datasets_already_zipped(seed):
+            print(f"[SKIP SEED] zip dataset gia' presente per rs{seed}: "
+                  f"{seed_datasets_zip_path(seed)}")
+            continue
 
         for group in FEATURE_GROUPS:
 
