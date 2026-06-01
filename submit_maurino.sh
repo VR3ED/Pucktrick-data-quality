@@ -5,9 +5,9 @@
 # Directory: /scratch_share/datai/fcavallini/dirtify/
 # =============================================================================
 
-#SBATCH --account=datai
-#SBATCH --partition=datai01
-#SBATCH --job-name=dirtify-cavas
+#SBATCH --account=a.maurino
+#SBATCH --partition=only-one-gpu
+#SBATCH --job-name=cavas
 
 # ── Risorse ──────────────────────────────────────────────────────────────────
 #SBATCH --ntasks=1
@@ -16,15 +16,15 @@
 #SBATCH --gres=gpu:1
 
 # ── Log ──────────────────────────────────────────────────────────────────────
-#SBATCH --output=/scratch_share/datai/fcavallini/dirtify/job_logs/out_%x_%j.log
-#SBATCH --error=/scratch_share/datai/fcavallini/dirtify/job_logs/error_%x_%j.log
+#SBATCH --output=/scratch_share/datai/maurinoa/dirtify/hpc/job_logs/out_%x_%j.log
+#SBATCH --error=/scratch_share/datai/maurinoa/dirtify/hpc/job_logs/error_%x_%j.log
 
 set -x
 
 # =============================================================================
 # DEFINIZIONI PERCORSI
 # =============================================================================
-export BASEDIR="/scratch_share/datai/fcavallini/dirtify"
+export BASEDIR="/scratch_share/datai/maurinoa/dirtify/hpc"
 export TMPDIR="${BASEDIR}/tmp_${SLURM_JOB_NAME}_${SLURM_JOB_ID}"
 
 mkdir -p "$TMPDIR"
@@ -48,6 +48,10 @@ nvidia-smi || echo "nvidia-smi non disponibile"
 module purge
 module load amd/slurm
 
+# ← workaround per Hadoop + Java > 17
+#export SPARK_SUBMIT_OPTS="--add-opens java.base/javax.security.auth=ALL-UNNAMED"
+#export _JAVA_OPTIONS="--add-opens java.base/javax.security.auth=ALL-UNNAMED"
+
 source /opt/share/sw/amd/gcc-8.5.0/miniforge3-24.3.0-0/etc/profile.d/conda.sh
 conda activate /scratch_share/datai/fcavallini/envs/dirtify
 
@@ -65,3 +69,4 @@ python3 "${BASEDIR}/7-cavas_model_experiment_multiple_features.py"
 # =============================================================================
 echo "Job completato: $(date)"
 rm -rf "$TMPDIR"
+

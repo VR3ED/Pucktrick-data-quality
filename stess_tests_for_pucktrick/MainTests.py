@@ -182,6 +182,7 @@ def init_spark(dataset_pd: pd.DataFrame):
         print("[Spark] Sessione inizializzata correttamente.")
         return spark, obj_sp
     except Exception as e:
+        print("=")*60
         print(f"[Spark] ERRORE di inizializzazione: {e}")
         return None, None
 

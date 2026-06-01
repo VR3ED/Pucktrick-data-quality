@@ -10,7 +10,7 @@ import os   # necessario per BASE_DIR prima del blocco CONFIG
 JUST_COMPILE_DATASETS  = False   # True  → crea e salva i dataset su disco (senza addestrare i modelli)
                                  # False → carica dataset da disco se esistono, altrimenti li crea al volo
                                  #         (SENZA salvarli) e addestra i due modelli
-LOCAL_RUN              = True    # True → esecuzione locale | False → HPC cluster
+LOCAL_RUN              = True   # True → esecuzione locale | False → HPC cluster
 RUNNING_ON_HPC         = not LOCAL_RUN
 RANDOM_SEEDS           = []
 TRIALS_ALREADY_EXECUTED= True
@@ -24,9 +24,9 @@ STEP_SIZE         = 10           # overlap tra finestre
 # Percorso base: cartella dello script in locale, path cluster su HPC
 if LOCAL_RUN:
     BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-    RANDOM_SEEDS = [1,11,21,31,41,42,51,61,86,101,202,303,404,505,606,707,808,909,1010,1111]
+    RANDOM_SEEDS = [1] #,11,21,31,41,42,51,61,86,101,202,303,404,505,606,707,808,909,1010,1111]
 else:
-    RANDOM_SEEDS = [42,51,61,86,101,202,303,404,505,606,707,808,909,1010,1111]
+    RANDOM_SEEDS = [21,31,41,42,51,61,86,101,202,303,404,505,606,707,808,909,1010,1111]
     if PROF_DIR:
         BASE_DIR = "/scratch_share/datai/maurinoa/dirtify/hpc"
     else:
@@ -38,6 +38,19 @@ CURRENT_RANDOM_SEED = RANDOM_SEEDS[0]   # aggiornato dinamicamente nel loop
 # Nomi delle sotto-cartelle dedicate a questa variante (MULTIPLE-FEATURES)
 MULTI_EXPERIMENT_SUBDIR  = "Pucktrick_on_multiple_features"
 LABELS_EXPERIMENT_SUBDIR = "labels_experiment"
+
+# ── PuckTrick: cluster Spark remoto ───────────────────────────────────────────
+# Se True, PuckTrick si collega a un cluster Spark remoto (via
+# PuckTrick.make_remote_cluster_config) invece di usare la sessione Spark
+# locale. Configura sotto l'URL del master e le risorse degli executor.
+CONNECT_TO_REMOTE_CLUSTER = False
+MASTER_PRIVATE_IP         = "20.101.113.252"
+REMOTE_SPARK_MASTER_URL   = f"spark://{MASTER_PRIVATE_IP}:7077"
+REMOTE_NUM_EXECUTORS      = 4
+REMOTE_EXECUTOR_CORES     = 4
+REMOTE_EXECUTOR_MEMORY    = "15g"
+REMOTE_DRIVER_MEMORY      = "8g"
+REMOTE_DRIVER_HOST        = MASTER_PRIVATE_IP
 
 # Colonne target del dataset CAVAS (richiedono il metodo PuckTrick "labels")
 TARGET_COLUMNS = {'Label', 'label_generic'}
@@ -56,6 +69,33 @@ TARGET_TO_ENCODED = {
 import pucktrick
 from pucktrick import Engine
 from pucktrick import PuckTrick
+from pucktrick import get_spark_session
+
+# ── Config cluster remoto PuckTrick (None = usa Spark locale) ─────────────────
+REMOTE_CLUSTER_CONFIG = None
+if CONNECT_TO_REMOTE_CLUSTER:
+    REMOTE_CLUSTER_CONFIG = PuckTrick.make_remote_cluster_config(
+        master_url     = REMOTE_SPARK_MASTER_URL,
+        num_executors  = REMOTE_NUM_EXECUTORS,
+        executor_memory= REMOTE_EXECUTOR_MEMORY,
+        driver_memory  = REMOTE_DRIVER_MEMORY,
+        driver_host    = REMOTE_DRIVER_HOST,
+        executor_cores = REMOTE_EXECUTOR_CORES,
+    )
+    print(f"🌐  PuckTrick: cluster remoto -> {REMOTE_SPARK_MASTER_URL}")
+else:
+    print("🖥️  PuckTrick: sessione Spark locale (no remote cluster)")
+
+
+def make_pucktrick(sdf):
+    """
+    Crea un'istanza PuckTrick sul DataFrame *sdf*. Se CONNECT_TO_REMOTE_CLUSTER
+    e' True usa il cluster Spark remoto, altrimenti la sessione Spark locale.
+    """
+    if REMOTE_CLUSTER_CONFIG is not None:
+        return PuckTrick(dataframe=sdf, engine=Engine.SPARK,
+                         remote_cluster=REMOTE_CLUSTER_CONFIG)
+    return PuckTrick(dataframe=sdf, engine=Engine.SPARK)
 
 import os, subprocess, warnings, json, gc, ctypes
 import numpy  as np
@@ -145,15 +185,22 @@ if not java_home:
 os.environ['PYSPARK_PYTHON']        = 'python3'
 os.environ['PYSPARK_DRIVER_PYTHON'] = 'python3'
 
-spark = SparkSession.builder \
-    .appName("CAVAS_Models_MultiFeatures") \
-    .master("local[*]") \
-    .config("spark.driver.memory",          "30g") \
-    .config("spark.driver.maxResultSize",   "20g") \
-    .config("spark.driver.host",            "localhost") \
-    .config("spark.sql.shuffle.partitions", "60") \
-    .config("spark.ui.showConsoleProgress", "false") \
-    .getOrCreate()
+if CONNECT_TO_REMOTE_CLUSTER:
+    # Sessione Spark fornita da PuckTrick e collegata al cluster remoto
+    # (stesso meccanismo di stess_tests_for_pucktrick/MainTests.py::init_spark).
+    spark = get_spark_session(remote_cluster=REMOTE_CLUSTER_CONFIG)
+    print(f"🌐  Spark remoto ottenuto via get_spark_session -> {REMOTE_SPARK_MASTER_URL}")
+else:
+    # Sessione Spark locale (single-node HPC, usa tutti i core SLURM)
+    spark = SparkSession.builder \
+        .appName("CAVAS_Models_MultiFeatures") \
+        .master("local[*]") \
+        .config("spark.driver.memory",          "30g") \
+        .config("spark.driver.maxResultSize",   "20g") \
+        .config("spark.driver.host",            "localhost") \
+        .config("spark.sql.shuffle.partitions", "60") \
+        .config("spark.ui.showConsoleProgress", "false") \
+        .getOrCreate()
 
 spark.sparkContext.setLogLevel("WARN")
 print(f"✅  Spark {spark.version} ready")
@@ -427,6 +474,51 @@ def split_group_columns(group):
     target_cols  = [c for c in group if c in TARGET_COLUMNS]
     feature_cols = [c for c in group if c not in TARGET_COLUMNS]
     return feature_cols, target_cols
+
+
+def seed_root_dir(seed):
+    """
+    Cartella radice per-seed di questa variante multiple-features.
+    Layout locale vs HPC (deve coincidere con quello usato nel main loop).
+    """
+    if RUNNING_ON_HPC:
+        return (f"{BASE_DIR}/complete_experiments_B/Experiment_B/"
+                f"{MULTI_EXPERIMENT_SUBDIR}/experiment_rs{seed}")
+    return (f"{BASE_DIR}/complete_experiments/Experiment_B/"
+            f"{MULTI_EXPERIMENT_SUBDIR}/experiment_rs{seed}")
+
+
+def zip_and_remove_seed_datasets(seed):
+    """
+    Modalita' JUST_COMPILE_DATASETS: a fine seed comprime in un unico file zip
+    tutte le cartelle 'datasets' compilate per il seed (sia quella diretta che
+    quella annidata in 'labels_experiment'), poi le cancella dal disco per
+    liberare spazio. Lo zip resta nella radice per-seed.
+    """
+    import shutil, zipfile
+
+    seed_root = seed_root_dir(seed)
+    direct    = os.path.join(seed_root, "datasets")
+    labels    = os.path.join(seed_root, LABELS_EXPERIMENT_SUBDIR, "datasets")
+    dataset_dirs = [d for d in (direct, labels) if os.path.isdir(d)]
+
+    if not dataset_dirs:
+        print(f"[ZIP] Nessun dataset da comprimere per rs{seed}")
+        return
+
+    zip_path = os.path.join(seed_root, f"datasets_rs{seed}.zip")
+    with zipfile.ZipFile(zip_path, "w", zipfile.ZIP_DEFLATED) as zf:
+        for d in dataset_dirs:
+            for root, _dirs, files in os.walk(d):
+                for fname in files:
+                    fpath   = os.path.join(root, fname)
+                    arcname = os.path.relpath(fpath, seed_root)
+                    zf.write(fpath, arcname)
+    print(f"[ZIP] Dataset compressi -> {zip_path}")
+
+    for d in dataset_dirs:
+        shutil.rmtree(d, ignore_errors=True)
+        print(f"[ZIP] Cartella rimossa: {d}")
 
 # =============================================================================
 # STEP 1a — TabNet Hyperparameter Objective
@@ -914,7 +1006,7 @@ def apply_feature_noise_sequential(sdf, feature_cols, noise_type, percentage):
         )
     for feat in feature_cols:
         strategy = _make_feature_strategy(noise_type, feat, percentage)
-        OBJ      = PuckTrick(dataframe=sdf, engine=Engine.SPARK)
+        OBJ      = make_pucktrick(sdf)
         if noise_type == "missing":
             _, sdf = OBJ.missing(OBJ.original, strategy=strategy)
         elif noise_type == "outliers":
@@ -942,7 +1034,7 @@ def apply_label_noise_sequential(sdf, target_cols, percentage):
             )
         enc_col  = TARGET_TO_ENCODED[tcol]
         strategy = _make_labels_strategy(enc_col, percentage)
-        OBJ      = PuckTrick(dataframe=sdf, engine=Engine.SPARK)
+        OBJ      = make_pucktrick(sdf)
         _, sdf   = OBJ.labels(OBJ.original, strategy=strategy)
         if '_pucktrick_row_id' in sdf.columns:
             sdf = sdf.drop('_pucktrick_row_id')
@@ -1343,10 +1435,7 @@ if __name__ == '__main__':
             #       experiment_rs{seed}/
             # Se il gruppo contiene colonne target -> sotto-cartella
             # 'labels_experiment' (coerente con 5-cavas_model_experiment_targets.py).
-            base_dir = (
-                f"{BASE_DIR}/complete_experiments/Experiment_B/"
-                f"{MULTI_EXPERIMENT_SUBDIR}/experiment_rs{seed}"
-            )
+            base_dir = seed_root_dir(seed)
             if has_target:
                 CURRENT_RS_DIR = f"{base_dir}/{LABELS_EXPERIMENT_SUBDIR}"
             else:
@@ -1411,6 +1500,10 @@ if __name__ == '__main__':
                                   f"gruppo {group} al {pct*100:.1f}%: {e}")
                         finally:
                             clear_memory()
+
+        # ── Fine seed: comprimi e cancella i dataset compilati ────────────
+        if JUST_COMPILE_DATASETS:
+            zip_and_remove_seed_datasets(seed)
 
     print("\n  All multiple-features experiments completed (all seeds).")
     spark.stop()
