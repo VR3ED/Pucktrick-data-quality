@@ -24,9 +24,9 @@ STEP_SIZE         = 10           # overlap tra finestre
 # Percorso base: cartella dello script in locale, path cluster su HPC
 if LOCAL_RUN:
     BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-    RANDOM_SEEDS = [1] #,11,21,31,41,42,51,61,86,101,202,303,404,505,606,707,808,909,1010,1111]
+    RANDOM_SEEDS = [11,21,31,41,42,51,61,86,101,202,303,404,505,606,707,808,909,1010,1111]
 else:
-    RANDOM_SEEDS = [21,31,41,42,51,61,86,101,202,303,404,505,606,707,808,909,1010,1111]
+    RANDOM_SEEDS = [31,41,42,51,61,86,101,202,303,404,505,606,707,808,909,1010,1111]
     if PROF_DIR:
         BASE_DIR = "/scratch_share/datai/maurinoa/dirtify/hpc"
     else:
