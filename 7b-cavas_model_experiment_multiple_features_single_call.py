@@ -10,12 +10,12 @@ import os   # necessario per BASE_DIR prima del blocco CONFIG
 JUST_COMPILE_DATASETS  = False   # True  → crea e salva i dataset su disco (senza addestrare i modelli)
                                  # False → carica dataset da disco se esistono, altrimenti li crea al volo
                                  #         (SENZA salvarli) e addestra i due modelli
-LOCAL_RUN              = True   # True → esecuzione locale | False → HPC cluster
+LOCAL_RUN              = False   # True → esecuzione locale | False → HPC cluster
 RUNNING_ON_HPC         = not LOCAL_RUN
 RANDOM_SEEDS           = []
 TRIALS_ALREADY_EXECUTED= True
 MIN_SAMPLES_PER_CLASS  = 5
-PROF_DIR               = True
+PROF_DIR               = True   
 
 PERCENTAGE_TO_USE = 0.1          # 10 % del dataset
 WINDOW_SIZE       = 50           # finestra temporale per CNN-LSTM
@@ -24,13 +24,18 @@ STEP_SIZE         = 10           # overlap tra finestre
 # Percorso base: cartella dello script in locale, path cluster su HPC
 if LOCAL_RUN:
     BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-    RANDOM_SEEDS = [11,21,31,41,42,51,61,86,101,202,303,404,505,606,707,808,909,1010,1111]
+    RANDOM_SEEDS = [1,11,21,31,41,42,51,61,86,101,202,303,404,505,606,707,808,909,1010,1111]
 else:
-    RANDOM_SEEDS = [31,41,42,51,61,86,101,202,303,404,505,606,707,808,909,1010,1111]
+    RANDOM_SEEDS = [1111,1010,909,808,707,606,505,404,303,202,101,86,61,51]
+                    # 42,41,31,21,11,1] già fatto a casa
     if PROF_DIR:
         BASE_DIR = "/scratch_share/datai/maurinoa/dirtify/hpc"
+        RANDOM_SEEDS = [303,404,505,606,707,808,909,1010,1111]
+                    # 61,86,101,202, ---> da fare a casa
+                    # 42,41,31,21,11,1] già fatto a casa
     else:
         BASE_DIR = "/scratch_share/datai/fcavallini/dirtify"
+        
 
 DATASETS_DIR        = f"{BASE_DIR}/DATASETS"
 CURRENT_RANDOM_SEED = RANDOM_SEEDS[0]   # aggiornato dinamicamente nel loop
@@ -482,7 +487,7 @@ def seed_root_dir(seed):
     Layout locale vs HPC (deve coincidere con quello usato nel main loop).
     """
     if RUNNING_ON_HPC:
-        return (f"{BASE_DIR}/complete_experiments_B/Experiment_B/"
+        return (f"{BASE_DIR}/complete_experiments/Experiment_B/"
                 f"{MULTI_EXPERIMENT_SUBDIR}/experiment_rs{seed}")
     return (f"{BASE_DIR}/complete_experiments/Experiment_B/"
             f"{MULTI_EXPERIMENT_SUBDIR}/experiment_rs{seed}")

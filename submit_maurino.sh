@@ -62,7 +62,7 @@ python3 -c "import pyspark; print('PySpark:', pyspark.__version__)"
 # =============================================================================
 # LANCIA LO SCRIPT PYTHON
 # =============================================================================
-python3 "${BASEDIR}/7-cavas_model_experiment_multiple_features.py"
+python3 "${BASEDIR}/7b-cavas_model_experiment_multiple_features_single_call.py"
 
 # =============================================================================
 # CLEANUP
