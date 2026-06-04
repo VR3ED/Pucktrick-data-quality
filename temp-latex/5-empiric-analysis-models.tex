@@ -159,7 +159,7 @@ For CNN-LSTM, the learning rate was halved relative to the HPO value to ensure s
 \label{sec:feature-selection}
 % ============================================================
 
-A central design choice of the experimental protocol is the selection of the feature set on which both baseline models and all noise-injection experiments operate.  Rather than using the full reduced feature set described in Chapter~\ref{chap:dataset} (44 features for Experiment~A, 79 for Experiment~B), a compact set of \textbf{9 features} was constructed for the baseline experiments through a principled importance-based selection procedure.  This compact set serves three purposes: (i) it makes the computational cost of training both models across hundreds of noise-injection experiments tractable; (ii) it ensures that the features selected for corruption are directly linked to the models' predictive behaviour; and (iii) it provides a controlled experimental setting in which the contribution of each feature can be assessed in isolation.
+A central design choice of the experimental protocol is the selection of the feature set on which both baseline models and all noise-injection experiments operate.  Rather than using the full reduced feature set described in Chapter~\ref{chap:dataset} (44 features for Experiment~A, 79 for Experiment~B), a compact set of \textbf{9 features} was constructed for the baseline experiments through a principled importance-based selection procedure.  This compact set serves three purposes: (i) it makes the computational cost of training both models across the several thousand noise-injection experiments tractable; (ii) it ensures that the features selected for corruption are directly linked to the models' predictive behaviour; and (iii) it provides a controlled experimental setting in which the contribution of each feature can be assessed in isolation.
 
 % ------------------------------------------------------------
 \subsection{Feature Importance Extraction}
@@ -380,41 +380,144 @@ The CNN-LSTM performs below TabNet on both tasks, which is expected given the co
 \label{sec:experiment-protocol}
 % ============================================================
 
-With the baselines established, the principal experimental campaign was executed following a fully automated pipeline implemented in the \texttt{4-4c-cavas\_model\_Experiment\_localhost.py} script.  The pipeline iterates over all combinations of noise injection method, target feature, corruption percentage, and random seed, and for each combination retrains both TabNet and CNN-LSTM from scratch using the best hyperparameters identified in Section~\ref{sec:hpo}.
+With the baselines established, the principal experimental campaign was executed following a fully automated pipeline that iterates over all combinations of noise injection method, target column, corruption percentage, and random seed, retraining both TabNet and CNN-LSTM from scratch for each combination using the best hyperparameters identified in Section~\ref{sec:hpo}.  As anticipated in the chapter introduction, the campaign is organised into the two experimental phases that constitute the analytical backbone of this thesis (\textbf{Experiment~A} on the reduced dataset and \textbf{Experiment~B} on the complete dataset).  This section quantifies precisely the grid of each phase, since the two phases differ in the dataset employed, the set of corrupted columns, the percentage grid, and the number of random seeds.
+
+Throughout this section, a single \emph{experiment} denotes one fully specified configuration (one noise method, one target column or column group, one corruption percentage, one random seed); every such experiment trains \textbf{both} models, so the number of trained models is always twice the number of experiment configurations.
 
 % ------------------------------------------------------------
-\subsection{Experimental Variables}
+\subsection{Common Experimental Variables}
 \label{sec:exp-variables}
 % ------------------------------------------------------------
 
-The experimental grid was defined by four independent variables:
+Three of the four experimental variables share a common definition across both phases; only their concrete instantiation (the set of corrupted columns and the percentage grid) differs, as detailed in the phase-specific subsections that follow.
 
 \paragraph{Noise injection methods.}
 All five PuckTrick corruption methods were employed:
 \begin{itemize}
-    \item \texttt{missing}: a fraction of values in the target feature column is replaced with \texttt{null}.
+    \item \texttt{missing}: a fraction of values in the target column is replaced with \texttt{null}.
     \item \texttt{noise}: values are replaced with uniform random draws from the column's observed range $[\min, \max]$.
     \item \texttt{outliers}: extreme values beyond $\mu \pm 4\sigma$ are injected into numeric columns; the next integer beyond the observed maximum is used for categorical integer columns.
-    \item \texttt{labels}: binary labels ($0 \leftrightarrow 1$) are flipped or categorical labels are replaced with a randomly chosen different category.
-    \item \texttt{duplicated}: a fraction of rows is duplicated and appended to the dataset.
+    \item \texttt{labels}: binary labels ($0 \leftrightarrow 1$) are flipped, or categorical labels are replaced with a randomly chosen different category.  Because this method requires a discrete-valued column, it is applicable only to binary or categorical features and to the encoded target columns.
+    \item \texttt{duplicated}: a fraction of rows is duplicated and appended to the dataset.  As this method operates at the row level rather than the column level, it is applied once globally using the \texttt{Timestamp} column as the reference for row selection; corrupting any single feature with \texttt{duplicated} would be equivalent to corrupting the entire row.
 \end{itemize}
 
-\paragraph{Target features.}
-Experiments for the methods \texttt{missing}, \texttt{noise}, \texttt{outliers}, and \texttt{labels} were applied to every feature in the nine-feature set (plus the \texttt{Timestamp} column, for a total of 10 columns), with the constraint that the \texttt{labels} method was applied exclusively to features with binary or categorical semantics (\texttt{FIN Flag Cnt} and \texttt{Protocol}).  The \texttt{duplicated} method operates at the row level rather than the column level and was therefore applied once globally using the \texttt{Timestamp} column as the reference for row selection.
+\paragraph{Random seed governance.}
+Each random seed deterministically governs the stratified sampling, the temporal split ordering, the PuckTrick noise realisation, and the PyTorch and Lightning random states (via \texttt{pl.seed\_everything}).  Repeating the full grid over multiple seeds is what permits the construction of Student-$t$ confidence intervals around the observed performance deltas in Chapter~\ref{chap:Empiric-analysis-models}, ensuring that the reported effects are statistically robust and not artefacts of a particular random split or noise realisation.
 
-\paragraph{Corruption percentages.}
-Six levels of corruption intensity were evaluated:
-\[
-    p \in \{5\%,\; 10\%,\; 20\%,\; 35\%,\; 50\%,\; 75\%\},
-\]
-spanning a range from mild, practically plausible degradation to severe corruption that approaches the limits of identifiable signal in the data.
+% ------------------------------------------------------------
+\subsection{Experiment A — Reduced Dataset (Proof of Concept)}
+\label{sec:exp-A-grid}
+% ------------------------------------------------------------
 
-\paragraph{Random seeds.}
-To establish confidence intervals around the observed performance deltas and ensure statistical robustness, the entire grid was repeated across \textbf{10 independent random seeds} on the HPC cluster:
+Experiment~A is the smaller, proof-of-concept phase, executed on the feature-pruned dataset described in Chapter~\ref{chap:dataset} (redundant and zero-variance features removed).  Its objective is to demonstrate that controlled noise injection \emph{can} improve IDS model performance; it is therefore deliberately limited in scope and was repeated over \textbf{5 random seeds}:
 \[
-    S = \{303,\; 404,\; 505,\; 606,\; 707,\; 808,\; 909,\; 1010,\; 1111,\; 42\}.
+    S_{A} = \{1,\; 2,\; 42,\; 51,\; 84\}.
 \]
-Each seed governs the stratified sampling, the temporal split ordering, the PuckTrick noise realisation, and the PyTorch and Lightning random states (via \texttt{pl.seed\_everything}).
+
+The corrupted columns are a set of \textbf{4 columns} drawn from the reduced feature set, chosen to span distinct feature types and fragility levels: \texttt{FIN Flag Cnt} (binary), \texttt{Down/Up Ratio} (continuous), \texttt{Protocol} (categorical), and \texttt{Timestamp} (temporal, used as the row-level reference for \texttt{duplicated}).  The percentage grid comprises \textbf{7 levels}:
+\[
+    p_{A} \in \{1\%,\; 5\%,\; 10\%,\; 20\%,\; 30\%,\; 50\%,\; 75\%\}.
+\]
+
+The combination logic, summarised in Table~\ref{tab:grid-A}, yields \textbf{104 experiment configurations per seed} (and therefore $104 \times 5 = 520$ configurations in total, or $1\,040$ trained models):
+
+\begin{table}[H]
+\centering
+\caption{Experiment~A grid (per random seed). The \texttt{labels} method is restricted to binary/categorical columns; \texttt{duplicated} uses a reduced 6-level percentage grid (the $50\%$ level was omitted).}
+\label{tab:grid-A}
+\small
+\begin{tabular}{llrr}
+\toprule
+\textbf{Method}    & \textbf{Corrupted columns}                       & \textbf{\#cols} & \textbf{Configs} \\
+\midrule
+\texttt{missing}   & FIN Flag Cnt, Down/Up Ratio, Protocol, Timestamp & 4               & $4 \times 7 = 28$ \\
+\texttt{outliers}  & FIN Flag Cnt, Down/Up Ratio, Protocol, Timestamp & 4               & $4 \times 7 = 28$ \\
+\texttt{noise}     & FIN Flag Cnt, Down/Up Ratio, Protocol, Timestamp & 4               & $4 \times 7 = 28$ \\
+\texttt{labels}    & FIN Flag Cnt, Protocol                           & 2               & $2 \times 7 = 14$ \\
+\texttt{duplicated}& Timestamp (row-level)                            & 1               & $1 \times 6 = 6$  \\
+\midrule
+\textbf{Total}     &                                                  &                 & \textbf{104} \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+% ------------------------------------------------------------
+\subsection{Experiment B — Complete Dataset (Main Focus)}
+\label{sec:exp-B-grid}
+% ------------------------------------------------------------
+
+Experiment~B is the principal analytical phase of the thesis.  It operates on the complete dataset (no features discarded prior to HPO, although every experiment is conducted on the nine-feature working set derived in Section~\ref{sec:feature-selection}) and was repeated over a far broader range of \textbf{20 random seeds}:
+\[
+    S_{B} = \{1, 11, 21, 31, 41, 42, 51, 61, 86, 101, 202, 303, 404, 505, 606, 707, 808, 909, 1010, 1111\}.
+\]
+All Experiment~B runs use the \textbf{6-level} percentage grid:
+\[
+    p_{B} \in \{5\%,\; 10\%,\; 20\%,\; 35\%,\; 50\%,\; 75\%\}.
+\]
+
+Experiment~B is itself articulated into three complementary families of experiments, each implemented by a dedicated script.
+
+\paragraph{(i) Single-feature corruption.}
+The principal family, implemented in \texttt{4-4c-cavas\_model\_\allowbreak Experiment\_localhost.py}, injects noise into one column at a time across the nine-feature working set plus the \texttt{Timestamp} column (10 columns in total).  As in Experiment~A, \texttt{labels} is restricted to discrete columns (only \texttt{Protocol} qualifies within this working set) and \texttt{duplicated} acts once at the row level on \texttt{Timestamp}.  This yields \textbf{192 configurations per seed} (Table~\ref{tab:grid-B-single}).
+
+\begin{table}[H]
+\centering
+\caption{Experiment~B single-feature grid (per random seed).}
+\label{tab:grid-B-single}
+\small
+\begin{tabular}{llrr}
+\toprule
+\textbf{Method}    & \textbf{Corrupted columns}              & \textbf{\#cols} & \textbf{Configs} \\
+\midrule
+\texttt{missing}   & 9-feature set $+$ Timestamp             & 10              & $10 \times 6 = 60$ \\
+\texttt{outliers}  & 9-feature set $+$ Timestamp             & 10              & $10 \times 6 = 60$ \\
+\texttt{noise}     & 9-feature set $+$ Timestamp             & 10              & $10 \times 6 = 60$ \\
+\texttt{labels}    & Protocol                                & 1               & $1 \times 6 = 6$  \\
+\texttt{duplicated}& Timestamp (row-level)                   & 1               & $1 \times 6 = 6$  \\
+\midrule
+\textbf{Total}     &                                         &                 & \textbf{192} \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\paragraph{(ii) Label corruption on the target columns.}
+A dedicated variant, implemented in \texttt{5-cavas\_model\_experiment\_targets.py}, applies the \texttt{labels} method directly to the two encoded \emph{target} columns rather than to input features: the multi-class target \texttt{Label} and the binary target \texttt{label\_generic}.  This isolates the effect of label noise on the supervision signal itself, a scenario distinct from corrupting an input feature.  Because PuckTrick's \texttt{labels} method requires an integer column, label encoding is performed \emph{before} noise injection in this variant.  The results are stored in a dedicated \texttt{labels\_experiment/} sub-directory and amount to \textbf{12 configurations per seed} ($2$ target columns $\times\ 6$ percentages).
+
+\paragraph{(iii) Multiple-feature corruption.}
+A third family, implemented in \texttt{7b-cavas\_model\_experiment\_\allowbreak multiple\_features\_single\_call.py}, corrupts \emph{several features simultaneously} within a single PuckTrick call, in order to study compound degradation effects that the single-feature experiments cannot capture.  Six feature groups are corrupted with the three feature-level methods (\texttt{missing}, \texttt{outliers}, \texttt{noise}); \texttt{duplicated} is intentionally excluded, as duplicating whole rows is already equivalent to corrupting all features at once.  The six groups are designed to probe different combinations of feature importance and fragility:
+
+\begin{enumerate}
+    \item \{\texttt{Fwd Act Data Pkts}, \texttt{Dst Port}, \texttt{Init Fwd Win Byts}\} — the three most important features;
+    \item \{\texttt{Protocol}, \texttt{PSH Flag Cnt}, \texttt{Fwd Seg Size Min}\} — the middle-ranked, type-diverse features;
+    \item \{\texttt{Bwd Byts/b Avg}, \texttt{Fwd Blk Rate Avg}, \texttt{Idle Mean}\} — the three least important features (negative control);
+    \item \{\texttt{Fwd Act Data Pkts}, \texttt{PSH Flag Cnt}, \texttt{Idle Mean}\} — one feature drawn from each importance tier;
+    \item \{\texttt{Fwd Act Data Pkts}, \texttt{Dst Port}, \texttt{Init Fwd Win Byts}, \texttt{Protocol}, \texttt{PSH Flag Cnt}, \texttt{Fwd Seg Size Min}\} — the combined top and middle tiers (6 features);
+    \item \{\texttt{Fwd Act Data Pkts}, \texttt{Idle Mean}, \texttt{Init Fwd Win Byts}\} — two high-fragility features plus one medium-fragility feature.
+\end{enumerate}
+
+This produces $6 \times 3 \times 6 = \textbf{108 configurations per seed}$ for the feature groups; an additional combined-target group (\{\texttt{Label}, \texttt{label\_generic}\} corrupted jointly with \texttt{labels}) contributes a further $6$ configurations stored in the \texttt{labels\_experiment/} sub-directory, for $114$ configurations per fully completed seed.  At the time of writing, this multiple-feature family constitutes ongoing work and has been completed for a subset of the 20 seeds, whereas the single-feature family~(i) and the target-label family~(ii) are complete across all 20 seeds.
+
+\paragraph{Aggregate experiment count.}
+Table~\ref{tab:grid-totals} consolidates the configuration counts across all phases and families.  Considering the fully completed families alone (Experiment~A, and Experiment~B families (i) and (ii)), the campaign comprises $520 + 3\,840 + 240 = 4\,600$ experiment configurations, corresponding to $9\,200$ individually trained models; the in-progress multiple-feature family adds a further $114$ configurations per completed seed.
+
+\begin{table}[H]
+\centering
+\caption{Total experiment configurations per phase and family. Each configuration trains both TabNet and CNN-LSTM, so the model count is twice the configuration count.}
+\label{tab:grid-totals}
+\small
+\begin{tabular}{lllrr}
+\toprule
+\textbf{Phase / family}              & \textbf{Seeds} & \textbf{Configs/seed} & \textbf{Seeds (n)} & \textbf{Total configs} \\
+\midrule
+Experiment~A                         & 5  & 104 & 5  & 520   \\
+Experiment~B (i) single-feature      & 20 & 192 & 20 & 3\,840 \\
+Experiment~B (ii) target labels      & 20 & 12  & 20 & 240   \\
+Experiment~B (iii) multiple-feature  & 20 & 114 & \emph{partial} & \emph{$\le$2\,280} \\
+\midrule
+\textbf{Completed total}             &    &     &    & \textbf{4\,600} (9\,200 models) \\
+\bottomrule
+\end{tabular}
+\end{table}
 
 % ------------------------------------------------------------
 \subsection{Experiment Naming Convention}
@@ -425,14 +528,16 @@ Each experiment is uniquely identified by a label of the form:
 \begin{center}
     \texttt{Experiment\_\{method\}\_\{feature\}\_\{percentage\}}
 \end{center}
-for example: \texttt{Experiment\_missing\_Dst Port\_50.0}.  For each label, two artifact files are produced: a \texttt{.pt} checkpoint file containing the CNN-LSTM model weights, and a \texttt{\_artifacts.json} file recording all evaluation metrics (MCC, F1, AUC, confusion matrices), the model hyperparameters, the feature importance scores, and the per-feature correlation matrix of the training set.  The TabNet model is persisted as a \texttt{.zip} archive following the \texttt{pytorch-tabnet} serialisation convention.
+for example: \texttt{Experiment\_missing\_Dst Port\_50.0}.  In the multiple-feature family, the \texttt{\{feature\}} field becomes a \texttt{+}-joined list of the corrupted columns (e.g.\ \texttt{Experiment\_noise\_FwdActDataPkts+DstPort+InitFwdWinByts\_20.0}).  For each label, two artifact files are produced: a \texttt{.pt} checkpoint file containing the CNN-LSTM model weights, and a \texttt{\_artifacts.json} file recording all evaluation metrics (MCC, F1, AUC, confusion matrices), the model hyperparameters, the feature importance scores, and the per-feature correlation matrix of the training set.  The TabNet model is persisted as a \texttt{.zip} archive following the \texttt{pytorch-tabnet} serialisation convention.
+
+On disk, the artifacts are organised under \texttt{complete\_experiments/} according to the experimental phase and family: Experiment~A runs are filed under \texttt{Experiment\_A/experiment\_rs\{seed\}/}, while Experiment~B runs are split between \texttt{Experiment\_B/Pucktrick\_on\_single\_feature/} (with the target-label variant in a nested \texttt{labels\_experiment/} sub-directory) and \texttt{Experiment\_B/Pucktrick\_on\_multiple\_features/}.  Each phase additionally maintains a \texttt{Baselines/} folder holding the clean-data reference models against which all noisy runs are compared.
 
 % ------------------------------------------------------------
 \subsection{Dataset Preparation and Caching}
 \label{sec:dataset-caching}
 % ------------------------------------------------------------
 
-Calling \texttt{prepare\_whole\_dataset\_from\_scratch()} for each experiment would entail: reading the full Parquet file from disk, performing stratified sampling, applying PuckTrick noise injection, converting the Spark DataFrame to Pandas, remapping labels, scaling features, and constructing the sliding windows.  Multiplied across hundreds of experiments and ten random seeds, this would represent a prohibitive I/O and CPU bottleneck.
+Calling \texttt{prepare\_whole\_dataset\_from\_scratch()} for each experiment would entail: reading the full Parquet file from disk, performing stratified sampling, applying PuckTrick noise injection, converting the Spark DataFrame to Pandas, remapping labels, scaling features, and constructing the sliding windows.  Multiplied across the thousands of experiment configurations and the up to 20 random seeds described above, this would represent a prohibitive I/O and CPU bottleneck.
 
 To circumvent this, the pipeline was executed in two sequential phases:
 
@@ -466,7 +571,7 @@ This design guarantees that each experiment measures exclusively the effect of c
 \label{sec:infra}
 % ------------------------------------------------------------
 
-Local development and prototyping (including hyperparameter optimisation and baseline training) were carried out on a single workstation with a consumer GPU.  The full experiment grid, comprising hundreds of training runs across ten random seeds, was executed on an HPC cluster (\texttt{scratch\_share/datai/} filesystem) equipped with dedicated GPU nodes.  The Spark session was configured with 30\,GB of driver memory, a \texttt{local[*]} master (exploiting all allocated SLURM CPU cores), and a per-process GPU memory limit of 80\% to avoid out-of-memory errors during concurrent GPU-accelerated model evaluation.
+Local development and prototyping (including hyperparameter optimisation and baseline training) were carried out on a single workstation with a consumer GPU.  The full experiment grid, comprising several thousand training runs across up to 20 random seeds, was executed on an HPC cluster (\texttt{scratch\_share/datai/} filesystem) equipped with dedicated GPU nodes.  The Spark session was configured with 30\,GB of driver memory, a \texttt{local[*]} master (exploiting all allocated SLURM CPU cores), and a per-process GPU memory limit of 80\% to avoid out-of-memory errors during concurrent GPU-accelerated model evaluation.  Because out-of-memory crashes are a recurrent risk in long unattended runs, a watchdog process monitored each job and automatically restarted it from the most recent persisted checkpoint upon failure, exploiting the idempotent design described in Section~\ref{sec:dataset-caching}.
 
 
 % ============================================================
@@ -504,8 +609,13 @@ TabNet baseline MCC (bin / mul)   & 0.883 / 0.856 \\
 CNN-LSTM baseline MCC (bin / mul) & 0.737 / 0.635 \\
 \midrule
 PuckTrick methods                 & \{missing, noise, outliers, labels, duplicated\} \\
-Corruption percentages            & \{5\%, 10\%, 20\%, 35\%, 50\%, 75\%\} \\
-Random seeds (HPC)                & 10 seeds \\
+Experiment~A percentages          & \{1\%, 5\%, 10\%, 20\%, 30\%, 50\%, 75\%\} \\
+Experiment~B percentages          & \{5\%, 10\%, 20\%, 35\%, 50\%, 75\%\} \\
+Experiment~A seeds                & 5 seeds \\
+Experiment~B seeds                & 20 seeds \\
+Configs per seed (Exp.~A)         & 104 \\
+Configs per seed (Exp.~B single-feature) & 192 ($+12$ target-label) \\
+Completed configurations          & 4\,600 (9\,200 trained models) \\
 \midrule
 Clean validation / test sets      & Always corruption-free \\
 Artifact persistence              & \texttt{.pt}, \texttt{.zip}, \texttt{\_artifacts.json} per experiment \\
