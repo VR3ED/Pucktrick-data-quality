@@ -10,7 +10,7 @@ import os   # necessario per BASE_DIR prima del blocco CONFIG
 JUST_COMPILE_DATASETS  = False   # True  → crea e salva i dataset su disco (senza addestrare i modelli)
                                  # False → carica dataset da disco se esistono, altrimenti li crea al volo
                                  #         (SENZA salvarli) e addestra i due modelli
-LOCAL_RUN              = False   # True → esecuzione locale | False → HPC cluster
+LOCAL_RUN              = True   # True → esecuzione locale | False → HPC cluster
 RUNNING_ON_HPC         = not LOCAL_RUN
 RANDOM_SEEDS           = []
 TRIALS_ALREADY_EXECUTED= True
@@ -24,7 +24,7 @@ STEP_SIZE         = 10           # overlap tra finestre
 # Percorso base: cartella dello script in locale, path cluster su HPC
 if LOCAL_RUN:
     BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-    RANDOM_SEEDS = [1,11,21,31,41,42,51,61,86,101,202,303,404,505,606,707,808,909,1010,1111]
+    RANDOM_SEEDS = [11,21,31,41,42,51,61,86,101,202,303,404,505,606,707,808,909,1010,1111]
 else:
     RANDOM_SEEDS = [1111,1010,909,808,707,606,505,404,303,202,101,86,61,51]
                     # 42,41,31,21,11,1] già fatto a casa

@@ -414,16 +414,31 @@ Experiment~A is the smaller, proof-of-concept phase, executed on the feature-pru
     S_{A} = \{1,\; 2,\; 42,\; 51,\; 84\}.
 \]
 
-The corrupted columns are a set of \textbf{4 columns} drawn from the reduced feature set, chosen to span distinct feature types and fragility levels: \texttt{FIN Flag Cnt} (binary), \texttt{Down/Up Ratio} (continuous), \texttt{Protocol} (categorical), and \texttt{Timestamp} (temporal, used as the row-level reference for \texttt{duplicated}).  The percentage grid comprises \textbf{7 levels}:
+The corrupted columns, defined in the script by the list \texttt{FEATURESS\_FOR\_EXPERTS}, are a set of \textbf{4 columns} drawn from the reduced feature set, chosen to span distinct feature types and fragility levels: \texttt{FIN Flag Cnt} (binary), \texttt{Down/Up Ratio} (continuous), \texttt{Protocol} (categorical), and \texttt{Timestamp} (temporal, used as the row-level reference for \texttt{duplicated}).  The percentage grid comprises \textbf{7 levels}:
 \[
     p_{A} \in \{1\%,\; 5\%,\; 10\%,\; 20\%,\; 30\%,\; 50\%,\; 75\%\}.
 \]
 
-The combination logic, summarised in Table~\ref{tab:grid-A}, yields \textbf{104 experiment configurations per seed} (and therefore $104 \times 5 = 520$ configurations in total, or $1\,040$ trained models):
+The notebook executes two nested loops, which must be summed to obtain the per-seed count.  The first loop sweeps the four feature-level methods over the four columns; however, the \texttt{labels} method is skipped on columns that are neither binary nor categorical (\texttt{Down/Up Ratio} and \texttt{Timestamp}), so it contributes only $2$ of the $4$ columns.  The second loop applies the row-level \texttt{duplicated} method once, over the same $7$ percentages.  Formally, the per-seed configuration count is:
+
+\begin{align*}
+N_{A}^{\text{seed}}
+&= \underbrace{\bigl( \underbrace{3}_{\substack{\text{missing,}\\\text{outliers, noise}}} \times \underbrace{4}_{\text{cols}} + \underbrace{1}_{\text{labels}} \times \underbrace{2}_{\substack{\text{binary/}\\\text{categ.\ cols}}} \bigr) \times \underbrace{7}_{\text{pct}}}_{\text{loop 1: feature-level methods}}
+   \;+\; \underbrace{\underbrace{1}_{\text{duplicated}} \times \underbrace{1}_{\text{Timestamp}} \times \underbrace{7}_{\text{pct}}}_{\text{loop 2: row-level method}} \\[4pt]
+&= (12 + 2)\times 7 \;+\; 7
+ \;=\; 98 + 7 \;=\; \mathbf{105}.
+\end{align*}
+
+Multiplying by the $5$ random seeds and by the $2$ models trained per configuration gives the total cost of Experiment~A:
+\[
+    N_{A}^{\text{total}} = 105 \times 5 = \mathbf{525} \text{ configurations} \;\Longrightarrow\; 525 \times 2 = \mathbf{1\,050} \text{ trained models}.
+\]
+
+Table~\ref{tab:grid-A} breaks this count down by method.
 
 \begin{table}[H]
 \centering
-\caption{Experiment~A grid (per random seed). The \texttt{labels} method is restricted to binary/categorical columns; \texttt{duplicated} uses a reduced 6-level percentage grid (the $50\%$ level was omitted).}
+\caption{Experiment~A grid (per random seed). The \texttt{labels} method is restricted to binary/categorical columns, hence applies to only 2 of the 4 columns.}
 \label{tab:grid-A}
 \small
 \begin{tabular}{llrr}
@@ -434,9 +449,11 @@ The combination logic, summarised in Table~\ref{tab:grid-A}, yields \textbf{104 
 \texttt{outliers}  & FIN Flag Cnt, Down/Up Ratio, Protocol, Timestamp & 4               & $4 \times 7 = 28$ \\
 \texttt{noise}     & FIN Flag Cnt, Down/Up Ratio, Protocol, Timestamp & 4               & $4 \times 7 = 28$ \\
 \texttt{labels}    & FIN Flag Cnt, Protocol                           & 2               & $2 \times 7 = 14$ \\
-\texttt{duplicated}& Timestamp (row-level)                            & 1               & $1 \times 6 = 6$  \\
+\texttt{duplicated}& Timestamp (row-level)                            & 1               & $1 \times 7 = 7$  \\
 \midrule
-\textbf{Total}     &                                                  &                 & \textbf{104} \\
+\textbf{Total per seed} &                                             &                 & \textbf{105} \\
+\textbf{Total ($\times 5$ seeds)} &                                   &                 & \textbf{525} \\
+\textbf{Trained models ($\times 2$)} &                                &                 & \textbf{1\,050} \\
 \bottomrule
 \end{tabular}
 \end{table}
@@ -455,36 +472,73 @@ All Experiment~B runs use the \textbf{6-level} percentage grid:
     p_{B} \in \{5\%,\; 10\%,\; 20\%,\; 35\%,\; 50\%,\; 75\%\}.
 \]
 
-Experiment~B is itself articulated into three complementary families of experiments, each implemented by a dedicated script.
+Experiment~B is itself articulated into two complementary scenarios: \emph{single-feature} corruption (one column corrupted at a time, Section~\ref{sec:exp-B-single}) and \emph{multiple-feature} corruption (several columns corrupted simultaneously, Section~\ref{sec:exp-B-multi}).  Both scenarios share the seed set $S_{B}$ and the percentage grid $p_{B}$ defined above.
 
-\paragraph{(i) Single-feature corruption.}
-The principal family, implemented in \texttt{4-4c-cavas\_model\_\allowbreak Experiment\_localhost.py}, injects noise into one column at a time across the nine-feature working set plus the \texttt{Timestamp} column (10 columns in total).  As in Experiment~A, \texttt{labels} is restricted to discrete columns (only \texttt{Protocol} qualifies within this working set) and \texttt{duplicated} acts once at the row level on \texttt{Timestamp}.  This yields \textbf{192 configurations per seed} (Table~\ref{tab:grid-B-single}).
+% ------------------------------------------------------------
+\subsubsection{Single-feature corruption}
+\label{sec:exp-B-single}
+% ------------------------------------------------------------
+
+In the single-feature scenario noise is injected into one column at a time.  It is realised by two distinct scripts, both of which corrupt a single column per run but target different kinds of columns; their counts are therefore reported in separate paragraphs and summed.
+
+\paragraph{Feature corruption (\texttt{4-4c-cavas\_model\_Experiment\_localhost.py}).}
+This script corrupts individual \emph{input features}, sweeping the nine-feature working set plus the \texttt{Timestamp} column (\textbf{10 columns}, the list \texttt{FEATURESS\_FOR\_EXPERTS}).  Like Experiment~A, it executes two nested loops.  The first loop sweeps the four feature-level methods (\texttt{PUCKTRICK\_METHODS\_MAIN}) over the 10 columns, with \texttt{labels} restricted to discrete columns; within this working set only \texttt{Protocol} qualifies, so \texttt{labels} contributes a single column.  The second loop applies \texttt{duplicated} once at the row level on \texttt{Timestamp}.  Over the $6$ percentages of $p_{B}$:
+
+\begin{align*}
+N_{B,\text{feat}}^{\text{seed}}
+&= \underbrace{\bigl( \underbrace{3}_{\substack{\text{missing,}\\\text{outliers, noise}}} \times \underbrace{10}_{\text{cols}} + \underbrace{1}_{\text{labels}} \times \underbrace{1}_{\text{Protocol}} \bigr) \times \underbrace{6}_{\text{pct}}}_{\text{loop 1: feature-level methods}}
+   \;+\; \underbrace{\underbrace{1}_{\text{duplicated}} \times \underbrace{1}_{\text{Timestamp}} \times \underbrace{6}_{\text{pct}}}_{\text{loop 2: row-level method}} \\[4pt]
+&= (30 + 1)\times 6 \;+\; 6 \;=\; 186 + 6 \;=\; \mathbf{192} \quad\text{per seed.}
+\end{align*}
+
+\paragraph{Target-label corruption (\texttt{5-cavas\_model\_experiment\_targets.py}).}
+A complementary script applies the \texttt{labels} method directly to the two encoded \emph{target} columns rather than to input features: the multi-class target \texttt{Label} and the binary target \texttt{label\_generic} (the list \texttt{Y\_TARGET\_COLUMNS\_TO\_DIRTY}).  This isolates the effect of label noise on the supervision signal itself, a scenario distinct from corrupting an input feature.  Because PuckTrick's \texttt{labels} method requires an integer column, label encoding is performed \emph{before} noise injection.  A single loop sweeps the $2$ target columns over the $6$ percentages:
+\[
+    N_{B,\text{targ}}^{\text{seed}}
+    = \underbrace{1}_{\text{labels}} \times \underbrace{2}_{\substack{\texttt{Label},\\\texttt{label\_generic}}} \times \underbrace{6}_{\text{pct}}
+    = \mathbf{12} \quad\text{per seed.}
+\]
+
+\paragraph{Single-feature subtotal.}
+Summing the two scripts and scaling over the 20 seeds and the 2 models per configuration:
+\[
+    N_{B,\text{single}}^{\text{total}} = \bigl(192 + 12\bigr) \times 20 = 204 \times 20 = \mathbf{4\,080} \text{ configurations}
+    \;\Longrightarrow\; \mathbf{8\,160} \text{ trained models}.
+\]
+Table~\ref{tab:grid-B-single} provides the per-method breakdown.
 
 \begin{table}[H]
 \centering
-\caption{Experiment~B single-feature grid (per random seed).}
+\caption{Experiment~B single-feature grid (per random seed), combining the feature-corruption and target-label scripts.}
 \label{tab:grid-B-single}
 \small
-\begin{tabular}{llrr}
+\begin{tabular}{lllrr}
 \toprule
-\textbf{Method}    & \textbf{Corrupted columns}              & \textbf{\#cols} & \textbf{Configs} \\
+\textbf{Script} & \textbf{Method}    & \textbf{Corrupted columns}              & \textbf{\#cols} & \textbf{Configs} \\
 \midrule
-\texttt{missing}   & 9-feature set $+$ Timestamp             & 10              & $10 \times 6 = 60$ \\
-\texttt{outliers}  & 9-feature set $+$ Timestamp             & 10              & $10 \times 6 = 60$ \\
-\texttt{noise}     & 9-feature set $+$ Timestamp             & 10              & $10 \times 6 = 60$ \\
-\texttt{labels}    & Protocol                                & 1               & $1 \times 6 = 6$  \\
-\texttt{duplicated}& Timestamp (row-level)                   & 1               & $1 \times 6 = 6$  \\
+4-4c & \texttt{missing}   & 9-feature set $+$ Timestamp             & 10              & $10 \times 6 = 60$ \\
+4-4c & \texttt{outliers}  & 9-feature set $+$ Timestamp             & 10              & $10 \times 6 = 60$ \\
+4-4c & \texttt{noise}     & 9-feature set $+$ Timestamp             & 10              & $10 \times 6 = 60$ \\
+4-4c & \texttt{labels}    & Protocol                                & 1               & $1 \times 6 = 6$  \\
+4-4c & \texttt{duplicated}& Timestamp (row-level)                   & 1               & $1 \times 6 = 6$  \\
+5    & \texttt{labels}    & Label, label\_generic (targets)         & 2               & $2 \times 6 = 12$ \\
 \midrule
-\textbf{Total}     &                                         &                 & \textbf{192} \\
+\textbf{Total per seed} & &                                       &                 & \textbf{204} \\
+\textbf{Total ($\times 20$ seeds)} & &                          &                 & \textbf{4\,080} \\
+\textbf{Trained models ($\times 2$)} & &                        &                 & \textbf{8\,160} \\
 \bottomrule
 \end{tabular}
 \end{table}
 
-\paragraph{(ii) Label corruption on the target columns.}
-A dedicated variant, implemented in \texttt{5-cavas\_model\_experiment\_targets.py}, applies the \texttt{labels} method directly to the two encoded \emph{target} columns rather than to input features: the multi-class target \texttt{Label} and the binary target \texttt{label\_generic}.  This isolates the effect of label noise on the supervision signal itself, a scenario distinct from corrupting an input feature.  Because PuckTrick's \texttt{labels} method requires an integer column, label encoding is performed \emph{before} noise injection in this variant.  The results are stored in a dedicated \texttt{labels\_experiment/} sub-directory and amount to \textbf{12 configurations per seed} ($2$ target columns $\times\ 6$ percentages).
+% ------------------------------------------------------------
+\subsubsection{Multiple-feature corruption}
+\label{sec:exp-B-multi}
+% ------------------------------------------------------------
 
-\paragraph{(iii) Multiple-feature corruption.}
-A third family, implemented in \texttt{7b-cavas\_model\_experiment\_\allowbreak multiple\_features\_single\_call.py}, corrupts \emph{several features simultaneously} within a single PuckTrick call, in order to study compound degradation effects that the single-feature experiments cannot capture.  Six feature groups are corrupted with the three feature-level methods (\texttt{missing}, \texttt{outliers}, \texttt{noise}); \texttt{duplicated} is intentionally excluded, as duplicating whole rows is already equivalent to corrupting all features at once.  The six groups are designed to probe different combinations of feature importance and fragility:
+The multiple-feature scenario, implemented in \texttt{7b-cavas\_model\_\allowbreak experiment\_multiple\_features\_single\_call.py}, corrupts \emph{several columns simultaneously} within a single PuckTrick call, in order to study compound degradation effects that the single-feature experiments cannot capture.  The script iterates over a list of column groups (\texttt{FEATURE\_GROUPS}); the groups split naturally into two categories — groups of input features and the group of target columns — which use different methods and are therefore counted in two separate paragraphs and summed.
+
+\paragraph{Feature-group corruption.}
+Six groups of \emph{input features} are corrupted with the three feature-level methods (\texttt{missing}, \texttt{outliers}, \texttt{noise}, the list \texttt{PUCKTRICK\_FEATURE\_METHODS}); the \texttt{duplicated} method is intentionally excluded, since duplicating whole rows is already equivalent to corrupting all features at once (already covered by the single-feature \texttt{duplicated} run).  The six groups are designed to probe different combinations of feature importance and fragility:
 
 \begin{enumerate}
     \item \{\texttt{Fwd Act Data Pkts}, \texttt{Dst Port}, \texttt{Init Fwd Win Byts}\} — the three most important features;
@@ -495,29 +549,57 @@ A third family, implemented in \texttt{7b-cavas\_model\_experiment\_\allowbreak 
     \item \{\texttt{Fwd Act Data Pkts}, \texttt{Idle Mean}, \texttt{Init Fwd Win Byts}\} — two high-fragility features plus one medium-fragility feature.
 \end{enumerate}
 
-This produces $6 \times 3 \times 6 = \textbf{108 configurations per seed}$ for the feature groups; an additional combined-target group (\{\texttt{Label}, \texttt{label\_generic}\} corrupted jointly with \texttt{labels}) contributes a further $6$ configurations stored in the \texttt{labels\_experiment/} sub-directory, for $114$ configurations per fully completed seed.  At the time of writing, this multiple-feature family constitutes ongoing work and has been completed for a subset of the 20 seeds, whereas the single-feature family~(i) and the target-label family~(ii) are complete across all 20 seeds.
+Over the $6$ percentages of $p_{B}$, the feature-group loop yields:
+\[
+    N_{B,\text{grp}}^{\text{seed}}
+    = \underbrace{6}_{\text{groups}} \times \underbrace{3}_{\substack{\text{missing,}\\\text{outliers, noise}}} \times \underbrace{6}_{\text{pct}}
+    = \mathbf{108} \quad\text{per seed.}
+\]
 
-\paragraph{Aggregate experiment count.}
-Table~\ref{tab:grid-totals} consolidates the configuration counts across all phases and families.  Considering the fully completed families alone (Experiment~A, and Experiment~B families (i) and (ii)), the campaign comprises $520 + 3\,840 + 240 = 4\,600$ experiment configurations, corresponding to $9\,200$ individually trained models; the in-progress multiple-feature family adds a further $114$ configurations per completed seed.
+\paragraph{Label-group corruption.}
+A seventh group bundles the two target columns \{\texttt{Label}, \texttt{label\_generic}\} and corrupts them \emph{jointly} with the \texttt{labels} method in a single call, the multi-target analogue of the target-label script of Section~\ref{sec:exp-B-single}.  Its results are stored in a dedicated \texttt{labels\_experiment/} sub-directory.  A single loop sweeps this one group over the $6$ percentages:
+\[
+    N_{B,\text{lblgrp}}^{\text{seed}}
+    = \underbrace{1}_{\text{group}} \times \underbrace{1}_{\text{labels}} \times \underbrace{6}_{\text{pct}}
+    = \mathbf{6} \quad\text{per seed.}
+\]
+
+\paragraph{Multiple-feature subtotal.}
+Summing the two group categories and scaling over the 20 seeds and the 2 models per configuration:
+\[
+    N_{B,\text{multi}}^{\text{total}} = \bigl(108 + 6\bigr) \times 20 = 114 \times 20 = \mathbf{2\,280} \text{ configurations}
+    \;\Longrightarrow\; \mathbf{4\,560} \text{ trained models}.
+\]
+
+% ------------------------------------------------------------
+\subsection{Aggregate Experiment Count}
+\label{sec:exp-totals}
+% ------------------------------------------------------------
+
+Table~\ref{tab:grid-totals} consolidates the configuration counts across all phases and scenarios.  In total the campaign comprises
+\[
+    \underbrace{525}_{\text{Exp.~A}} + \underbrace{4\,080}_{\substack{\text{Exp.~B}\\\text{single-feature}}} + \underbrace{2\,280}_{\substack{\text{Exp.~B}\\\text{multiple-feature}}} = \mathbf{6\,885} \text{ experiment configurations},
+\]
+corresponding to $6\,885 \times 2 = \mathbf{13\,770}$ individually trained TabNet and CNN-LSTM models.
 
 \begin{table}[H]
 \centering
-\caption{Total experiment configurations per phase and family. Each configuration trains both TabNet and CNN-LSTM, so the model count is twice the configuration count.}
+\caption{Total experiment configurations per phase and scenario. Each configuration trains both TabNet and CNN-LSTM, so the model count is twice the configuration count.}
 \label{tab:grid-totals}
 \small
-\begin{tabular}{lllrr}
+\begin{tabular}{lrrrr}
 \toprule
-\textbf{Phase / family}              & \textbf{Seeds} & \textbf{Configs/seed} & \textbf{Seeds (n)} & \textbf{Total configs} \\
+\textbf{Phase / scenario}              & \textbf{Configs/seed} & \textbf{Seeds} & \textbf{Configs} & \textbf{Models} \\
 \midrule
-Experiment~A                         & 5  & 104 & 5  & 520   \\
-Experiment~B (i) single-feature      & 20 & 192 & 20 & 3\,840 \\
-Experiment~B (ii) target labels      & 20 & 12  & 20 & 240   \\
-Experiment~B (iii) multiple-feature  & 20 & 114 & \emph{partial} & \emph{$\le$2\,280} \\
+Experiment~A                          & 105 & 5  & 525    & 1\,050 \\
+Experiment~B — single-feature         & 204 & 20 & 4\,080 & 8\,160 \\
+Experiment~B — multiple-feature       & 114 & 20 & 2\,280 & 4\,560 \\
 \midrule
-\textbf{Completed total}             &    &     &    & \textbf{4\,600} (9\,200 models) \\
+\textbf{Total}                        &     &    & \textbf{6\,885} & \textbf{13\,770} \\
 \bottomrule
 \end{tabular}
 \end{table}
+
 
 % ------------------------------------------------------------
 \subsection{Experiment Naming Convention}
@@ -613,9 +695,10 @@ Experiment~A percentages          & \{1\%, 5\%, 10\%, 20\%, 30\%, 50\%, 75\%\} \
 Experiment~B percentages          & \{5\%, 10\%, 20\%, 35\%, 50\%, 75\%\} \\
 Experiment~A seeds                & 5 seeds \\
 Experiment~B seeds                & 20 seeds \\
-Configs per seed (Exp.~A)         & 104 \\
-Configs per seed (Exp.~B single-feature) & 192 ($+12$ target-label) \\
-Completed configurations          & 4\,600 (9\,200 trained models) \\
+Configs per seed (Exp.~A)         & 105 \\
+Configs per seed (Exp.~B single-feature) & 204 (192 features $+\,12$ target-label) \\
+Configs per seed (Exp.~B multiple-feature) & 114 (108 feature-group $+\,6$ label-group) \\
+Total configurations              & 6\,885 (13\,770 trained models) \\
 \midrule
 Clean validation / test sets      & Always corruption-free \\
 Artifact persistence              & \texttt{.pt}, \texttt{.zip}, \texttt{\_artifacts.json} per experiment \\
