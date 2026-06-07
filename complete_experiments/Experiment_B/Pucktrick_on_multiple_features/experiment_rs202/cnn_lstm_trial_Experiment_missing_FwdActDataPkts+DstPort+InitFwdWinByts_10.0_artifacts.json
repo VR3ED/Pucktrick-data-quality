@@ -1,42 +1,27 @@
 {
-    "model": "/media/Cava/Volume/REPOS/jupyter notebooks/Pucktrick-data-quality/complete_experiments/Experiment_B/Pucktrick_on_multiple_features/experiment_rs202/cnn_lstm_trial_Experiment_missing_FwdActDataPkts+DstPort+InitFwdWinByts_10.0.pt",
+    "model": "/scratch_share/datai/maurinoa/dirtify/hpc/complete_experiments/Experiment_B/Pucktrick_on_multiple_features/experiment_rs202/cnn_lstm_trial_Experiment_missing_FwdActDataPkts+DstPort+InitFwdWinByts_10.0.pt",
     "model_type": "CNN-LSTM",
     "label": "Experiment_missing_FwdActDataPkts+DstPort+InitFwdWinByts_10.0",
-    "mcc_bin": 0.7588981398208464,
-    "mcc_mul": 0.696138589477989,
-    "mean_mcc": 0.7275183646494177,
-    "val_loss": 0.6578974053263664,
+    "mcc_bin": 0.7429078693399537,
+    "mcc_mul": 0.6169622634224071,
+    "mean_mcc": 0.6799350663811804,
+    "val_loss": 0.8018687106668949,
     "cm_bin": [
         [
-            22257,
-            76
+            22095,
+            238
         ],
         [
-            1642,
-            2909
+            1579,
+            2972
         ]
     ],
     "cm_mul": [
         [
-            22296,
-            19,
+            22302,
+            28,
             0,
-            0,
-            16,
-            1,
-            0,
-            0,
-            1,
-            0,
-            0,
-            0,
-            0
-        ],
-        [
-            1,
-            1149,
-            0,
-            4,
+            3,
             0,
             0,
             0,
@@ -48,11 +33,11 @@
             0
         ],
         [
-            938,
+            2,
+            1152,
             0,
             0,
             0,
-            7,
             0,
             0,
             0,
@@ -63,11 +48,26 @@
             0
         ],
         [
-            36,
-            40,
+            945,
             0,
-            704,
-            1,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0
+        ],
+        [
+            12,
+            108,
+            0,
+            661,
+            0,
             0,
             0,
             0,
@@ -93,27 +93,12 @@
             0
         ],
         [
-            1,
-            43,
+            2,
+            97,
+            0,
+            213,
             0,
             0,
-            1,
-            267,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0
-        ],
-        [
-            6,
-            283,
-            0,
-            11,
-            0,
-            1,
             0,
             0,
             0,
@@ -123,11 +108,26 @@
             0
         ],
         [
-            260,
-            0,
-            0,
-            0,
             3,
+            53,
+            0,
+            245,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0
+        ],
+        [
+            261,
+            2,
+            0,
+            0,
+            0,
             0,
             0,
             0,
@@ -139,26 +139,11 @@
         ],
         [
             0,
-            2,
             0,
             0,
-            0,
-            2,
-            0,
-            0,
-            226,
+            230,
             0,
             0,
-            0,
-            0
-        ],
-        [
-            2,
-            66,
-            0,
-            0,
-            0,
-            1,
             0,
             0,
             0,
@@ -168,11 +153,26 @@
             0
         ],
         [
-            13,
+            2,
+            32,
+            0,
+            35,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0
+        ],
+        [
+            16,
             4,
             0,
             0,
-            3,
+            0,
             0,
             0,
             0,
@@ -183,8 +183,8 @@
             0
         ],
         [
-            1,
-            1,
+            2,
+            0,
             0,
             0,
             0,
@@ -214,15 +214,15 @@
         ]
     ],
     "feature_importance": {
-        "Fwd Act Data Pkts": 0.00025581990278831054,
-        "Dst Port": 0.3783576362240976,
-        "Init Fwd Win Byts": 0.5963161933998467,
-        "Protocol": 0.012279355333844251,
-        "PSH Flag Cnt": 0.0841647480173954,
+        "Fwd Act Data Pkts": 0.001389532190829092,
+        "Dst Port": 0.41014358499305215,
+        "Init Fwd Win Byts": 0.5046317739694304,
+        "Protocol": 0.04214914312181556,
+        "PSH Flag Cnt": 0.09796201945345064,
         "Fwd Seg Size Min": 1.0,
         "Bwd Byts/b Avg": 0.0,
         "Fwd Blk Rate Avg": 0.0,
-        "Idle Mean": 0.01637247377845951
+        "Idle Mean": 0.008105604446503153
     },
     "params": {
         "nb_filters": 32,
@@ -235,17 +235,17 @@
     },
     "metrics_binary": {
         "task": "Trial Experiment_missing_FwdActDataPkts+DstPort+InitFwdWinByts_10.0 - Binary Task",
-        "accuracy": 0.9360958190745424,
-        "f1": 0.7720276008492569,
-        "mcc": 0.7588981398208464,
-        "auc": 0.9314340802792215
+        "accuracy": 0.9324133313495016,
+        "f1": 0.7658806854786754,
+        "mcc": 0.7429078693399537,
+        "auc": 0.9057567472425503
     },
     "metrics_multiclass": {
         "task": "Trial Experiment_missing_FwdActDataPkts+DstPort+InitFwdWinByts_10.0 - Multiclass Task",
-        "accuracy": 0.9166046719238209,
-        "f1": 0.35663533636097366,
-        "mcc": 0.696138589477989,
-        "auc": 0.8668854047187757
+        "accuracy": 0.8970019342359767,
+        "f1": 0.18831317541790116,
+        "mcc": 0.6169622634224071,
+        "auc": 0.8397645980134919
     },
     "correlation_matrix": {
         "Fwd Act Data Pkts": {
