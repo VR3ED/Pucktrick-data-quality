@@ -2,32 +2,32 @@
     "model": "tabnet_trial_Experiment_outliers_FwdActDataPkts+DstPort+InitFwdWinByts_35.0",
     "model_type": "TabNet",
     "label": "Experiment_outliers_FwdActDataPkts+DstPort+InitFwdWinByts_35.0",
-    "mcc_bin": 0.8760419504248705,
-    "mcc_mul": 0.8265195210380963,
-    "mean_mcc": 0.8512807357314834,
+    "mcc_bin": 0.8633364843373483,
+    "mcc_mul": 0.8149607173712291,
+    "mean_mcc": 0.8391486008542888,
     "cm_bin": [
         [
-            222439,
-            841
+            221692,
+            1588
         ],
         [
-            8282,
-            37326
+            8430,
+            37178
         ]
     ],
     "cm_mul": [
         [
-            222572,
-            281,
-            98,
-            17,
-            125,
-            87,
-            86,
+            221821,
+            272,
+            834,
+            12,
+            179,
+            35,
+            113,
             0,
             0,
-            6,
-            8,
+            9,
+            5,
             0,
             0,
             0
@@ -49,23 +49,23 @@
             0
         ],
         [
-            5602,
+            5700,
             0,
-            3978,
-            0,
-            0,
+            3874,
             0,
             0,
             0,
             0,
             0,
             0,
-            7,
+            0,
+            0,
+            13,
             0,
             0
         ],
         [
-            17,
+            45,
             0,
             0,
             7455,
@@ -74,7 +74,7 @@
             240,
             0,
             0,
-            28,
+            0,
             0,
             0,
             0,
@@ -129,12 +129,12 @@
             0
         ],
         [
-            2669,
+            2659,
             2,
-            7,
-            6,
+            22,
             0,
             0,
+            1,
             1,
             0,
             0,
@@ -161,23 +161,23 @@
             0
         ],
         [
+            5,
             0,
-            0,
-            0,
+            81,
             120,
             0,
             0,
             234,
             0,
             0,
-            322,
+            236,
             14,
             0,
             0,
             0
         ],
         [
-            12,
+            6,
             0,
             0,
             19,
@@ -186,14 +186,13 @@
             1,
             0,
             0,
-            32,
-            67,
+            3,
+            102,
             0,
             0,
             0
         ],
         [
-            1,
             0,
             0,
             0,
@@ -204,7 +203,8 @@
             0,
             0,
             0,
-            25,
+            0,
+            26,
             0,
             0
         ],
@@ -242,15 +242,15 @@
         ]
     ],
     "feature_importance": {
-        "Fwd Act Data Pkts": 0.043891271074252725,
-        "Dst Port": 0.14717501000892966,
-        "Init Fwd Win Byts": 0.12677268280938908,
-        "Protocol": 0.15024180741035842,
-        "PSH Flag Cnt": 0.13751527644788664,
-        "Fwd Seg Size Min": 0.13394395116415542,
-        "Bwd Byts/b Avg": 0.03244364355648893,
-        "Fwd Blk Rate Avg": 0.057475725544259455,
-        "Idle Mean": 0.17054063198427957
+        "Fwd Act Data Pkts": 0.0415726418520889,
+        "Dst Port": 0.12926223862116815,
+        "Init Fwd Win Byts": 0.07507074638929316,
+        "Protocol": 0.1389329600580653,
+        "PSH Flag Cnt": 0.13462459640108204,
+        "Fwd Seg Size Min": 0.27656435985823996,
+        "Bwd Byts/b Avg": 0.03317764352472087,
+        "Fwd Blk Rate Avg": 0.018998569237835244,
+        "Idle Mean": 0.15179624405750636
     },
     "params": {
         "N_a": 32,
@@ -263,59 +263,59 @@
     },
     "metrics_binary": {
         "task": "Trial Experiment_outliers_FwdActDataPkts+DstPort+InitFwdWinByts_35.0 - Binary Task",
-        "accuracy": 0.9660713754425635,
-        "f1": 0.891101163831692,
-        "mcc": 0.8760419504248705,
-        "auc": 0.9723415974381345
+        "accuracy": 0.9627428520424861,
+        "f1": 0.8812667409391519,
+        "mcc": 0.8633364843373483,
+        "auc": 0.966608736572833
     },
     "metrics_multiclass": {
         "task": "Trial Experiment_outliers_FwdActDataPkts+DstPort+InitFwdWinByts_35.0 - Multiclass Task",
-        "accuracy": 0.9494696676683229,
-        "f1": 0.552229711472364,
-        "mcc": 0.8265195210380963,
-        "auc": 0.9680138420379427
+        "accuracy": 0.946103954062658,
+        "f1": 0.5507232061837335,
+        "mcc": 0.8149607173712291,
+        "auc": 0.9009024598918822
     },
     "correlation_matrix": {
         "Fwd Act Data Pkts": {
             "Fwd Act Data Pkts": 1.0,
-            "Dst Port": -0.0027,
-            "Init Fwd Win Byts": -0.0009,
-            "Protocol": -0.0041,
-            "PSH Flag Cnt": -0.0012,
-            "Fwd Seg Size Min": 0.0049,
+            "Dst Port": -0.0006,
+            "Init Fwd Win Byts": -0.0,
+            "Protocol": -0.0051,
+            "PSH Flag Cnt": -0.0006,
+            "Fwd Seg Size Min": 0.0051,
             "Bwd Byts/b Avg": NaN,
             "Fwd Blk Rate Avg": NaN,
-            "Idle Mean": -0.0006,
-            "label_generic_enc": 0.0084
+            "Idle Mean": -0.0013,
+            "label_generic_enc": 0.0086
         },
         "Dst Port": {
-            "Fwd Act Data Pkts": -0.0027,
+            "Fwd Act Data Pkts": -0.0006,
             "Dst Port": 1.0,
-            "Init Fwd Win Byts": 0.0282,
-            "Protocol": 0.0824,
-            "PSH Flag Cnt": -0.0518,
-            "Fwd Seg Size Min": -0.0761,
+            "Init Fwd Win Byts": 0.028,
+            "Protocol": 0.081,
+            "PSH Flag Cnt": -0.0521,
+            "Fwd Seg Size Min": -0.075,
             "Bwd Byts/b Avg": NaN,
             "Fwd Blk Rate Avg": NaN,
-            "Idle Mean": 0.0045,
-            "label_generic_enc": -0.0531
+            "Idle Mean": 0.0041,
+            "label_generic_enc": -0.0548
         },
         "Init Fwd Win Byts": {
-            "Fwd Act Data Pkts": -0.0009,
-            "Dst Port": 0.0282,
+            "Fwd Act Data Pkts": -0.0,
+            "Dst Port": 0.028,
             "Init Fwd Win Byts": 1.0,
-            "Protocol": 0.0941,
-            "PSH Flag Cnt": 0.088,
-            "Fwd Seg Size Min": -0.0888,
+            "Protocol": 0.0955,
+            "PSH Flag Cnt": 0.0886,
+            "Fwd Seg Size Min": -0.0883,
             "Bwd Byts/b Avg": NaN,
             "Fwd Blk Rate Avg": NaN,
-            "Idle Mean": 0.0727,
-            "label_generic_enc": 0.0641
+            "Idle Mean": 0.0721,
+            "label_generic_enc": 0.0646
         },
         "Protocol": {
-            "Fwd Act Data Pkts": -0.0041,
-            "Dst Port": 0.0824,
-            "Init Fwd Win Byts": 0.0941,
+            "Fwd Act Data Pkts": -0.0051,
+            "Dst Port": 0.081,
+            "Init Fwd Win Byts": 0.0955,
             "Protocol": 1.0,
             "PSH Flag Cnt": 0.4818,
             "Fwd Seg Size Min": -0.7867,
@@ -325,9 +325,9 @@
             "label_generic_enc": 0.2508
         },
         "PSH Flag Cnt": {
-            "Fwd Act Data Pkts": -0.0012,
-            "Dst Port": -0.0518,
-            "Init Fwd Win Byts": 0.088,
+            "Fwd Act Data Pkts": -0.0006,
+            "Dst Port": -0.0521,
+            "Init Fwd Win Byts": 0.0886,
             "Protocol": 0.4818,
             "PSH Flag Cnt": 1.0,
             "Fwd Seg Size Min": -0.4608,
@@ -337,9 +337,9 @@
             "label_generic_enc": 0.021
         },
         "Fwd Seg Size Min": {
-            "Fwd Act Data Pkts": 0.0049,
-            "Dst Port": -0.0761,
-            "Init Fwd Win Byts": -0.0888,
+            "Fwd Act Data Pkts": 0.0051,
+            "Dst Port": -0.075,
+            "Init Fwd Win Byts": -0.0883,
             "Protocol": -0.7867,
             "PSH Flag Cnt": -0.4608,
             "Fwd Seg Size Min": 1.0,
@@ -373,9 +373,9 @@
             "label_generic_enc": NaN
         },
         "Idle Mean": {
-            "Fwd Act Data Pkts": -0.0006,
-            "Dst Port": 0.0045,
-            "Init Fwd Win Byts": 0.0727,
+            "Fwd Act Data Pkts": -0.0013,
+            "Dst Port": 0.0041,
+            "Init Fwd Win Byts": 0.0721,
             "Protocol": 0.0397,
             "PSH Flag Cnt": 0.0003,
             "Fwd Seg Size Min": -0.2065,
@@ -385,9 +385,9 @@
             "label_generic_enc": -0.0574
         },
         "label_generic_enc": {
-            "Fwd Act Data Pkts": 0.0084,
-            "Dst Port": -0.0531,
-            "Init Fwd Win Byts": 0.0641,
+            "Fwd Act Data Pkts": 0.0086,
+            "Dst Port": -0.0548,
+            "Init Fwd Win Byts": 0.0646,
             "Protocol": 0.2508,
             "PSH Flag Cnt": 0.021,
             "Fwd Seg Size Min": -0.093,

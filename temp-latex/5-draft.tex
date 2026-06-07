@@ -2,6 +2,27 @@
 
 \begin{document}
 
+% capitolo eliminato dalla tesi ma magari potrei rimettere dentro se riformulato correttamente
+% ------------------------------------------------------------
+\subsection{Dataset Preparation and Caching}
+\label{sec:dataset-caching}
+% ------------------------------------------------------------
+
+Calling \texttt{prepare\_whole\_dataset\_from\_scratch()} for each experiment would entail: reading the full Parquet file from disk, performing stratified sampling, applying PuckTrick noise injection, converting the Spark DataFrame to Pandas, remapping labels, scaling features, and constructing the sliding windows.  Multiplied across the thousands of experiment configurations and the up to 20 random seeds described above, this would represent a prohibitive I/O and CPU bottleneck.
+
+To circumvent this, the pipeline was executed in two sequential phases:
+
+\begin{enumerate}
+    \item \textbf{Dataset compilation phase} (\texttt{JUST\_COMPILE\_DATASETS = True}): all datasets for all experiment combinations were pre-computed and serialised to disk in NumPy binary format (\texttt{.npy} arrays).  For each experiment label, a directory \texttt{<RS\_DIR>/datasets/<label>/} is created, containing the 12 split arrays (train/val $\times$ 2D/3D $\times$ binary/multiclass labels) plus a \texttt{metadata.json} file recording the \texttt{FEATURE\_COLS}, \texttt{CAT\_IDXS}, \texttt{CAT\_DIMS}, \texttt{label\_classes}, and the training-set correlation matrix.  A checkpointing mechanism skips any dataset for which the corresponding \texttt{metadata.json} already exists, making the compilation phase resumable after interruption.
+
+    \item \textbf{Training phase} (\texttt{JUST\_COMPILE\_DATASETS = False}): the training script loads each pre-computed dataset from disk and immediately passes the arrays to the model training functions.  If a model artifact already exists on disk for a given experiment label, training is skipped and the artifact is reloaded directly, making the training phase equally resumable.
+\end{enumerate}
+
+This two-phase design decoupled the Spark-intensive data preparation from the GPU-intensive model training, allowing each phase to be scheduled independently on the HPC cluster and enabling efficient use of both the distributed Spark infrastructure and the GPU nodes.
+
+
+
+
 % =======================================================================
 \chapter{Empiric Models Analysis}
 \addcontentsline{toc}{chapter}{Empiric-analysis-models}
