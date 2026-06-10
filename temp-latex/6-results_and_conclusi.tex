@@ -1,0 +1,436 @@
+\documentclass[../main.tex]{subfiles}
+
+\begin{document}
+
+
+
+% =======================================================================
+\chapter{Experimental Results and Conclusions}
+\addcontentsline{toc}{chapter}{Experimental Results and Conclusions}
+\label{chap:Empiric-analysis-models}
+% =======================================================================
+
+The previous chapter described the full experimental grid, from which the grand total of $\approx 13$k single models were trained (summarized in Section \ref{sec:experiment-protocol}). The present chapter reports and interprets the \emph{quantitative outcomes} of that grid. In line with the analytical priorities stated in the introduction of Chapter \ref{chap:5-Empiric-analysis-models}, the discussion opens with \red{Experiment B} (the principal, full-dataset campaign run over 20 random seeds), because it is the broader and more controlled study, and only afterwards turns to \red{Experiment A} (the proof of concept experiment), which is best read as one concrete instantiation of the more general phenomena that \red{Experiment~B} characterises in depth. The chapter then closes with the overall conclusions of the thesis.
+
+Throughout, the \textbf{Matthews Correlation Coefficient (MCC)} is the primary metric, reported separately for the binary task (\texttt{label\_generic}: benign vs.\ malicious) and the multi-class task (\texttt{Label}: attack subtype). MCC is preferred over accuracy and macro-F1 because, as motivated in Section \ref{sec:hpo}, the CIC-IDS2018 label distribution is heavily imbalanced: MCC remains informative under imbalance and is bounded in $[-1, +1]$, where $0$ denotes a prediction uncorrelated with the ground truth and negative values denote systematic anti-correlation; yet, in contrast, unlike the F1-score, the MCC is much less susceptible to the presence of underrepresented classes within the target columns (which, as we know, are very common in the dataset used). For this reason, in this section, most of the analysis will be based on the MCC (although all F1-score thresholds have still been traced). Also, the aggregated F1 and accuracy tables produced by the evaluation notebooks are consistent with the MCC trends discussed here and are therefore not reproduced in full.
+
+% =======================================================================
+\newpage
+\section{Reading the Results: Evaluation Protocol}
+\label{sec:res-protocol}
+% =======================================================================
+
+Before presenting the numbers, it is useful to fix precisely how each reported quantity was computed, since every claim in this chapter is expressed in these terms.
+
+\paragraph{Performance delta against the clean baseline.}
+For a given model, task, corruption method, target column (or column group), and noise percentage $perc$, the metric of interest is the \emph{signed difference} between the mean MCC (indicated as $\overline{\mathrm{MCC}}$) of the noisy configuration  and the MCC of the corresponding clean baseline of Section \ref{sec:baseline-performance}:
+\[
+    \Delta\mathrm{MCC} \;=\; \overline{\mathrm{MCC}}_{\text{noisy}}(perc) \;-\; \mathrm{MCC}_{\text{baseline}}.
+\]
+A \emph{positive} $\Delta\mathrm{MCC}$ therefore means that injecting noise into the training data \emph{improved} held-out performance relative to training on clean data; a negative value denotes degradation. The clean validation and test partitions are identical across all configurations (Section~\ref{sec:noise-construction}), so these deltas are directly comparable across methods, features, and seeds.
+
+\paragraph{Confidence intervals: the Student-$t$ interval.}
+Each cell of the grid is repeated over the seed set of its phase (5 seeds for \red{Experiment~A}, 20 for \red{Experiment~B}), yielding, for every configuration, a small sample of $n$ MCC measurements. The reported figure is their mean $\mathrm{MCC}$ (indicated as $\overline{\mathrm{MCC}}$); but a mean over this number of runs could still be an uncertain estimate of the ``true'' expected performance, and that uncertainty must be quantified. Since the population variance is unknown and is estimated from the same handful of seeds, the appropriate tool is the \emph{Student-$t$ confidence interval}, reported throughout as $\overline{\mathrm{MCC}} \pm \delta$ (and drawn as a shaded band in every figure), with half-width
+\[
+    \delta \;=\; t_{1-\alpha/2,\;n-1}\;\frac{s}{\sqrt{n}},
+\]
+where:
+\begin{itemize}
+    \item $s$ is the sample standard deviation across seeds
+    \item $s/\sqrt{n}$ is the standard error of the mean
+    \item $t_{1-\alpha/2,\,n-1}$ is the critical value of Student's $t$ distribution with $n-1$ degrees of freedom at confidence level $1-\alpha = 0.95$
+\end{itemize}
+
+Student's $t$ (rather than the Gaussian $z$) is used precisely because $\sigma$ is itself estimated from few points: its heavier tails widen the interval to account honestly for that extra uncertainty. The interpretation is the customary one: were the experiment repeated with fresh seeds, approximately $95\%$ of the intervals so constructed would contain the true mean. The half-width therefore \emph{adapts to the seed count} through two compounding factors:
+\begin{itemize}
+    \item the $\sqrt{n}$ in the denominator
+    \item the critical value $t_{1-\alpha/2,\,n-1}$, which shrinks from $2.776$ at $n=5$ (\red{Experiment~A}) to $2.093$ at $n=20$ (\red{Experiment~B}) and approaches the Gaussian limit of $1.960$ as $n\!\to\!\infty$, so that the 20-seed \red{Experiment~B} intervals are intrinsically tighter than the 5-seed \red{Experiment~A} ones
+\end{itemize}
+
+Therefore the deltas of this chapter are reported as $\Delta\mathrm{MCC} \pm \delta$.
+
+\paragraph{Statistical significance: the meaning of $p$.}
+A narrow interval of $\delta$ tells us the mean is well estimated, but to decide whether an observed delta is \emph{real}, rather than an artifact of a particular random split or noise realization. For this reason the evaluation pipeline additionally runs a paired \emph{Wilcoxon signed-rank test} on the per-seed deltas of each noisy cell against the clean baseline, computed on the binary MCC (the most stable of the two tasks and the one most relevant to the anomaly-detection use case). The resulting \emph{$p$-value} is the probability of observing a sign-consistent effect at least this strong \emph{if noise truly had no effect} (the null hypothesis). A small $p$ therefore means that such a coherent shift across independent seeds would be exceedingly unlikely to arise by chance, and when: $$p < 0.05$$the null hypothesis is rejected and the effect flagged as significant. This is closely related to the confidence interval: an effect is significant, roughly, when its interval $\Delta\mathrm{MCC} \pm \delta$ lies entirely on one side of zero, so the intuitive reading of ``$p < 0.05$'' is ``the $\pm\delta$ margin is small enough, relative to the size of the effect, that we are confident of its sign''. The stronger value $p < 10^{-4}$ reported for several \red{Experiment~B} cells corresponds to all twenty seeds agreeing on the sign of the effect, whose probability under the null is $\approx 2\times 10^{-6}$: about as close to certainty as twenty seeds permit. One caveat follows directly from this construction, however: the $p$-value depends not only on the effect size and its $\pm\delta$ margin but also on the \emph{number of seeds}. With only five seeds the Wilcoxon test cannot return a value below $\approx 0.0625$ even when every seed agrees, which is why \red{Experiment~A} can display large, tightly-bounded effects that the formal test is nevertheless unable to certify (discussed in Section~\ref{sec:res-A}).
+
+\paragraph{The sample-size asymmetry between models.}
+As established in Section~\ref{sec:sample-dimensionality}, TabNet evaluates on roughly ten times as many samples as CNN-LSTM (one flow per sample versus one sliding window of $50$ flows per sample). Consequently, CNN-LSTM metrics are intrinsically noisier and exhibit wider seed-to-seed variance; the 20-seed confidence intervals of \red{Experiment~B} are precisely what make it possible to separate genuine effects from this elevated variance. This asymmetry should be kept in mind whenever the magnitude of a CNN-LSTM delta is compared against a TabNet one.
+
+% =======================================================================
+\newpage
+\section{Experiment B: Results on full theorethical analysis}
+\label{sec:res-B}
+% =======================================================================
+
+\red{Experiment~B} is the analytical core of the thesis. It operates on the complete (non feature-pruned) dataset, restricted at training time to the nine-feature working set of Table~\ref{tab:final-features} plus the \texttt{Timestamp} column, and is repeated over the 20 seeds $S_B$ with the six-level grid $p_B \in \{5\%, 10\%, 20\%, 35\%, 50\%, 75\%\}$. Its purpose is not to maximise detection rates (AKA improving the NIDS system) but to map, as completely as possible, the space of effects that controlled corruption produces on a tabular classifier (TabNet) and on a time-series classifier (CNN-LSTM). 
+The reference points for this Experiment are the clean baselines of Tables~\ref{tab:tabnet-baseline} and~\ref{tab:cnnlstm-baseline}, namely:
+\begin{itemize}
+    \item For TabNet:
+    \begin{itemize}
+        \item  $\mathrm{MCC}_{\text{bin}} = 0.883$
+        \item  $\mathrm{MCC}_{\text{mul}} = 0.856$
+    \end{itemize} 
+    \item For CNN-LSTM:
+    \begin{itemize}
+        \item  $\mathrm{MCC}_{\text{bin}} = 0.737$
+        \item  $\mathrm{MCC}_{\text{mul}} = 0.635$
+    \end{itemize} 
+\end{itemize}
+
+The campaign is divided into:
+\begin{itemize}
+    \item \emph{single-feature} scenario (one column corrupted at a time, Section~\ref{sec:res-B-single})
+    \item \emph{multiple-feature} scenario (several columns corrupted jointly, Section~\ref{sec:res-B-multi})
+\end{itemize}
+This is done in order to mirror the grid definitions of Sections \ref{sec:exp-B-single} and \ref{sec:exp-B-multi} from previous Chapter.
+
+% ------------------------------------------------------------
+\begin{landscape}
+\subsection{Single-Feature Corruption}
+\label{sec:res-B-single}
+% ------------------------------------------------------------
+Full display of all conducted experiments using \texttt{Pucktrick} Library is displayed in images \ref{fig:TabNet_full_grid_single_feature} and \ref{fig:CNN-LSTM_full_grid_single_feature} below: 
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=1\linewidth]{images/results/TabNet_full_grid_single_feature.png}
+    \caption{Full result grid spectrum over MCC for TabNet in both prediction heads (bynary task sx, multitask task dx)}
+    \label{fig:TabNet_full_grid_single_feature}
+\end{figure}
+\end{landscape}
+
+\begin{landscape}
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=1\linewidth]{images/results/CNN-LSTM_full_grid_single_feature.png}
+    \caption{Full result grid spectrum over MCC for CNN-LSTM in both prediction heads (bynary task sx, multitask task dx)}
+    \label{fig:CNN-LSTM_full_grid_single_feature}
+\end{figure}
+\end{landscape}
+
+
+% ------------------------------------------------------------
+\newpage
+\subsubsection{Corruption of input features}
+\label{sec:res-B-single-feat}
+% ------------------------------------------------------------
+
+The single-feature feature-corruption sweep applies the three feature-level \texttt{Pucktrick} methods (\texttt{missing}, \texttt{noise}, \texttt{outliers} and the row-level \texttt{duplicated} method to each of the ten working columns. Three qualitatively distinct regimes emerge, and they recur throughout the entire campaign.
+
+\paragraph{Regime 1: Both Models are mostly resilient against single feature noise injection.}
+As we can see from Images \ref{fig:TabNet_full_grid_single_feature} and \ref{fig:CNN-LSTM_full_grid_single_feature}, for both models, corrupting any single input feature leaves the binary MCC, while decreased, essentially unchanged across: \emph{most} of the ten-feature $\times$ five \texttt{Pucktrick} methods $\times$ six-percentage grid. Especially for TabNet, which is more robust to feature corruption. This robustness is the empirical signature of TabNet's sequential attention mechanism: when an informative feature is corrupted, the attentive transformer simply reallocates its sparse attention mass towards the remaining clean features, and because the working set deliberately contains redundant discriminative signal, binary detection barely suffers. The multi-class task shows a small but systematic offset (a roughly uniform $-0.02$ to $-0.03$ penalty under almost any corruption, including corruption of zero-variance control features), confirming that the resolution of rare attack subtypes is the first capability to erode when the input distribution is perturbed, even when the benign/malicious boundary is untouched.
+
+If we take a look at the binary-label portion of those graphs: it is still observable in the majority of cases the tendency to decrease to a lower MCC than the baseline, the binary $\Delta\mathrm{MCC}$ remains within $\pm 0.1$-$\pm 0.4$ in the vast majority of cells. Yet, there is an exception to this. The only feature whose corruption produces a sizable, monotone degradation for both models is \texttt{Dst Port}; which represents:
+\begin{itemize}
+    \item For \textbf{CNN-LSTM}: the \emph{second} most discriminative column (as referenced in Table \ref{tab: final-ranking-features-TabNet-baseline})
+    \item For \textbf{TabNet}: the \emph{first} most discriminative column (as referenced in Table \ref{tab:final-ranking-features-CNN-LSTM-baseline})
+\end{itemize}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.6\linewidth]{images/results/DTS-Port-comparaison_singleFeature.png}
+    \caption{Most evident case of performance degradation on Experiment-B (single feature noise injection): happening on feature `DTS Port`}
+    \label{fig:CNN-single-feature-dts-port}
+\end{figure}
+
+At first glance, while it is completely reasonable for TabNet that the most discriminative feature when injected whit noise might report the most damage, it might seem strange that only the \emph{second} most important feature for CNN-LSTM creates this same distortion to MCC value, while the \emph{first} most important feature doesn't apply the same level of reduction to the MCC ratio. Yet, by taking a deeper look into the data, this behavior is completely explicable.
+If we take a look at CNN-LSTM most important feature it results being: $$\texttt{Fwd Seg Size Min}$$
+This particular feature, is sole one that we identified as "Low-Fragility" inside the whole dataset inside Dataset Analysis Chapter \ref{sec:fragility} (Specifically at Table \ref{tab:fragility-examples}), justifying why at low levels of noise injections (below 35\%) no evident results of declining MCC were shown, and only reaching a 4\% decline of MCC at 70\% noise. 
+
+This statement could further be backed up by taking a look at following graph: 
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.8\linewidth]{images/results/top_feature_ranking_evolution.png}
+    \caption{Average (over 20 random seeds) position ranking taken by top-2 features for both TabNet and CNN-LSTM across increasing noise injection.}
+    \label{fig:top_feature_ranking_evolution}
+\end{figure}
+
+\newpage
+Graph \ref{fig:top_feature_ranking_evolution} shows that:  
+\begin{itemize}
+    \item For \textbf{CNN-LSTM}: 
+    \begin{itemize}
+        \item For Feature \texttt{Fwd Seg Size Min}: This result further consolidates the notion that feature \texttt{Fwd Seg Size Min} is highly resistant to noise injection methods, as for all noise injection experiments up to 35\% noise the feature always remains the in the average number one spot. After the 35\% experiment (at 50\%) the feature average rank drop significantly (for all examined noise injection methods). By taking a look at Image \ref{fig:CNN-LSTM_full_grid_single_feature} (at this particular feature graph), the performance actually start drastically declining at the same point. 
+        \item For feature \texttt{DTS Port}: we can verify that this feature immediately drops position to 3rd and subsequently to 5th after first noise injection experiment, further backing up results in Image \ref{fig:CNN-single-feature-dts-port}, where it is shown (for all noise injection methods) immediatly causing MCC to drop. 
+    \end{itemize}
+    \item For \textbf{Tabnet}: We can also observe that feature \texttt{DTS Port} immediately drops after just 5\% noise injection for all methods, yet since this column.
+\end{itemize}
+
+To summarize the points discussed in this subsection, it appears that both models are particularly resistant to noise injection (especially TabNet, thanks to its sequential attention mechanism): a resilience reflected in the narrow Student-$t$ confidence intervals around these near-baseline deltas. At the same time, when noise is introduced into a feature that is particularly important for a model, and the model no longer has redundant features to rely upon to reach the correct solution, performance inevitably declines --- a degradation that the paired Wilcoxon test confirms as highly significant ($p < 10^{-4}$, i.e.\ all twenty seeds agree on the loss): this point will be reconfirmed in the next section, which analyzes the experiments conducted on groups of features (\ref{sec:res-B-multi}).
+
+
+
+\paragraph{Regime 2: CNN-LSTM \emph{benefits} from corrupting the \texttt{Timestamp} feature.}
+The most striking single-feature result is that injecting noise into the \texttt{Timestamp} column \emph{improves} the CNN-LSTM on both tasks, and the improvement is large, monotone in the noise level, and highly significant. Table \ref{tab:res-B-timestamp} reports the effect for the \texttt{outliers} method, which is the strongest case; \texttt{missing} and \texttt{noise} on \texttt{Timestamp} produce smaller but equally consistent gains (binary $\Delta\mathrm{MCC} \approx +0.04$ to $+0.05$ across all percentages for \texttt{missing}). All \texttt{outliers}/\texttt{Timestamp} cells from $10\%$ upward are significant against the clean baseline having $p$-value of: $$p < 10^{-4}$$which provides a \emph{the highest} degree of certainty registered across all experiments.
+
+\begin{table}[H]
+\centering
+\caption{\red{Experiment~B}, single-feature: CNN-LSTM MCC improvement under \texttt{outliers} corruption of the \texttt{Timestamp} feature. Each entry is $\Delta\mathrm{MCC} \pm \delta$ against the clean CNN-LSTM baseline ($0.737$ binary, $0.635$ multi-class), where $\delta$ is the Student-$t$ $95\%$ confidence half-width over the 20 seeds. The margins ($\le 0.024$) are far smaller than the gains, which is precisely why all cells from $10\%$ upward are significant at $p < 10^{-4}$.}
+\label{tab:res-B-timestamp}
+\small
+\resizebox{\linewidth}{!}{%
+\begin{tabular}{lrrrrrr}
+\toprule
+\textbf{Task} & \textbf{5\%} & \textbf{10\%} & \textbf{20\%} & \textbf{35\%} & \textbf{50\%} & \textbf{75\%} \\
+\midrule
+Binary       & $+0.037{\pm}0.010$ & $+0.068{\pm}0.013$ & $+0.081{\pm}0.009$ & $+0.110{\pm}0.012$ & $+0.147{\pm}0.009$ & $+0.139{\pm}0.004$ \\
+Multi-class  & $+0.082{\pm}0.022$ & $+0.123{\pm}0.024$ & $+0.164{\pm}0.012$ & $+0.206{\pm}0.014$ & $+0.233{\pm}0.010$ & $+0.236{\pm}0.006$ \\
+\bottomrule
+\end{tabular}%
+}
+\end{table}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=1\linewidth]{images/results/Timestamp_comparaison_singleFeature.png}
+    \caption{\red{Experiment~B}, single-feature: CNN-LSTM held-out MCC as a function of the \texttt{Timestamp} corruption level, one line per PuckTrick method, with Student-$t$ confidence bands over the 20 seeds. The dashed horizontal line is the clean baseline.}
+    \label{fig:res-B-timestamp}
+\end{figure}
+
+This phenomenon gives us a very strong result: corrupting the temporal index (particularly with \texttt{outliers}) acts as a regularizer and raises performance well above the clean reference for both tasks (single and multi-label).
+
+In fact, although the CNN-LSTM model operates on chronologically ordered sliding windows (Section~\ref{Chapter: model cnn-lstm}), the raw \texttt{Timestamp} value is \emph{never} presented to the network as an input channel. In the preprocessing pipeline the column is retained only transiently: it is used as the sort key of the temporal \texttt{orderBy} operation that arranges the flows in chronological order, and it is subsequently \emph{dropped} before the feature tensor is materialized. Consequently, the model cannot predict a label from \emph{when} a flow occurred, since the temporal coordinate is not part of its observable input.
+
+This does not, however, imply that the temporal dimension is inert. Because the windows are built over a chronologically sorted sequence and attack campaigns are clustered in time, the labels of flows that fall within the same window are strongly auto-correlated. The CNN-LSTM can therefore exploit a \emph{temporal shortcut}: rather than discriminating each flow solely from its own statistical signature, it can lean on
+the local label homogeneity of its neighbors within the window (i.e.\ "the surrounding flows are all of attack type $X$, hence this one is likely $X$ as well"). Crucially, this shortcut is mediated by the \emph{ordering-and-windowing} mechanism.
+
+This observation explains a mechanism through which noise injection on the \texttt{Timestamp} column can influence the CNN-LSTM in a manner that is \emph{indirect}, yet substantial. In the experimental pipeline, corruption is applied to the training partition \emph{before} the chronological sort is performed. When the corrupted column is \texttt{Timestamp} itself (for the value-perturbing methods \texttt{missing}, \texttt{noise} and \texttt{outliers}), the subsequent \texttt{orderBy} no longer reflects the true arrival order: the rows are effectively \emph{permuted}, and the sliding windows are assembled over a partially shuffled sequence. The corruption
+therefore does not pollute the feature values consumed by the model; instead, it \emph{reshuffles the samples prior to window construction}, weakening the within-window label auto-correlation on which the temporal shortcut relies.
+
+Therefore: the effect is best understood as a form of \emph{regularisation}: by disrupting the spurious temporal clustering in the training windows, the corruption forces the network to rely more heavily on the genuine flow-level statistical signatures rather than on the contextual label homogeneity of adjacent flows. This pressure is further accentuated by the asymmetry of the experimental protocol: noise is injected \emph{only} into the training partition, whereas the validation and test partitions retain their true chronological ordering. The model is thus trained on windows whose temporal shortcut has been degraded, but is evaluated on cleanly ordered windows. Under this regime, an
+\emph{improvement} in CNN-LSTM performance when the \texttt{Timestamp} column is corrupted is consistent with the model being discouraged from over-fitting to the temporal clustering of attack campaigns and instead learning more transferable, feature-driven representations.
+
+The effect is absent for TabNet precisely because TabNet, by contrast, operates on a \emph{two-dimensional} design matrix $(n_{\text{samples}}, n_{\text{features}})$ in which each flow is an independent row and no temporal window is ever formed. Since the model treats samples as exchangeable and the training batches are randomly shuffled regardless, the row ordering carries no information that TabNet can exploit. Corrupting the \texttt{Timestamp} column (which is dropped before the feature matrix is built) therefore leaves the set of feature vectors seen by TabNet effectively unchanged (it merely reorders identical rows). With no temporal shortcut to exploit, there is correspondingly none to regularize, and the manipulation has no material effect on TabNet's performance.
+
+
+
+
+\paragraph{Regime 3: Row-level method \texttt{duplicated} has no effect on performance.}
+
+The method \texttt{duplicated} was used on `\texttt{Timestamp}` only as a nominal column label, while the operation took place operating row-wise. This method's are therefore visible in Image \ref{fig:res-B-timestamp}. As we can see the effects are near-null on the MCC of both models (binary $\Delta\mathrm{MCC}$ within inter-seed noise across the whole grid). This may appear as counter-intuitive, since the duplication of training rows is sometimes regarded in the literature as a form of implicit regularization. The result is, however, exactly what the mechanics of the operation predict. Because \texttt{duplicated} inserts \emph{byte-identical} copies into the training partition only, it adds no entropy: an exact duplicate yields an identical forward pass and an identical gradient, so its effect is a mere \emph{re-weighting} of the affected rows rather than the injection of new information. Genuine regularization instead acts in one of three ways:
+\begin{itemize}
+    \item by penalizing model complexity (e.g.\ $L_2$),
+    \item by introducing stochastic perturbation (e.g.\ dropout, label smoothing, \textsc{mixup}),
+    \item or by expanding the data manifold with \emph{novel} points (data augmentation).
+\end{itemize}
+Exact duplication performs none of these. Formally, duplicating a uniformly sampled fraction $p$ of rows rescales the empirical distribution by an almost-constant factor that is absorbed by the learning rate and the per-epoch sample count, leaving the
+empirical-risk minimizer, and hence the clean-set MCC, essentially invariant.
+Three properties of the present setting reinforce this inertia: 
+\begin{itemize}
+    \item stochastic gradient descent already revisits every sample many times across epochs, so one additional copy of $p\%$ of the rows is marginal;
+    \item the training partition is large ($\approx 1.07$ million flows), so duplicate draws from the same distribution do not perturb the gradient statistics;
+    \item critically, the duplication is uniform rather than class-targeted, so it does not correct the label imbalance: the one mechanism through which row duplication is genuinely beneficial (minority-class oversampling)
+\end{itemize}
+
+The recurrent intuition that duplication regularities is, moreover, traceable to a conflation with \emph{bootstrap aggregating}, whose regularizing power stems from averaging an ensemble of decorrelated models, not from the duplicates contained within any single bootstrap sample. Consistently with this analysis, the empirical deltas hover within the seed-to-seed noise, with only a mild \emph{negative} drift on the CNN-LSTM multi-class head at high duplication levels ($-0.134$ at $20\%$, $-0.118$ at $75\%$): since duplicated rows share the \texttt{Timestamp} of their source and therefore fall adjacent to it once the sequence is chronologically ordered, a sliding window may contain repeated identical flows, slightly distorting the local temporal statistics on which the CNN-LSTM relies: an effect that, if anything, mildly harms rather than helps, and which leaves the order-invariant TabNet untouched.
+
+
+
+\paragraph{-------------------------------------------------------}
+\paragraph{Considerations on input-feature corruption.}
+Three lessons crystallise from the single-feature feature sweep. First, \textbf{robustness is governed by feature importance and by architectural inductive bias}: TabNet's sparse attention makes it nearly immune to the loss of any single feature except the most discriminative one, whereas CNN-LSTM, lacking such a re-weighting mechanism, is more exposed but also more malleable. Second, \textbf{not all ``noise'' is harmful}: when the corrupted feature encodes a spurious shortcut (the temporal index for a time-series model), its destruction is a form of regularisation that improves generalisation. Third, \textbf{the experimental controls behave exactly as designed}: degradation magnitude tracks the combined importance rank, and corrupting zero-variance features is inert, which validates the stratified feature selection of Section~\ref{sec:combined-ranking} and lends credibility to the rest of the campaign. The permutation-importance rank-drift diagnostics confirm this picture: corrupting \texttt{Dst Port} causes both models to shed its rank sharply, while corrupting irrelevant features leaves the ranking unchanged.
+
+% ------------------------------------------------------------
+\newpage
+\subsubsection{Corruption of the target labels}
+\label{sec:res-B-single-label}
+% ------------------------------------------------------------
+
+A complementary script applies the \texttt{labels} method directly to the encoded \emph{target} columns, isolating the effect of corrupting the supervision signal rather than an input feature. The two targets are corrupted \emph{independently}, one run per column: the binary target \texttt{label\_generic} and the multi-class target \texttt{Label}. Crucially, because both architectures are \emph{multi-task} (Section~\ref{Chap: model selection}), every corrupted target is evaluated on \emph{both} prediction heads at once. Each of the two corrupted columns therefore yields two MCC curves per model --- the \emph{direct} effect, on the head that predicts the very column being corrupted, and the \emph{cross} effect, on the \emph{other} head --- for a total of $2\ \text{targets}\times 2\ \text{heads}\times 2\ \text{models} = 8$ series, all displayed in Figure~\ref{fig:res-B-labelcliff} and tabulated in Table~\ref{tab:res-B-labelcliff}. This cross-head view is one of the focal analyses of the thesis: it answers not merely ``how badly does corrupting a label damage its own task?'' but the more revealing question ``when one label is corrupted, what happens to the \emph{other} one?'' --- a question that only a multi-task probe can pose, and whose answer turns out to depend sharply on both \emph{which} target is corrupted and on the model architecture.
+
+\begin{table}[H]
+\centering
+\caption{\red{Experiment~B}, single-feature, \texttt{labels} method: $\Delta\mathrm{MCC} \pm \delta$ (Student-$t$ $95\%$ half-width over 20 seeds) for the \emph{eight} target-corruption series. The table is split by the \emph{corrupted} target column; within each block every model is evaluated on both prediction heads. A $\dagger$ marks the \emph{direct} head (the one predicting the corrupted column); the unmarked rows are the \emph{cross} head, whose target was \emph{not} corrupted. Corrupting the binary target \texttt{label\_generic} inverts its own head past $50\%$ and --- for the CNN-LSTM only --- drags the multi-class head down with it ($-0.536$); corrupting the multi-class target \texttt{Label} degrades only its own head and leaves the binary head at baseline. Margins stay tight in the flat regime ($\le 0.011$) but widen at the cliff (CNN-LSTM binary $\pm0.114$ at $50\%$), reflecting seed-to-seed instability on the knife-edge of inversion.}
+\label{tab:res-B-labelcliff}
+\small
+\resizebox{\linewidth}{!}{%
+\begin{tabular}{llrrrrrr}
+\toprule
+\textbf{Model} & \textbf{Monitored head} & \textbf{5\%} & \textbf{10\%} & \textbf{20\%} & \textbf{35\%} & \textbf{50\%} & \textbf{75\%} \\
+\midrule
+\multicolumn{8}{l}{\emph{Corrupting the binary target} \texttt{label\_generic}} \\
+\midrule
+TabNet   & Binary$^\dagger$    & $-0.007{\pm}0.004$ & $-0.005{\pm}0.003$ & $-0.009{\pm}0.003$ & $-0.016{\pm}0.004$ & $-0.956{\pm}0.041$ & $-1.642{\pm}0.035$ \\
+TabNet   & Multi-class         & $-0.030{\pm}0.008$ & $-0.024{\pm}0.005$ & $-0.028{\pm}0.006$ & $-0.033{\pm}0.004$ & $-0.056{\pm}0.022$ & $-0.050{\pm}0.015$ \\
+CNN-LSTM & Binary$^\dagger$    & $+0.008{\pm}0.009$ & $+0.010{\pm}0.007$ & $-0.003{\pm}0.011$ & $-0.010{\pm}0.011$ & $-0.668{\pm}0.114$ & $-0.864{\pm}0.094$ \\
+CNN-LSTM & Multi-class         & $+0.018{\pm}0.025$ & $+0.019{\pm}0.028$ & $-0.010{\pm}0.029$ & $-0.017{\pm}0.021$ & $-0.008{\pm}0.022$ & $-0.536{\pm}0.065$ \\
+\midrule
+\multicolumn{8}{l}{\emph{Corrupting the multi-class target} \texttt{Label}} \\
+\midrule
+TabNet   & Binary              & $-0.003{\pm}0.002$ & $-0.003{\pm}0.005$ & $-0.005{\pm}0.005$ & $-0.002{\pm}0.003$ & $-0.004{\pm}0.003$ & $-0.002{\pm}0.002$ \\
+TabNet   & Multi-class$^\dagger$ & $-0.028{\pm}0.004$ & $-0.030{\pm}0.006$ & $-0.033{\pm}0.006$ & $-0.029{\pm}0.004$ & $-0.034{\pm}0.003$ & $-0.042{\pm}0.007$ \\
+CNN-LSTM & Binary              & $+0.004{\pm}0.008$ & $+0.011{\pm}0.007$ & $+0.012{\pm}0.007$ & $+0.001{\pm}0.009$ & $-0.029{\pm}0.044$ & $+0.000{\pm}0.011$ \\
+CNN-LSTM & Multi-class$^\dagger$ & $+0.004{\pm}0.031$ & $+0.008{\pm}0.030$ & $+0.016{\pm}0.026$ & $-0.030{\pm}0.030$ & $-0.123{\pm}0.053$ & $-0.049{\pm}0.031$ \\
+\bottomrule
+\end{tabular}%
+}
+\end{table}
+
+\begin{figure}[H]
+    \centering
+    \makebox[\textwidth][c]{\includegraphics[width=1.2\linewidth]{images/label_method_noise_singleFeature.png}}
+    \caption{\red{Experiment~B}, single-feature, \texttt{labels} method on the two target columns. Each panel fixes a model and a monitored MCC head (binary / multi-class); within each panel the two curves correspond to corrupting \texttt{label\_generic} versus corrupting \texttt{Label}, so that the \emph{direct} effect (corrupted target $=$ monitored head) and the \emph{cross} effect (the other head) can be read side by side. Bands are Student-$t$ $95\%$ intervals over the 20 seeds; the dashed line is the clean baseline.}
+    \label{fig:res-B-labelcliff}
+\end{figure}
+
+\paragraph{Direct effects: a two-class cliff versus a graceful multi-class decay.}
+Reading the directly-corrupted heads (the $\dagger$ rows of Table~\ref{tab:res-B-labelcliff}), the two targets behave in qualitatively opposite ways. Corrupting the \emph{binary} target \texttt{label\_generic} leaves its own (binary) head essentially untouched up to $35\%$ and then collapses it off a cliff at $50\%$ ($-0.956$ for TabNet, $-0.668$ for CNN-LSTM) and into outright inversion at $75\%$ ($-1.642$, i.e.\ a TabNet binary MCC of $\approx -0.76$). This is exactly what theory predicts for a two-state symmetric label-flip: with only two classes the \texttt{labels} method necessarily \emph{flips} every selected entry, so below $50\%$ the majority of the supervision is still correct, at $50\%$ the signal is information-free (the flipped and correct fractions balance), and beyond it the labels become a minority-inverted signal that the model dutifully learns in reverse, yielding a \emph{negative} clean-set MCC. The $50\%$ flip point is thus a genuine phase transition, not a gradual decline --- and the widening confidence margins at the cliff (CNN-LSTM binary $\pm0.114$ at $50\%$ versus $\pm0.011$ in the flat regime) quantify the seed-to-seed instability of a model balanced on the knife-edge of inversion. Corrupting the \emph{multi-class} target \texttt{Label}, by contrast, never triggers a cliff on its own (multi-class) head: degradation is gradual and monotone (TabNet a steady $-0.03$ to $-0.04$; CNN-LSTM down to $-0.123$ at $50\%$). With fifteen classes a $p\%$ corruption \emph{reassigns} each affected label to one of many alternatives rather than guaranteeing an inversion, so no coherent inverse mapping can ever form. (For completeness, applying the same \texttt{labels} method to the categorical \emph{input} feature \texttt{Protocol} rather than to a target produces only minor effects on either model, confirming that it is corruption of the \emph{supervision signal}, not merely of a discrete column, that carries the danger.)
+
+\paragraph{Cross effects: corruption leaks between heads, asymmetrically.}
+The genuinely novel observation lies in the off-diagonal (unmarked) rows of Table~\ref{tab:res-B-labelcliff}, i.e.\ in what happens to the head whose target was \emph{not} corrupted. Here a \emph{double} asymmetry emerges. First, \textbf{the contamination is directional}: the catastrophic collapse of \texttt{label\_generic} \emph{propagates} to the multi-class head of the CNN-LSTM ($-0.536$ at $75\%$), whereas corrupting \texttt{Label} leaves the binary head of \emph{both} models effectively at baseline ($|\Delta| \le 0.03$, with margins that overlap zero). Damage therefore flows from the binary target to the multi-class one, but not the reverse --- precisely because the binary collapse is a \emph{global inversion} of the representation that the two heads share, whereas multi-class corruption is a diffuse re-shuffle carrying no coherent signal to leak. Second, \textbf{the contamination is architecture-dependent}: the very same binary collapse that drags the CNN-LSTM's multi-class head down by $-0.536$ barely moves TabNet's ($-0.050$ at $75\%$). TabNet feeds its two heads from a sparsity-regularised, attention-selected representation that stays partially disentangled per task, so a corrupted supervisory signal remains largely confined to its own head; the CNN-LSTM's two heads instead branch off a \emph{single} shared context vector that offers no such firewall, so the catastrophic gradient of the inverted binary loss contaminates the multi-class head as well. This is exactly the kind of asymmetric, task- and architecture-specific coupling that motivated monitoring both heads simultaneously (Section~\ref{Chap: model selection}): it would have been completely invisible under a single-task evaluation.
+
+\paragraph{Considerations on label corruption.}
+Three lessons follow. First, \textbf{corrupting the supervision signal is categorically different from corrupting the inputs}: feature noise degrades gracefully (and is sometimes even beneficial), whereas binary-label noise is harmless up to a $\approx 50\%$ threshold and then catastrophic, with an outright inversion regime beyond it. Second, \textbf{the damage scales with the label's cardinality}: a two-state target admits a sharp flip-induced cliff, a fifteen-state target only a gradual decay, because the former guarantees an inversion while the latter merely re-shuffles among many alternatives. Third, and most distinctive, \textbf{label noise does not stay local}: through the shared multi-task encoder it can \emph{leak} onto the other head --- but only in the binary$\rightarrow$multi-class direction, and only for the architecture (CNN-LSTM) whose heads are not attention-disentangled. For an operational multi-task IDS this delineates the single most important data-quality boundary: the integrity of the \emph{binary} label must be guaranteed above all, since its corruption past the half-way point not only inverts detection but can simultaneously poison attack-type attribution through a coupling that single-task monitoring would never reveal.
+
+% ------------------------------------------------------------
+\newpage
+\subsection{Multiple-Feature Corruption}
+\label{sec:res-B-multi}
+% ------------------------------------------------------------
+
+The multiple-feature scenario corrupts several columns simultaneously within a single PuckTrick call, probing the compound effects that the single-feature sweep cannot reach. Six input-feature groups (spanning combinations of importance and fragility, Section~\ref{sec:exp-B-multi}) are corrupted with \texttt{missing}, \texttt{noise}, and \texttt{outliers}, while a seventh group bundles the two targets for joint \texttt{labels} corruption.
+
+% ------------------------------------------------------------
+\subsubsection{Corruption of feature groups}
+\label{sec:res-B-multi-feat}
+% ------------------------------------------------------------
+
+Compound corruption is, broadly, the additive-to-superadditive amplification of the single-feature degradations, dominated by the \texttt{outliers} method on the most important groups. Table~\ref{tab:res-B-multi-outliers} reports the CNN-LSTM degradation under \texttt{outliers} at the highest noise level, ordered to expose the dependence on group composition.
+
+\begin{table}[H]
+\centering
+\caption{\red{Experiment~B}, multiple-feature: CNN-LSTM $\Delta\mathrm{MCC} \pm \delta$ (Student-$t$ $95\%$ half-width over 20 seeds) at $75\%$ \texttt{outliers} corruption, by feature group. Degradation scales jointly with the number of corrupted features and their importance; the zero-variance group is an inert negative control even under compound corruption (its margin overlaps zero, hence it is not significant).}
+\label{tab:res-B-multi-outliers}
+\small
+\begin{tabular}{lrr}
+\toprule
+\textbf{Corrupted feature group} & \textbf{Binary} & \textbf{Multi-class} \\
+\midrule
+Top-3 importance (\texttt{Fwd Act Data Pkts}, \texttt{Dst Port}, \texttt{Init Fwd Win Byts}) & $-0.207{\pm}0.030$ & $-0.367{\pm}0.062$ \\
+Top + middle tiers (6 features)                                                              & $-0.209{\pm}0.011$ & $-0.526{\pm}0.080$ \\
+Middle tier (\texttt{Protocol}, \texttt{PSH Flag Cnt}, \texttt{Fwd Seg Size Min})            & $-0.059{\pm}0.022$ & $-0.153{\pm}0.051$ \\
+Mixed fragility (\texttt{Fwd Act Data Pkts}, \texttt{Idle Mean}, \texttt{Init Fwd Win Byts}) & $-0.038{\pm}0.022$ & $-0.126{\pm}0.046$ \\
+One-per-tier (\texttt{Fwd Act Data Pkts}, \texttt{PSH Flag Cnt}, \texttt{Idle Mean})         & $-0.014{\pm}0.009$ & $-0.038{\pm}0.033$ \\
+Zero-variance control (\texttt{Bwd Byts/b Avg}, \texttt{Fwd Blk Rate Avg}, \texttt{Idle Mean}) & $-0.010{\pm}0.010$ & $-0.035{\pm}0.026$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{figure}[H]
+    \centering
+    % TODO: export from 6B-multi-Experiment-evaluation.ipynb, §5 (Heatmaps — method × noise),
+    %       CNN-LSTM multi-class MCC, all feature groups.
+    \includegraphics[width=0.95\linewidth]{images/results/b-multi-cnnlstm-outliers-heatmap.png}
+    \caption{\red{Experiment~B}, multiple-feature: heatmap of CNN-LSTM multi-class $\Delta\mathrm{MCC}$ as a function of feature group (rows) and noise level (columns) under \texttt{outliers} corruption. Degradation deepens towards the bottom-right, i.e.\ with more important features corrupted at higher intensity, while the zero-variance control row stays pale throughout.}
+    \label{fig:res-B-multi-heatmap}
+\end{figure}
+
+Two structural facts stand out. First, the \texttt{outliers} corruption of the six-feature top-and-middle group drives the CNN-LSTM multi-class MCC down by more than half its baseline at $75\%$ ($-0.526$), the single most severe feature-level degradation in the entire campaign; \texttt{noise} on the same group is comparably destructive ($-0.494$), whereas \texttt{missing} is markedly gentler ($-0.223$), because masked values are absorbed by the embedding/scaling pipeline rather than injected as out-of-distribution magnitudes. Second, and crucially, the \textbf{beneficial regime essentially disappears in the compound setting}: the \texttt{Timestamp} feature is not a member of any group, so the regularising effect of Section~\ref{sec:res-B-single-feat} cannot manifest, and only a handful of marginal CNN-LSTM gains survive (e.g.\ \texttt{noise} on the mixed-fragility group, $+0.010$ at $35\%$). TabNet, once again, is remarkably resilient: even corrupting six important features at $75\%$ costs it at most $\approx -0.05$ on the multi-class task and $\approx -0.04$ on the binary task. The zero-variance group remains inert in every method and at every intensity, confirming that the negative control holds even under compound corruption.
+
+% ------------------------------------------------------------
+\subsubsection{Corruption of the target-label group}
+\label{sec:res-B-multi-label}
+% ------------------------------------------------------------
+
+The seventh group corrupts the two targets \texttt{Label} and \texttt{label\_generic} \emph{jointly} with a single \texttt{labels} call. The outcome is, at first sight, surprising: the catastrophic binary cliff of Section~\ref{sec:res-B-single-label} does \emph{not} reappear. Both models retain near-baseline binary MCC across the entire grid (TabNet $\Delta \approx -0.004$; CNN-LSTM between $+0.015$ and $-0.009$), while the multi-class task degrades only mildly (TabNet $-0.027$ to $-0.043$; CNN-LSTM $+0.033$ at $5\%$ down to $-0.086$ at $50\%$).
+
+The explanation lies in the \emph{consistency} of joint corruption and is itself an informative result. When the two targets are corrupted together, a row whose multi-class label is reassigned from one attack type to another keeps its binary label malicious; reassignments among the many attack classes therefore overwhelmingly \emph{preserve} the benign/malicious distinction. The binary supervision is thus largely intact even at $50\%$ group corruption, which is why no inversion cliff forms, whereas the multi-class supervision is genuinely shuffled and degrades. This stands in sharp contrast to the isolated binary-target flip, where every selected entry is guaranteed to cross the benign/malicious boundary. The lesson is methodologically important: \textbf{the impact of label noise depends not only on its quantity but on the precise mechanics of how it is realised} --- whether corruption respects or violates the semantic coupling between related labels.
+
+% ------------------------------------------------------------
+\newpage
+\subsection{Joint Considerations on Experiment B}
+\label{sec: Cumulative BreakEven Point Test}
+% ------------------------------------------------------------
+
+Taken together, the single-feature and multiple-feature scenarios of \red{Experiment~B} paint a coherent picture of how the two architectures respond to data-quality degradation.
+
+\paragraph{Architectural inductive bias dictates robustness.}
+TabNet's sparse sequential attention makes it the more robust model by a wide margin: it absorbs single- and even multi-feature corruption with negligible loss on the binary task, failing only when the supervision signal itself is inverted. CNN-LSTM is more sensitive to feature corruption but, by the same token, more \emph{plastic}: it is the only model capable of \emph{benefiting} from corruption, because it is the only one whose inductive bias (temporal windowing) admits a spurious shortcut that corruption can remove. Robustness and improvability are therefore two faces of the same architectural coin.
+
+\paragraph{A controlled noise budget can be net-positive --- but the window is narrow.}
+The clearest cumulative break-even result is that, for the CNN-LSTM, there exists a corruption that is reliably and significantly \emph{beneficial} (\texttt{outliers}/\texttt{Timestamp}, monotone up to $+0.147$ binary and $+0.236$ multi-class), but it is highly specific: it requires corrupting a feature that encodes leakage, with a method that destroys that feature's structure, on a model that would otherwise overfit it. As soon as corruption is broadened to several informative features, or applied to a tabular model with no shortcut to remove, the net effect turns negative. The break-even point between regularisation and information destruction is thus real but tightly bounded, and locating it requires precisely the kind of dense, multi-seed sweep that the newly implemented Spark backend of PuckTrick (Chapter~\ref{chap:5-Empiric-analysis-models}) made computationally affordable.
+
+\paragraph{The two tasks degrade at different rates.}
+Across every scenario, the binary task is the more robust of the two and the multi-class task carries a persistent small penalty under almost any perturbation. The fine-grained resolution of rare attack subtypes is the first capability to erode and the last to recover, which is consistent with its dependence on minority-class signal that even modest corruption can wash out. Any deployment that cares about attack \emph{attribution} (not merely detection) must therefore treat data quality as a first-order concern.
+
+\paragraph{Degradation is a readout of feature importance.}
+Finally, the magnitude of degradation under corruption tracks the combined importance ranking with remarkable fidelity: \texttt{Dst Port} corruption hurts most, mid-tier features less, and zero-variance controls not at all. This means the noise-injection protocol doubles as an \emph{importance-attribution probe} --- an independent, perturbation-based confirmation of the attention- and permutation-based rankings of Section~\ref{sec:combined-ranking}.
+
+% =======================================================================
+\newpage
+\section{Experiment A: Proof-of-Concept Results}
+\label{sec:res-A}
+% =======================================================================
+
+\red{Experiment~A} is the smaller, proof-of-concept phase, conducted on the feature-pruned dataset over five seeds $S_A = \{1, 2, 42, 51, 84\}$, four corrupted columns (\texttt{FIN Flag Cnt}, \texttt{Down/Up Ratio}, \texttt{Protocol}, \texttt{Timestamp}), and the seven-level grid $p_A$. Its clean baselines are stronger than \red{Experiment~B}'s on the reduced feature set ($\mathrm{MCC}_{\text{bin}}/\mathrm{MCC}_{\text{mul}} = 0.896/0.886$ for TabNet, $0.730/0.580$ for CNN-LSTM), since the reduction retained only high-signal features. Read in the light of \red{Experiment~B}, this phase is best understood as a concrete instance of the regularisation phenomenon characterised above, now visible across \emph{most} of the (small) feature set rather than concentrated on \texttt{Timestamp} alone.
+
+\paragraph{The proof of concept holds: controlled noise improves the weaker model.}
+The headline result is that, for the CNN-LSTM, noise injection \emph{systematically} raises held-out MCC, with by far the largest and most consistent gains on the multi-class task. Table~\ref{tab:res-A-cnnlstm} reports the CNN-LSTM multi-class improvement under \texttt{outliers} corruption for the four features. The gains are substantial (up to $+0.353$ for \texttt{Timestamp}), positive across nearly the entire grid, and present for \texttt{missing} and \texttt{noise} as well, not only \texttt{outliers}.
+
+\begin{table}[H]
+\centering
+\caption{\red{Experiment~A}: CNN-LSTM multi-class $\Delta\mathrm{MCC} \pm \delta$ under \texttt{outliers} corruption (baseline $0.580$), where $\delta$ is the Student-$t$ $95\%$ half-width over the five seeds. Gains are large and \emph{tightly bounded} for three of the four features (margins as small as $\pm 0.008$); \texttt{Protocol} is the exception (see text), its $\approx\!\pm 0.5$ margins revealing that its five seeds disagree even on the sign. A margin of $\pm 0.000$ denotes a cell in which all five seeds returned a numerically identical MCC.}
+\label{tab:res-A-cnnlstm}
+\small
+\resizebox{\linewidth}{!}{%
+\begin{tabular}{lrrrrrrr}
+\toprule
+\textbf{Feature} & \textbf{1\%} & \textbf{5\%} & \textbf{10\%} & \textbf{20\%} & \textbf{30\%} & \textbf{50\%} & \textbf{75\%} \\
+\midrule
+\texttt{Timestamp}     & $+0.171{\pm}0.014$ & $+0.241{\pm}0.052$ & $+0.291{\pm}0.019$ & $+0.326{\pm}0.014$ & $+0.336{\pm}0.022$ & $+0.353{\pm}0.014$ & $+0.310{\pm}0.021$ \\
+\texttt{FIN Flag Cnt}  & $+0.161{\pm}0.024$ & $+0.180{\pm}0.023$ & $+0.175{\pm}0.029$ & $+0.183{\pm}0.008$ & $+0.172{\pm}0.016$ & $+0.156{\pm}0.000$ & $+0.122{\pm}0.000$ \\
+\texttt{Down/Up Ratio} & $+0.168{\pm}0.033$ & $+0.168{\pm}0.020$ & $+0.175{\pm}0.026$ & $+0.172{\pm}0.046$ & $+0.123{\pm}0.050$ & $+0.160{\pm}0.053$ & $+0.169{\pm}0.033$ \\
+\texttt{Protocol}      & $-0.138{\pm}0.502$ & $-0.124{\pm}0.517$ & $-0.132{\pm}0.508$ & $-0.138{\pm}0.501$ & $-0.128{\pm}0.513$ & $+0.179{\pm}0.000$ & $+0.189{\pm}0.000$ \\
+\bottomrule
+\end{tabular}%
+}
+\end{table}
+
+\begin{figure}[H]
+    \centering
+    % TODO: export from 6A-Experiment-evaluation.ipynb, §4 (Core trends — MCC vs. noise),
+    %       CNN-LSTM multi-class panel, all four features / methods.
+    \includegraphics[width=0.9\linewidth]{images/results/a-cnnlstm-multiclass-improvement.png}
+    \caption{\red{Experiment~A}: CNN-LSTM multi-class MCC versus noise level on the reduced dataset, per corrupted feature. Most corruption configurations lift performance above the clean baseline (dashed), reproducing on a smaller scale the regularisation effect isolated in \red{Experiment~B}.}
+    \label{fig:res-A-cnnlstm}
+\end{figure}
+
+The \texttt{Protocol} curve is instructive: \texttt{noise} and \texttt{outliers} on this low-cardinality categorical feature \emph{degrade} the model at low-to-moderate intensities (down to $-0.20$) but then turn positive at $50\%$--$75\%$. At very high corruption the feature is so thoroughly destroyed that the model effectively learns to ignore it, recovering and even improving --- a different mechanism from the \texttt{Timestamp} regularisation, and a reminder that the relationship between noise level and performance need not be monotone for categorical inputs.
+
+\paragraph{TabNet has no headroom and is unmoved.}
+For TabNet, already near ceiling on the reduced set, the deltas are small and of mixed sign, with no systematic improvement. This is consistent with \red{Experiment~B}: a model that does not overfit a spurious signal has nothing to gain from corrupting it. The proof of concept is therefore specifically a statement about \emph{regularising an under-fit-prone temporal model}, not a universal claim about all architectures.
+
+\paragraph{On the absence of formal significance.}
+No \red{Experiment~A} cell passes the $p < 0.05$ significance test --- but this is a consequence of the test's statistical \emph{power} at five seeds, not of absent effects. As explained in Section~\ref{sec:res-protocol}, the significance screen is a paired Wilcoxon signed-rank test on the binary MCC, and with only $n = 5$ seeds this non-parametric test has a hard floor: even when all five seeds agree on the sign of the effect, the smallest two-sided $p$-value it can return is $\approx 0.0625 > 0.05$. No five-seed configuration can therefore ever be flagged, irrespective of how large or how tightly-bounded the effect is. And the effects \emph{are} often tightly bounded: the headline multi-class gains of Table~\ref{tab:res-A-cnnlstm} carry confidence half-widths as small as $\pm 0.014$ while being an order of magnitude larger, so they are \emph{descriptively} unambiguous even though the formal test must abstain (the exception is the \texttt{Protocol} control, whose $\approx\!\pm 0.5$ margins signal genuine seed disagreement and thus a truly inconclusive cell). The proper reading is that \red{Experiment~A} \emph{motivated} the hypothesis with large, mostly well-estimated effect sizes that its five-seed budget could not formally certify, and \red{Experiment~B}, with twenty seeds and the full dataset, then \emph{confirmed} the surviving component of that hypothesis (the CNN-LSTM/\texttt{Timestamp} regularisation) at $p < 10^{-4}$ while delimiting its boundaries. The two phases are complementary: A demonstrates that the effect can be large; B proves which part of it is real.
+
+% =======================================================================
+\newpage
+\section{Conclusions}
+\label{sec:conclusions}
+% =======================================================================
+
+This thesis set out to study, systematically and at scale, how controlled data-quality degradation affects deep-learning intrusion-detection models, using the PuckTrick library --- and its newly implemented Spark backend --- to inject five families of noise into the CIC-IDS2018 dataset across a grid of nearly seven thousand experimental configurations and almost fourteen thousand trained models. The empirical findings of Chapters~\ref{chap:5-Empiric-analysis-models} and the present chapter support the following conclusions.
+
+\paragraph{Controlled noise injection can improve a deep IDS, but the effect is specific and bounded.}
+The thesis's guiding hypothesis --- that injecting noise into training data may \emph{improve} IDS performance --- is confirmed, but with important qualifications. The improvement is real, large, monotone in intensity, and statistically significant, yet it materialises only under a narrow conjunction of conditions: a model whose inductive bias admits a spurious shortcut (the temporal CNN-LSTM), a feature that encodes that shortcut (\texttt{Timestamp}), and a corruption method that destroys the shortcut's structure (\texttt{outliers}). Under these conditions corruption acts as a targeted regulariser. Broadened indiscriminately to several informative features, or applied to an attention-based tabular model that does not over-rely on any single feature, the same operation is harmful. Noise injection is therefore best understood not as a generic performance booster but as a \emph{precision instrument} for removing learnable leakage.
+
+\paragraph{Robustness is an architectural property.}
+TabNet's sparse sequential attention confers near-immunity to single- and multi-feature corruption, failing only when the supervisory signal is itself inverted; CNN-LSTM is more fragile to feature corruption but uniquely capable of benefiting from it. There is no universally ``robust'' model --- only models whose inductive biases match, or mismatch, the structure of the corruption they face.
+
+\paragraph{Supervision noise is categorically more dangerous than feature noise.}
+Feature corruption degrades gracefully and is occasionally beneficial; binary-label corruption is benign up to a $\approx 50\%$ threshold and catastrophically inverting beyond it, and it can contaminate a coupled task through a shared multi-task representation. Moreover, the danger of label noise depends on its \emph{mechanics}: corruption that preserves the semantic coupling between related labels (the joint target-group case) is far less harmful than corruption that violates it (the isolated binary-flip case). Data-quality assurance for IDS training should therefore prioritise label integrity --- and the consistency of any relabelling --- above feature cleanliness.
+
+\paragraph{Detection is more robust than attribution.}
+Across every experiment the binary benign/malicious task withstood corruption far better than the fine-grained attack-attribution task, which carried a persistent penalty under almost any perturbation. Systems that must classify attack \emph{types}, not merely flag anomalies, are correspondingly more demanding of data quality.
+
+\paragraph{Noise injection doubles as an importance probe.}
+Because degradation magnitude tracked the combined feature-importance ranking so closely --- maximal for \texttt{Dst Port}, negligible for zero-variance controls --- the perturbation protocol provided an independent, model-agnostic confirmation of which features the classifiers actually rely upon, complementing the attention- and permutation-based rankings.
+
+\paragraph{Methodological contribution.}
+Finally, the very feasibility of this study rests on the Spark-backed PuckTrick implementation developed in this work, which made dense, multi-seed corruption sweeps over a $\approx 1.6$-million-flow dataset tractable on commodity and HPC hardware alike. The dynamic, fully data-driven evaluation pipeline (Chapter~\ref{chap:5-Empiric-analysis-models}) that recovered every experimental coordinate from artefact metadata, rather than from hard-coded assumptions, is what allowed the resulting space of effects to be navigated and reported with statistical rigour.
+
+\paragraph{Outlook.}
+Several directions follow naturally. The leakage-removal interpretation of the \texttt{Timestamp} effect could be tested directly by ablating the feature entirely and comparing against its corruption, and by replicating the phenomenon on other temporally ordered IDS datasets. The label-inversion boundary invites a formal characterisation of the multi-task contamination mechanism. And the demonstration that a \emph{targeted} corruption can regularise a temporal model motivates treating noise injection as a tunable hyperparameter in its own right --- searching, rather than stumbling upon, the break-even point between regularisation and information destruction.
+
+
+
+\end{document}

@@ -451,25 +451,34 @@ Both models were thus endowed with a ranked list of features ordered by their re
 After retaining the list of all features ordered by their importance here two very different approaches were taken in order to progress for both Experiments. This was done as the two main branches of this work (Experiment A and B) have very different main goals (described in this very same Chapter introduction at \ref{chap:5-Empiric-analysis-models}):
 
 \begin{itemize}
-    \item For \red{Experiment A}: Since our main goal is reaching a proof of concept that even applying noise data used to train to deep-learning based IDS it is possible to improve our performance it was taken the intersection of two lists while only retaining 8 features. This is done mostly for satisfy our technical requirements, as it would have been much nicer to have a larger dataset, the computational power required to run all the noise injection experiments was simply not present. For this reason, in order to keep our future results as close to the best results possible only top features were selected. This compelled to a final list of feature listed below: 
+    \item For \red{Experiment A}: since the main goal of this phase is to reach a proof of concept that injecting noise into the training data of a deep-learning based IDS can actually improve its performance, a deliberately compact and high-quality feature set was assembled. This choice is also dictated by a technical constraint: while a larger feature set would have been preferable, the computational power required to run the full grid of noise-injection experiments was simply not available, so only the most informative features were retained. Concretely, the feature set was obtained by \emph{intersecting} the top-13 most important features of the two best models (TabNet trial-7 and CNN-LSTM trial-6), whose importance rankings were computed on the reduced dataset:
+    \begin{align*}
+        \mathcal{T}_{13} &= \{ \text{Down/Up Ratio}, \text{Dst Port}, \text{FIN Flag Cnt}, \text{Flow IAT Std}, \text{Flow Pkts/s}, \text{Fwd Pkt Len Max}, \\
+        &\qquad \text{Init Bwd Win Byts}, \text{Init Fwd Win Byts}, \text{PSH Flag Cnt}, \text{Protocol}, \text{RST Flag Cnt}, \\
+        &\qquad \text{TotLen Fwd Pkts}, \text{URG Flag Cnt} \}, \\
+        \mathcal{C}_{13} &= \{ \text{Active Std}, \text{Bwd Pkt Len Max}, \text{Bwd Pkt Len Min}, \text{Down/Up Ratio}, \text{Dst Port}, \text{FIN Flag Cnt}, \\
+        &\qquad \text{Flow Pkts/s}, \text{Fwd Pkt Len Max}, \text{Fwd Pkt Len Min}, \text{Fwd Pkts/s}, \text{Init Bwd Win Byts}, \\
+        &\qquad \text{Init Fwd Win Byts}, \text{Timestamp} \}.
+    \end{align*}
+    Their intersection $\mathcal{T}_{13} \cap \mathcal{C}_{13}$ yields the \textbf{7 features} deemed most important by \emph{both} models. To this set the categorical feature \texttt{Protocol} was additionally retained: it lies within TabNet's top-13 and is the only low-cardinality categorical feature of the reduced dataset, hence indispensable for the categorical \texttt{labels} corruption experiments. This produces the final \textbf{8-feature} training set persisted in \texttt{important\_features.csv}; the temporal column \texttt{Timestamp} is additionally kept throughout as the chronological ordering key and as the row-level reference for the \texttt{duplicated} method. The selection is summarized in Table~\ref{tab:selected-features-ranking}.
     \begin{table}[H]
         \centering
-        \caption{Ranking of the selected features, obtained by the two best models (TabNet trial-7 and CNN-LSTM trial-6). For each feature, the position in the importance ranking of each model and the average rank $\bar{r}$ are reported; the \emph{Rank} column is the position in the list sorted by $\bar{r}$.}
+        \caption{Experiment~A feature set. The first seven features are common to both models' top-13 importance rankings (the intersection $\mathcal{T}_{13} \cap \mathcal{C}_{13}$); \texttt{Protocol} is retained additionally to guarantee categorical-type coverage. Together these eight features constitute \texttt{important\_features.csv}.}
         \label{tab:selected-features-ranking}
         \small
-        \begin{tabular}{rlrrl}
+        \begin{tabular}{llcc}
         \toprule
-        \textbf{Rank} & \textbf{Feature}     & \textbf{TabNet} & \textbf{CNN-LSTM} & \textbf{Avg.\ rank} \\
+        \textbf{Feature}     & \textbf{Type}  & \textbf{TabNet top-13} & \textbf{CNN-LSTM top-13} \\
         \midrule
-        1 & \texttt{Init Bwd Win Byts}  & 1  & 2  & 1.5  \\
-        2 & \texttt{Dst Port}           & 3  & 1  & 2.0  \\
-        3 & \texttt{Down/Up Ratio}      & 5  & 6  & 5.5  \\
-        4 & \texttt{Init Fwd Win Byts}  & 12 & 4  & 8.0  \\
-        5 & \texttt{FIN Flag Cnt}       & 11 & 7  & 9.0  \\
-        6 & \texttt{Fwd Pkt Len Max}    & 6  & 25 & 15.5 \\
-        7 & \texttt{Protocol}           & 10 & 21 & 15.5 \\
-        8 & \texttt{Flow Pkts/s}        & 28 & 9  & 18.5 \\
-        9 & \texttt{Timestamp}          & -  & -  & -    \\
+        \texttt{Down/Up Ratio}      & Continuous   & Yes & Yes \\
+        \texttt{Dst Port}           & Continuous   & Yes & Yes \\
+        \texttt{FIN Flag Cnt}       & Binary       & Yes & Yes \\
+        \texttt{Flow Pkts/s}        & Continuous   & Yes & Yes \\
+        \texttt{Fwd Pkt Len Max}    & Continuous   & Yes & Yes \\
+        \texttt{Init Bwd Win Byts}  & Continuous   & Yes & Yes \\
+        \texttt{Init Fwd Win Byts}  & Continuous   & Yes & Yes \\
+        \midrule
+        \texttt{Protocol}           & Categorical  & Yes & —   \\
         \bottomrule
         \end{tabular}
     \end{table}
@@ -517,7 +526,7 @@ After retaining the list of all features ordered by their importance here two ve
         \item \textbf{Bottom tier (last 3 in combined ranking):} \texttt{Bwd Byts/b Avg}, \texttt{Fwd Blk Rate Avg}, and \texttt{Idle Mean}.  These features are ranked last by both models and include zero-variance bulk-transfer statistics that carry no discriminative information.  Their inclusion provides a negative control: noise injection on features that are already irrelevant to the classifier should, in principle, produce no measurable performance change.
     \end{enumerate}
     
-    After de-duplication, the final feature set comprises exactly \textbf{9 features}, which are listed in Table~\ref{tab:final-features}.
+    After de-duplication, the final feature set comprises exactly \textbf{9 features}, which are listed in Table \ref{tab:final-features}.
     
     \begin{table}[H]
     \centering
@@ -544,6 +553,8 @@ After retaining the list of all features ordered by their importance here two ve
 \end{itemize}
 
 In both experiment-cases those feature-sets were saved to disk and will be loaded by all subsequent experiment scripts as the authoritative column selection for both the 10\%-sampled baseline training and the full-scale HPC experiment loop.
+
+Yet, please note that ranking of those features may vary once both baselines model will be trained on a dataset purely containing this restricted set of features. Those re-rankings are shown in later Sections: \ref{sec:baseline-performance}.
 
 
 
@@ -613,14 +624,131 @@ Total              & 1\,614\,745         & 100.0                  \\
 Following the split, a \texttt{StandardScaler} was fit \emph{exclusively on the training partition} and subsequently applied to both validation and test sets, preventing any target leakage. Scaling was applied only to the six continuous features; categorical and binary features were left in their integer-encoded form and consumed directly by the respective model heads (through TabNet's native embedding layer, and as integer inputs to the CNN-LSTM channel dimension).
 
 % ------------------------------------------------------------
-\subsection{Baseline Performance}
+\subsection{Baseline Performance for \red{Experiment A}}
+\label{sec:baseline-performance-A}
+% ------------------------------------------------------------
+
+For Experiment~A the two models were trained on the \emph{reduced} dataset, i.e.\ the version of CIC-IDS2018 from which both redundant (highly correlated) and zero-variance features had been removed (Chapter~\ref{chap:dataset}).  The resulting working set comprises \textbf{8 features}: \texttt{Fwd Pkt Len Max}, \texttt{Protocol}, \texttt{Init Fwd Win Byts}, \texttt{Dst Port}, \texttt{Init Bwd Win Byts}, \texttt{FIN Flag Cnt}, \texttt{Flow Pkts/s}, and \texttt{Down/Up Ratio}.  Every other aspect of the pipeline (10\% stratified sample, temporal split, scaling, sliding windows) is identical to the one described above.  The baseline performance on the validation set, measured on the clean (noise-free) data, is reported below and constitutes the reference against which all Experiment~A noise-injection runs are compared.
+
+\subsubsection{TabNet Baseline.}
+TabNet reached the results reported in Image~\ref{fig:Tabnet-confusionmatrix-baseline-expA} and Table~\ref{tab:tabnet-baseline-expA}:
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=1\linewidth]{images/Tabnet-confusionmatrix-baseline-expA.png}
+    \caption{TabNet confusion matrix baseline (Experiment~A, reduced dataset)}
+    \label{fig:Tabnet-confusionmatrix-baseline-expA}
+\end{figure}
+
+\begin{table}[H]
+\centering
+\caption{TabNet baseline performance on the validation set (Experiment~A).}
+\label{tab:tabnet-baseline-expA}
+\small
+\begin{tabular}{lrrrr}
+\toprule
+\textbf{Task}   & \textbf{Accuracy} & \textbf{F1 (macro)} & \textbf{MCC}   & \textbf{AUC}   \\
+\midrule
+Binary          & 0.9704            & 0.9142              & 0.8963         & 0.9788         \\
+Multi-class     & 0.9648            & 0.5816              & 0.8859         & —              \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+As on the complete dataset, the binary task is handled with high proficiency (MCC of $0.896$ and AUC of $0.979$), confirming that the discriminative power needed to separate benign from malicious flows survives the feature pruning. Interestingly, the multi-class macro F1 of $0.582$ is slightly \emph{higher} than the corresponding figure on the complete dataset (Section~\ref{sec:baseline-performance}): removing the redundant and zero-variance features yields a more compact, less collinear representation that marginally eases the fine-grained attack-type discrimination. The high multi-class MCC ($0.886$) again indicates that the bulk of samples is correctly classified, the lower macro F1 being driven by the minority attack classes that remain under-represented even after pruning.
+
+After baseline training, the estimated feature-importance ranking of TabNet across the 8 features of the reduced dataset is reported in Table~\ref{tab:final-ranking-features-TabNet-baseline-expA}:
+
+\begin{table}[H]
+    \centering
+    \caption{Ranking of feature importance according to the TabNet model (Experiment~A).}
+    \label{tab:final-ranking-features-TabNet-baseline-expA}
+    \small
+    \begin{tabular}{lll}
+    \toprule
+    \textbf{} & \textbf{Feature}            & \textbf{Type} \\
+    \midrule
+     1 &  \texttt{Fwd Pkt Len Max}    & Continuous             \\
+     2 &  \texttt{Protocol}           & Categorical            \\
+     3 &  \texttt{Init Fwd Win Byts}  & Continuous             \\
+     4 &  \texttt{Dst Port}           & Continuous             \\
+     5 &  \texttt{Init Bwd Win Byts}  & Continuous             \\
+     6 &  \texttt{FIN Flag Cnt}       & Binary                 \\
+     7 &  \texttt{Flow Pkts/s}        & Continuous             \\
+     8 &  \texttt{Down/Up Ratio}      & Continuous             \\
+    \bottomrule
+    \end{tabular}
+\end{table}
+
+\newpage
+\subsubsection{CNN-LSTM Baseline.}
+The CNN-LSTM baseline for Experiment~A is summarized in both Image~\ref{fig:CNN-LSTM-confusionmatrix-baseline-expA} and Table~\ref{tab:cnnlstm-baseline-expA}.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=1\linewidth]{images/CNN-LSTM-confusionmatrix-baseline-expA.png}
+    \caption{CNN-LSTM confusion matrix baseline (Experiment~A, reduced dataset)}
+    \label{fig:CNN-LSTM-confusionmatrix-baseline-expA}
+\end{figure}
+
+\begin{table}[H]
+\centering
+\caption{CNN-LSTM baseline performance on the validation set (Experiment~A).}
+\label{tab:cnnlstm-baseline-expA}
+\small
+\begin{tabular}{lrr}
+\toprule
+\textbf{Task}   & \textbf{F1 (macro)} & \textbf{MCC}   \\
+\midrule
+Binary          & 0.7484              & 0.7303         \\
+Multi-class     & 0.2612              & 0.5801         \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+As on the complete dataset, the CNN-LSTM performs below TabNet on both tasks (binary MCC $0.730$, multi-class MCC $0.580$, for a mean MCC of $0.655$). The same structural factors discussed for Experiment~B apply here: the reduced 10\% sample, the retention of all minority attack classes, and the absence of a native attention mechanism make the temporal-window classification problem intrinsically harder than the tabular one. These figures are nonetheless fully adequate as a clean reference point: as for Experiment~B, the purpose of the baseline is not to maximize absolute detection rates but to provide a stable anchor against which the \emph{relative} effect of controlled noise injection can be measured.
+
+After baseline training, the estimated feature-importance ranking of CNN-LSTM across the 8 features of the reduced dataset is reported in Table~\ref{tab:final-ranking-features-CNN-LSTM-baseline-expA}:
+
+\begin{table}[H]
+    \centering
+    \caption{Ranking of feature importance according to the CNN-LSTM model (Experiment~A).}
+    \label{tab:final-ranking-features-CNN-LSTM-baseline-expA}
+    \small
+    \begin{tabular}{lll}
+    \toprule
+    \textbf{} & \textbf{Feature}            & \textbf{Type} \\
+    \midrule
+     1 &  \texttt{Init Fwd Win Byts}  & Continuous             \\
+     2 &  \texttt{Dst Port}           & Continuous             \\
+     3 &  \texttt{Fwd Pkt Len Max}    & Continuous             \\
+     4 &  \texttt{Down/Up Ratio}      & Continuous             \\
+     5 &  \texttt{Flow Pkts/s}        & Continuous             \\
+     6 &  \texttt{Protocol}           & Categorical            \\
+     7 &  \texttt{Init Bwd Win Byts}  & Continuous             \\
+     8 &  \texttt{FIN Flag Cnt}       & Binary                 \\
+    \bottomrule
+    \end{tabular}
+\end{table}
+
+
+% ------------------------------------------------------------
+\newpage
+\subsection{Baseline Performance for \red{Experiment B}}
 \label{sec:baseline-performance}
 % ------------------------------------------------------------
 
 After training both models with the scaled batch sizes and learning rates described in Section~\ref{sec:batch-scaling}, the baseline performance on the validation set was as follows.
 
-\paragraph{TabNet Baseline.}
-TabNet converged after 11 epochs (early stopping), achieving the results reported in Table~\ref{tab:tabnet-baseline}.
+\subsubsection{TabNet Baseline.}
+TabNet converged after 11 epochs (early stopping), achieving the results reported in Image \ref{fig:Tabnet-confusionmatrix-baseline} and Table~\ref{tab:tabnet-baseline}:
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=1\linewidth]{images/Tabnet-confusionmatrix-baseline.png}
+    \caption{Tabnet confusion matrix baseline}
+    \label{fig:Tabnet-confusionmatrix-baseline}
+\end{figure}
 
 \begin{table}[H]
 \centering
@@ -637,10 +765,43 @@ Multi-class     & 0.9574            & 0.5040              & 0.8558         & 0.9
 \end{tabular}
 \end{table}
 
-The binary task is well handled: the MCC of $0.883$ and AUC of $0.973$ indicate strong discriminative power across both classes despite the class imbalance. Yet, the macro F1 on the multi-class task ($0.504$) is substantially lower, reflecting the inherent difficulty of resolving 15 classes from only nine features on a 10\% dataset subsample, yet this was something to be expected as some type of attacks have very few examples to be able to learn on.  The high MCC ($0.856$) for the multi-class task is not contradictory: MCC measures correlation between predicted and true label matrices and is less sensitive to macro-averaging caused by minority classes.
+The binary task is well handled: the MCC of $0.883$ and AUC of $0.973$ indicate strong discriminative power across both classes despite the class imbalance. Yet, the macro F1 on the multi-class task ($0.504$) is substantially lower, reflecting the inherent difficulty of resolving 15 classes from only nine features on a 10\% dataset subsample. This was something to be expected, as some type of attacks have very few examples to be able to learn on as visible from \ref{fig:Tabnet-confusionmatrix-baseline}. The high MCC ($0.856$) for the multi-class task is not contradictory: MCC measures correlation between predicted and true label matrices and is less sensitive to macro-averaging caused by minority classes, meaning that the model is still well capable of predicting vast-majority of samples. 
 
-\paragraph{CNN-LSTM Baseline.}
-The CNN-LSTM model trained for more epochs before early stopping was triggered. Its baseline performance is summarised in Table~\ref{tab:cnnlstm-baseline}.
+After baseline training for TabNet this is the esteemed final ranking for feature importance across the 9 features used for training on the baseline model:
+
+\begin{table}[H]
+    \centering
+    \caption{Ranking of features importance according to TabNet model}
+    \label{tab:final-ranking-features-TabNet-baseline}
+    \small
+    \begin{tabular}{lllr}
+    \toprule
+    \textbf{} & \textbf{Feature}            & \textbf{Type} \\
+    \midrule
+     1 &  \texttt{Dst Port}           & Continuous             \\
+     2 &  \texttt{Init Fwd Win Byts}  & Continuous             \\
+     3 &  \texttt{PSH Flag Cnt}       & Binary                 \\
+     4 &  \texttt{Idle Mean}          & Continuous             \\
+     5 &  \texttt{Fwd Act Data Pkts}  & Continuous             \\
+     6 &  \texttt{Protocol}           & Categorical            \\
+     7 &  \texttt{Fwd Seg Size Min}   & Categorical            \\
+     8 &  \texttt{Bwd Byts/b Avg}     & Continuous (zero-var.) \\
+     9 &  \texttt{Fwd Blk Rate Avg}   & Continuous (zero-var.) \\
+    \bottomrule
+    \end{tabular}
+\end{table}
+
+
+\newpage
+\subsubsection{CNN-LSTM Baseline.}
+The CNN-LSTM model trained for more epochs before early stopping was triggered. Its baseline performance is summarized in both Image \ref{fig:CNN-LSTM-confusionmatrix-baselinie} and Table \ref{tab:cnnlstm-baseline}.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=1\linewidth]{CNN-LSTM-confusionmatrix-baselinie.png}
+    \caption{CNN-LSTM confusion matrix baseline}
+    \label{fig:CNN-LSTM-confusionmatrix-baselinie}
+\end{figure}
 
 \begin{table}[H]
 \centering
@@ -657,8 +818,32 @@ Multi-class     & 0.2525              & 0.6352         \\
 \end{tabular}
 \end{table}
 
-The CNN-LSTM performs below TabNet on both tasks, which is expected given the combined effect of the reduced dataset size (10\% instead of the full corpus used in the reference work~\supercite{jablaoui2024effective}) and the restriction to only 9 features out of the original 80.  Furthermore, unlike TabNet, the CNN-LSTM does not benefit from a native attention mechanism that can explicitly focus on discriminative features; the temporal patterns captured in a 50-flow window on a dataset as heterogeneous as CIC-IDS2018 represent a harder learning problem.  These performance figures nonetheless constitute adequate baselines for the noise-injection experiments: the goal is not to achieve state-of-the-art detection rates, but rather to establish stable reference points against which the \emph{relative} impact of controlled corruption can be measured.
+The CNN-LSTM performs below TabNet on both tasks, which is expected given the combined effect of the reduced dataset size (10\% instead of the full corpus used in the reference work\supercite{jablaoui2024effective}) and the restriction to only 9 features out of the original 79. It is also important to note that CNN-LSTM in models original paper\supercite{jablaoui2024effective} the minority label classes of multiclass-label were removed (while those were kept in this work, as visible from Image \ref{fig:CNN-LSTM-confusionmatrix-baselinie}), making it way easier for the model to learn on only the remaining multiclass-labels that had way more examples. Furthermore, unlike TabNet, the CNN-LSTM does not benefit from a native attention mechanism that can explicitly focus on discriminative features; the temporal patterns captured in a 50-flow window on a dataset as heterogeneous as CIC-IDS2018 represent a harder learning problem.  These performance figures nonetheless constitute adequate baselines for the noise-injection experiments: the goal is not to achieve state-of-the-art detection rates, but rather to establish stable reference points against which the \emph{relative} impact of controlled corruption can be measured.
 
+
+After baseline training for CNN-LSTM this is the esteemed final ranking for feature importance across the 9 features used for training on the baseline model:
+
+\begin{table}[H]
+    \centering
+    \caption{Ranking of features importance according to CNN-LSTM model}
+    \label{tab:final-ranking-features-CNN-LSTM-baseline}
+    \small
+    \begin{tabular}{lllr}
+    \toprule
+    \textbf{} & \textbf{Feature}            & \textbf{Type} \\
+    \midrule
+     1 &  \texttt{Fwd Seg Size Min}   & Categorical            \\
+     2 &  \texttt{Dst Port}           & Continuous             \\
+     3 &  \texttt{Init Fwd Win Byts}  & Continuous             \\
+     4 & \texttt{PSH Flag Cnt}        & Binary                 \\
+     5 & \texttt{Protocol}            & Categorical            \\
+     6 & \texttt{Idle Mean}           & Continuous             \\
+     7 &  \texttt{Fwd Act Data Pkts}  & Continuous             \\
+     8 & \texttt{Bwd Byts/b Avg}      & Continuous (zero-var.) \\
+     9 & \texttt{Fwd Blk Rate Avg}    & Continuous (zero-var.) \\
+    \bottomrule
+    \end{tabular}
+\end{table}
 
 
 % ============================================================
@@ -880,6 +1065,7 @@ Summing the two group categories and scaling over the 20 seeds and the 2 models 
     N_{B,\text{multi}}^{\text{total}} = \bigl(108 + 6\bigr) \times 20 = 114 \times 20 = \mathbf{2\,280} \text{ configurations}
     \;\Longrightarrow\; \mathbf{4\,560} \text{ trained models}.
 \]
+
 Table~\ref{tab:grid-B-multi} provides the per-method breakdown.
 
 \begin{table}[H]
@@ -904,6 +1090,7 @@ Table~\ref{tab:grid-B-multi} provides the per-method breakdown.
 \end{table}
 
 % ------------------------------------------------------------
+\newpage
 \subsection{Aggregate Experiment Count}
 \label{sec:exp-totals}
 % ------------------------------------------------------------
@@ -987,9 +1174,6 @@ Configs per seed (Exp.~A)         & 105 \\
 Configs per seed (Exp.~B single-feature) & 204 (192 features $+\,12$ target-label) \\
 Configs per seed (Exp.~B multiple-feature) & 114 (108 feature-group $+\,6$ label-group) \\
 Total configurations              & 6\,885 (13\,770 trained models) \\
-\midrule
-Clean validation / test sets      & Always corruption-free \\
-Artifact persistence              & \texttt{.pt}, \texttt{.zip}, \texttt{\_artifacts.json} per experiment \\
 \bottomrule
 \end{tabular}
 \end{table}
@@ -997,8 +1181,6 @@ Artifact persistence              & \texttt{.pt}, \texttt{.zip}, \texttt{\_artif
 The pipeline described in this chapter constitutes the methodological backbone of Chapter~\ref{chap:Empiric-analysis-models}, where the quantitative results of all noise-injection experiments are presented, visualised, and interpreted.
 
 \end{document}
-
-
 
 
 \end{document}

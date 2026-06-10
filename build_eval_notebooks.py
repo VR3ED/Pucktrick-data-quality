@@ -19,10 +19,19 @@ def new_code_cell(source):
             "outputs": [], "source": source}
 
 
-def build(phase):
+SCENARIO_LABELS = {
+    "single": "single-feature corruption (one feature/column dirtied at a time)",
+    "multi": "multiple-feature corruption (several features dirtied simultaneously)",
+}
+
+
+def build(phase, scenario=None):
     assert phase in ("A", "B")
+    assert scenario in (None, "single", "multi")
     is_A = phase == "A"
     ROOT = "complete_experiments/Experiment_A" if is_A else "complete_experiments/Experiment_B"
+    # File suffix / results dir tag, e.g. "B-single".
+    tag = phase if scenario is None else f"{phase}-{scenario}"
     cells = []
     md = lambda s: cells.append(new_markdown_cell(s))
     co = lambda s: cells.append(new_code_cell(s))
@@ -75,24 +84,31 @@ folder grows.
 straight into the (English) thesis in `temp-latex`.
 """)
     else:
-        md(r"""# 6B &mdash; Evaluation of *Experiment B* (complete dataset, main contribution)
+        scen_desc = SCENARIO_LABELS.get(scenario, "all scenarios combined")
+        scen_title = {"single": "single-feature scenario",
+                      "multi": "multiple-feature scenario"}.get(
+                          scenario, "all scenarios")
+        sibling = {"single": "`6B-multi` (multiple-feature)",
+                   "multi": "`6B-single` (single-feature)"}.get(scenario, "")
+        md(rf"""# 6B &mdash; Evaluation of *Experiment B*: {scen_title} (complete dataset)
 
-This notebook evaluates **Experiment B**: the noise-injection runs stored under
-`complete_experiments/Experiment_B`. Experiment B is the **main focus** of the
-thesis (see `CLAUDE.md`): it uses the **complete** (non feature-reduced)
-dataset and a much wider grid of **up to 20 random seeds**, so its conclusions
-carry real statistical weight.
+This notebook evaluates **Experiment B** &mdash; the **main focus** of the thesis
+(see `CLAUDE.md`) &mdash; restricted to the **{scen_desc}**. Experiment B uses the
+**complete** (non feature-reduced) dataset and a wide grid of **up to 20 random
+seeds**, so its conclusions carry real statistical weight.
 
-Experiment B is organised into two scenarios:
+Experiment B is split across two complementary scenarios, each with its **own
+dedicated evaluation notebook** so the two stories never get mixed:
 
-* **`Pucktrick_on_single_feature/`** &mdash; noise injected into *one* feature/column
-  at a time (plus a `labels_experiment/` sub-folder that corrupts the target
-  labels instead of features);
-* **`Pucktrick_on_multiple_features/`** &mdash; noise injected into *several*
-  features simultaneously (work in progress).
+* **`6B-single`** &mdash; `Pucktrick_on_single_feature/`: noise injected into *one*
+  feature/column at a time (plus a `labels_experiment/` sub-folder that corrupts
+  the target labels instead of features);
+* **`6B-multi`** &mdash; `Pucktrick_on_multiple_features/`: noise injected into
+  *several* features simultaneously.
 
-The loader records this as a `scenario` column (`single` / `multi`) so the same
-analysis serves both.
+**This notebook covers the {scen_title}.** Its companion is {sibling}. The data
+is filtered to `scenario == "{scenario}"` immediately after loading, so every
+table, figure and export below concerns only this scenario.
 
 > **Note.** This notebook is written to run *before* the runs are finished. If a
 > section finds no data yet it says so and moves on. As the experiment folder
@@ -104,21 +120,22 @@ analysis serves both.
 ### What this notebook does (and why)
 
 The evaluation is **completely dynamic**: it discovers every
-`*_artifacts.json` under the experiment folder and recomputes all tables,
-plots and confidence intervals from scratch on every run. The structure mirrors
-notebook `6A` but adds the single- vs. multiple-feature `scenario` dimension.
+`*_artifacts.json` under the experiment folder, keeps only the
+`{scenario}`-scenario runs, and recomputes all tables, plots and confidence
+intervals from scratch on every run.
 
 | Section | Question it answers | Why it matters for the thesis |
 |---|---|---|
 | 1. Dynamic loading | What runs exist on disk? | Reproducible, self-updating basis for everything below. |
 | 2. Coverage | How many seeds back each cell? | A CI over few seeds &ne; a CI over 20; reported honestly. |
-| 3. Leaderboard (mean &plusmn; CI) | Headline numbers per scenario | Thesis-ready estimates with uncertainty. |
+| 3. Leaderboard (mean &plusmn; CI) | Headline numbers | Thesis-ready estimates with uncertainty. |
 | 4. Metric vs. noise level | For each feature, how do **F1** and **MCC** evolve as noise grows, per method? | Central research question. |
 | 5. Heatmaps | Where does noise help vs. hurt? | Compact manuscript figures. |
-| 6. Paired significance | Are observed changes real? | Supports causal *improvement* claims over many seeds. |
+| 6. Significance | Are observed changes real? | Supports causal *improvement* claims over many seeds. |
 | 7. Model comparison | TabNet vs. CNN-LSTM robustness | Architectural insight. |
 | 8. Per-class analysis | Which attack classes benefit / suffer? | Macro metrics hide rare-class effects. |
 | 9. Feature-importance drift | Does corruption change feature reliance? | Mechanistic explanation. |
+| 9b. Rank-drift | How does each corrupted feature's *importance rank* move? | Reads off the mechanism feature-by-feature. |
 | 10. Export | LaTeX/CSV artefacts | Drop-in tables for `temp-latex`. |
 | 11. Auto-summary | Written digest with key numbers | Seed for the chapter conclusions. |
 
@@ -143,9 +160,10 @@ import experiment_eval_utils as eu   # shared helpers (see experiment_eval_utils
 
 # ---- knobs you may want to change ------------------------------------------
 PHASE        = {phase!r}                  # "A" or "B"
+SCENARIO     = {scenario!r}               # None | "single" | "multi" (Experiment B only)
 ROOT_DIR     = {ROOT!r}
 CONF_LEVEL   = 0.95                       # confidence level for all CIs
-RESULTS_DIR  = "evaluation_results/Experiment_{phase}"   # CSV/figure exports
+RESULTS_DIR  = "evaluation_results/Experiment_{tag}"   # CSV/figure exports
 SAVE_FIGURES = False                      # True -> also write PNGs under RESULTS_DIR/figures
 
 sns.set_theme(style="whitegrid", context="notebook")
@@ -155,6 +173,7 @@ pd.set_option("display.width", 160)
 
 os.makedirs(RESULTS_DIR, exist_ok=True)
 print("Phase            : Experiment", PHASE)
+print("Scenario         :", SCENARIO if SCENARIO else "(all)")
 print("Reading from     :", ROOT_DIR)
 print("Confidence level :", CONF_LEVEL)
 print("Exports ->       :", RESULTS_DIR)""")
@@ -176,14 +195,21 @@ parsed from the file name.""")
 df.head()""")
 
     if not is_A:
-        co(r"""# Experiment B only: quick look at the two scenarios (single vs multiple feature).
+        co(r"""# This notebook is scoped to a single scenario. Show the full breakdown,
+# then keep only the SCENARIO rows so every section below concerns just it.
 if df.empty:
     print("No Experiment B artifacts on disk yet - run the experiments, then re-run this notebook.")
 else:
-    print("Rows per scenario:")
+    print("Rows per scenario (before filtering):")
     display(df.groupby("scenario").size().rename("rows").to_frame())
-    print("\nLabels-variant runs (target corruption) per scenario:")
-    display(df.groupby(["scenario", "is_labels_variant"]).size().rename("rows").to_frame())""")
+    df = df[df["scenario"] == SCENARIO].copy()
+    print(f"\nKept scenario == '{SCENARIO}': {len(df)} task-rows.")
+    if df.empty:
+        print(f"[!] No runs for scenario '{SCENARIO}' yet - sections below stay empty "
+              "until they are produced.")
+    else:
+        print("Labels-variant runs (target corruption) in this scenario:")
+        display(df.groupby("is_labels_variant").size().rename("rows").to_frame())""")
 
     co(r"""# Guard used throughout: if nothing is on disk yet, the rest still runs cleanly.
 HAS_DATA = not df.empty
@@ -467,6 +493,8 @@ as noise increases &mdash; important because an IDS that improves overall while
 collapsing on a rare-but-critical attack is *not* an improvement in practice.
 (Classes are identified by integer index, since names are not stored.)""")
     co(r"""pcd = eu.per_class_dataframe(ROOT_DIR)
+if SCENARIO is not None and not pcd.empty:
+    pcd = pcd[pcd["scenario"] == SCENARIO]
 if pcd.empty:
     print("No per-class data available yet.")
 else:
@@ -493,6 +521,8 @@ importance of the *corrupted* feature as the noise level grows. (`is_corrupted`
 is name-normalised, so the file's `Down_Up Ratio` matches the importance dict's
 `Down/Up Ratio`.)""")
     co(r"""fid = eu.feature_importance_dataframe(ROOT_DIR)
+if SCENARIO is not None and not fid.empty:
+    fid = fid[fid["scenario"] == SCENARIO]
 if fid.empty:
     print("No feature-importance data available yet.")
 else:
@@ -519,6 +549,48 @@ else:
             ax.set_xlabel("Noise level (%)"); ax.set_ylabel("Permutation importance")
             ax.legend(fontsize=8)
         plt.tight_layout(); plt.show()""")
+
+    # ------------------------------------------------------------------ #
+    # 9b. Rank-drift                                                     #
+    # ------------------------------------------------------------------ #
+    md(r"""## 9b. Importance-rank drift of the corrupted feature
+
+Section 9 plots *absolute* permutation importance, which is hard to compare
+across noise levels (the whole importance vector can rescale). Here we instead
+track the corrupted feature's **position (rank)** in the importance ordering
+(rank 1 = the feature the model relies on most), which is a stable, directly
+interpretable signal.
+
+* **one subplot per corrupted feature**, the panels **ordered by clean-baseline
+  importance** (most important feature top-left, then left-to-right and down);
+* **one line per PuckTrick method**;
+* the **y-axis runs from 1 (top) to 10 (bottom)**, so rank 1 is at the top, and
+  **each point is annotated with the exact position it sits on** (dot and label
+  always agree);
+* a **dashed line** marks the feature's position in the clean baseline (also
+  shown as `baseline #k` in each panel title).
+
+**How the position is computed.** For each (method, noise level) we first average
+each feature's permutation importance over the seeds, *then* rank those averages.
+This gives a genuine integer position in the ordering. (Averaging the per-seed
+ranks instead would give a fractional number that corresponds to no real
+position &mdash; the dot would not match its own label.)
+
+Reading guide: a line that *descends* (position number grows) means that
+corrupting the feature makes the model **demote** it &mdash; it learns to stop
+trusting an unreliable input; a line that stays near the top means the model
+keeps leaning on the feature despite the noise.""")
+    co(r"""# fid was filtered to SCENARIO in section 9; build the clean-baseline ranks too.
+bfi = eu.baseline_feature_importance(ROOT_DIR)
+if 'fid' not in dir() or fid is None or fid.empty:
+    print("No feature-importance data available yet.")
+else:
+    for model in sorted(fid["model"].dropna().unique()):
+        save = (os.path.join(RESULTS_DIR, "figures", f"rank_drift_{model}.png")
+                if SAVE_FIGURES else None)
+        fig = eu.plot_feature_rank_drift(fid, model, baseline_fi=bfi, savepath=save)
+        if fig is not None:
+            plt.show()""")
 
     # ------------------------------------------------------------------ #
     # 10. Export                                                         #
@@ -614,16 +686,17 @@ auto_summary()""")
 
 ### Caveats to carry into the write-up
 
+* **Scenario-scoped.** This notebook concerns **only** the `{}`-feature scenario;
+  its companion notebook covers the other one. Conclusions drawn here should be
+  stated as specific to this scenario (do not generalise single-feature findings
+  to the multiple-feature setting or vice versa).
 * **Clean baseline is a single deterministic run** (no seeds), so the
   vs-baseline test (6a) is a one-sample Wilcoxon over the noisy config's seed
   distribution against a fixed clean value &mdash; the primary "noise beats
   clean" evidence for the thesis.
-* **Single- vs. multiple-feature scenarios** are aggregated together by default.
-  Filter `df[df.scenario == "single"]` (or `"multi"`) before any section to
-  analyse them separately; the multiple-feature scenario is still in progress.
 * As seeds accumulate toward the full 20, re-run the notebook periodically &mdash;
   the confidence intervals will tighten and previously non-significant effects
-  may cross into significance.""")
+  may cross into significance.""".format(scenario))
 
     nb = {
         "cells": cells,
@@ -634,7 +707,7 @@ auto_summary()""")
         "nbformat": 4,
         "nbformat_minor": 5,
     }
-    out = os.path.join(REPO, f"6{phase}-Experiment-evaluation.ipynb")
+    out = os.path.join(REPO, f"6{tag}-Experiment-evaluation.ipynb")
     with open(out, "w") as fh:
         json.dump(nb, fh, indent=1)
     print("wrote", out, "cells=", len(cells))
@@ -642,4 +715,6 @@ auto_summary()""")
 
 if __name__ == "__main__":
     build("A")
-    build("B")
+    # Experiment B: one dedicated notebook per scenario (single vs multiple feature).
+    build("B", scenario="single")
+    build("B", scenario="multi")

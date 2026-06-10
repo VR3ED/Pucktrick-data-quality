@@ -526,6 +526,7 @@ def per_class_dataframe(root: str) -> pd.DataFrame:
         coords = parse_label(d.get("label") or os.path.basename(f))
         model = _model_from_path(f) or _model_from_type(d.get("model_type"))
         seed = _seed_from_path(f)
+        scenario = _scenario_from_path(f)
         row_sums = cm.sum(axis=1)
         col_sums = cm.sum(axis=0)
         diag = np.diag(cm)
@@ -539,6 +540,7 @@ def per_class_dataframe(root: str) -> pd.DataFrame:
                 "model": model, "method": coords["method"],
                 "feature": coords["feature"],
                 "noise_percentage": coords["noise_percentage"], "seed": seed,
+                "scenario": scenario,
                 "class": int(i), "precision": float(precision[i]),
                 "recall": float(recall[i]), "f1": float(f1[i]),
                 "support": float(row_sums[i]),
@@ -554,8 +556,8 @@ def feature_importance_dataframe(root: str) -> pd.DataFrame:
     """Long table of permutation feature importances across all runs.
 
     Columns: ``model, method, corrupted_feature, noise_percentage, seed,
-    fi_feature, importance, is_corrupted``. ``is_corrupted`` flags the row whose
-    reported feature is the one PuckTrick dirtied (name-normalised, so
+    scenario, fi_feature, importance, is_corrupted``. ``is_corrupted`` flags the
+    row whose reported feature is the one PuckTrick dirtied (name-normalised, so
     'Down/Up Ratio' matches the file's 'Down_Up Ratio').
     """
     files = sorted(glob.glob(os.path.join(root, "**", "*_artifacts.json"),
@@ -575,16 +577,91 @@ def feature_importance_dataframe(root: str) -> pd.DataFrame:
         coords = parse_label(d.get("label") or os.path.basename(f))
         model = _model_from_path(f) or _model_from_type(d.get("model_type"))
         seed = _seed_from_path(f)
-        corrupted_norm = _norm_feature(coords["feature"])
+        scenario = _scenario_from_path(f)
+        # In the multiple-feature scenario the corrupted "feature" is a combo of
+        # several names joined by '+', e.g. "FwdActDataPkts+DstPort+IdleMean".
+        # Match each importance feature against ANY token of that combo.
+        corrupted_tokens = {_norm_feature(t)
+                            for t in str(coords["feature"]).split("+")}
         for feat, imp in fi.items():
             rows.append({
                 "model": model, "method": coords["method"],
                 "corrupted_feature": coords["feature"],
                 "noise_percentage": coords["noise_percentage"], "seed": seed,
+                "scenario": scenario,
                 "fi_feature": feat, "importance": _to_float(imp),
-                "is_corrupted": _norm_feature(feat) == corrupted_norm,
+                "is_corrupted": _norm_feature(feat) in corrupted_tokens,
             })
     return pd.DataFrame(rows)
+
+
+def feature_rank_dataframe(fid: pd.DataFrame) -> pd.DataFrame:
+    """Add a per-run importance ``rank`` column to a feature-importance table.
+
+    Within each run -- identified by
+    ``(model, method, corrupted_feature, noise_percentage, seed)`` -- the
+    features are ranked by permutation importance, **rank 1 = most important**.
+    Also adds ``n_features`` (how many features were ranked in that run, i.e. the
+    worst possible rank). Returns a copy; the input is unchanged.
+
+    This is the basis of the rank-drift plot: a feature's *absolute* importance
+    is hard to compare across noise levels, but its *rank* among the other
+    features is a stable, interpretable measure of how much the model relies on
+    it relative to everything else.
+    """
+    if fid is None or fid.empty:
+        return fid
+    out = fid.copy()
+    grp = ["model", "method", "corrupted_feature", "noise_percentage", "seed"]
+    out["rank"] = (out.groupby(grp)["importance"]
+                      .rank(ascending=False, method="min"))
+    out["n_features"] = out.groupby(grp)["importance"].transform("size")
+    return out
+
+
+def baseline_feature_importance(root: str) -> pd.DataFrame:
+    """Per-model feature importances of the clean baseline, with importance rank.
+
+    Columns: ``model, fi_feature, importance, rank, n_features``. Used to draw a
+    "clean" reference rank in the rank-drift plot.
+    """
+    files = sorted(glob.glob(os.path.join(root, "**", "*_artifacts.json"),
+                             recursive=True))
+    files = [f for f in files if _is_baseline_path(f)]
+    rows = []
+    for f in files:
+        try:
+            with open(f) as fh:
+                d = json.load(fh)
+        except (json.JSONDecodeError, OSError):
+            continue
+        fi = d.get("feature_importance", {}) or {}
+        if not isinstance(fi, dict) or not fi:
+            continue
+        model = _model_from_path(f) or _model_from_type(d.get("model_type"))
+        for feat, imp in fi.items():
+            rows.append({"model": model, "fi_feature": feat,
+                         "importance": _to_float(imp)})
+    bfi = pd.DataFrame(rows)
+    if bfi.empty:
+        return bfi
+    bfi["rank"] = (bfi.groupby("model")["importance"]
+                      .rank(ascending=False, method="min"))
+    bfi["n_features"] = bfi.groupby("model")["importance"].transform("size")
+    return bfi
+
+
+def baseline_feature_rank(baseline_fi: pd.DataFrame, model: str,
+                          feature: str) -> float:
+    """Clean-baseline importance rank of ``feature`` for ``model`` (NaN if absent)."""
+    if baseline_fi is None or baseline_fi.empty:
+        return float("nan")
+    target = _norm_feature(feature)
+    sel = baseline_fi[(baseline_fi["model"] == model)
+                      & (baseline_fi["fi_feature"].map(_norm_feature) == target)]
+    if sel.empty:
+        return float("nan")
+    return float(sel["rank"].iloc[0])
 
 
 # --------------------------------------------------------------------------- #
@@ -763,6 +840,140 @@ def plot_metric_heatmap(df: pd.DataFrame, model: str, task: str, metric: str,
         os.makedirs(os.path.dirname(savepath), exist_ok=True)
         fig.savefig(savepath, bbox_inches="tight", dpi=150)
         print(f"[heatmap] saved -> {savepath}")
+    return fig
+
+
+def plot_feature_rank_drift(fid: pd.DataFrame, model: str,
+                            baseline_fi: Optional[pd.DataFrame] = None,
+                            ncols: int = 3, figsize_per=(5.2, 4.0),
+                            annotate: bool = True, y_max: Optional[int] = None,
+                            savepath: Optional[str] = None):
+    """Rank-drift plot: how the corrupted feature's *importance rank* moves.
+
+    One subplot **per corrupted feature**. In each subplot the y-axis is the
+    permutation-importance **rank (position)** of *that same feature* (rank 1 =
+    most important, at the top via an inverted axis), the x-axis is the noise
+    level, and there is **one line per PuckTrick method**. Each point is
+    annotated with the rank it sits on, so the dot and its label always agree
+    (e.g. "missingness pushes Protocol from position 5 down to position 8").
+
+    **Rank = rank-of-mean-importance.** For each (method, noise level) we first
+    average the permutation importance over seeds for *every* feature, then rank
+    those averages. This yields a genuine integer *position* in the importance
+    ordering -- unlike averaging the per-seed ranks, which produces a misleading
+    fractional number that no longer corresponds to any real position.
+
+    Subplots are ordered by the feature's **clean-baseline importance** (the most
+    important feature in the baseline first), so the grid reads top-left to
+    bottom-right in decreasing baseline relevance. A dashed line marks each
+    feature's baseline rank.
+
+    ``y_max`` fixes the worst rank shown on the axis (default: ``max(10, observed
+    max)`` -- i.e. 1..10 for the ~8-9 features of the single-feature scenario,
+    auto-expanded if a run ranks more features). Only features that appear among
+    the reported importances are shown (row-level ``duplicated``/``labels`` runs
+    corrupt a column that is not a model input, so they are skipped).
+    """
+    import matplotlib.pyplot as plt
+    import seaborn as sns
+    from matplotlib.lines import Line2D
+
+    if fid is None or fid.empty:
+        print("[rank-drift] No feature-importance data.")
+        return None
+
+    model_fi = fid[fid["model"] == model].copy()
+    if model_fi.empty or not model_fi["is_corrupted"].any():
+        print(f"[rank-drift] No corrupted-feature importances for model={model} "
+              "(e.g. only row-level 'duplicated'/'labels' runs).")
+        return None
+
+    # 1) Average importance over seeds for EVERY feature within each run cell,
+    #    keyed by the full corrupted-feature label (a single name in the single
+    #    scenario, a '+'-joined combo in the multi scenario).
+    imp = (model_fi.groupby(["method", "corrupted_feature", "noise_percentage",
+                             "fi_feature"])
+                   .agg(importance=("importance", "mean"),
+                        is_corrupted=("is_corrupted", "first"))
+                   .reset_index())
+    # 2) Rank the averaged importances -> a true integer position per cell.
+    imp["rank"] = (imp.groupby(["method", "corrupted_feature", "noise_percentage"])
+                      ["importance"].rank(ascending=False, method="min"))
+
+    # 3) Keep only the dirtied features; facet by the actual feature name. In the
+    #    multi scenario a feature may be dirtied inside several combos at the same
+    #    (method, noise), so average its position across them (then it can be
+    #    fractional -- the annotation matches whatever is plotted).
+    plot_df = imp[imp["is_corrupted"]]
+    agg = (plot_df.groupby(["fi_feature", "method", "noise_percentage"])
+                  ["rank"].mean().reset_index())
+
+    # Order facets by clean-baseline importance (rank 1 first); unknowns last.
+    def _facet_key(feat):
+        br = baseline_feature_rank(baseline_fi, model, feat)
+        return (br if np.isfinite(br) else float("inf"), str(feat))
+    feats = sorted(agg["fi_feature"].dropna().unique(), key=_facet_key)
+
+    methods = _ordered_hue_values(agg["method"].dropna().unique())
+    palette = dict(zip(methods, sns.color_palette("tab10", max(len(methods), 3))))
+
+    observed_max = int(np.ceil(np.nanmax(agg["rank"]))) if len(agg) else 10
+    if y_max is None:
+        y_max = max(10, observed_max)
+
+    def _fmt(v):  # keep the dot and its label identical
+        return f"{v:.0f}" if abs(v - round(v)) < 1e-9 else f"{v:.1f}"
+
+    ncols = max(1, min(ncols, len(feats)))
+    nrows = math.ceil(len(feats) / ncols)
+    fig, axes = plt.subplots(nrows, ncols,
+                             figsize=(figsize_per[0] * ncols, figsize_per[1] * nrows),
+                             squeeze=False)
+
+    for i, feat in enumerate(feats):
+        ax = axes[i // ncols][i % ncols]
+        for m in methods:
+            g = agg[(agg["fi_feature"] == feat) & (agg["method"] == m)]
+            g = g.sort_values("noise_percentage")
+            if g.empty:
+                continue
+            ax.plot(g["noise_percentage"], g["rank"], marker="o", ms=6,
+                    color=palette[m])
+            if annotate:
+                for x, y in zip(g["noise_percentage"], g["rank"]):
+                    ax.annotate(_fmt(y), (x, y), textcoords="offset points",
+                                xytext=(0, 7), ha="center", fontsize=8,
+                                color=palette[m])
+        base_rank = baseline_feature_rank(baseline_fi, model, feat)
+        title = f"feature = {feat}"
+        if np.isfinite(base_rank):
+            ax.axhline(base_rank, ls="--", lw=1.3, color="0.35", zorder=0)
+            title += f"  (baseline #{base_rank:.0f})"
+        ax.set_title(title, fontsize=11)
+        ax.set_xlabel("Noise level (%)")
+        ax.set_ylabel("Importance rank (1 = most important)")
+        ax.set_ylim(y_max + 0.5, 0.5)   # inverted: rank 1 on top, y_max at bottom
+        step = 1 if y_max <= 12 else 2
+        ax.set_yticks(range(1, y_max + 1, step))
+        ax.grid(True, alpha=0.3)
+
+    for j in range(len(feats), nrows * ncols):
+        axes[j // ncols][j % ncols].axis("off")
+
+    handles = [Line2D([0], [0], marker="o", color=palette[m], label=str(m))
+               for m in methods]
+    if baseline_fi is not None and not baseline_fi.empty:
+        handles.append(Line2D([0], [0], ls="--", color="0.35",
+                              label="clean-baseline rank"))
+    fig.legend(handles=handles, title="Method", loc="upper center",
+               ncol=min(len(handles), 6), bbox_to_anchor=(0.5, 1.02))
+    fig.suptitle(f"Importance-rank drift of the corrupted feature - {model.upper()}",
+                 y=1.06, fontsize=14)
+    fig.tight_layout()
+    if savepath:
+        os.makedirs(os.path.dirname(savepath), exist_ok=True)
+        fig.savefig(savepath, bbox_inches="tight", dpi=150)
+        print(f"[rank-drift] saved -> {savepath}")
     return fig
 
 

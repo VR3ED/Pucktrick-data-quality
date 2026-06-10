@@ -1,0 +1,5 @@
+model,task,path,accuracy,f1,mcc,auc
+cnn_lstm,binary,complete_experiments/Experiment_B/Baselines/cnn_lstm_trial_Baseline_artifacts.json,0.9306897576928794,0.7593237837140276,0.7373443625996885,0.92044084004883
+cnn_lstm,multiclass,complete_experiments/Experiment_B/Baselines/cnn_lstm_trial_Baseline_artifacts.json,0.9001783856102274,0.25246260542608734,0.6352175196242492,
+tabnet,binary,complete_experiments/Experiment_B/Baselines/tabnet_trial_Baseline_artifacts.json,0.9677397779462256,0.8967338297214359,0.8833252598050216,0.9730492240553429
+tabnet,multiclass,complete_experiments/Experiment_B/Baselines/tabnet_trial_Baseline_artifacts.json,0.9574471247454704,0.5040041653475638,0.8557877308144989,0.9266434070419857
