@@ -47,7 +47,7 @@ Student's $t$ (rather than the Gaussian $z$) is used precisely because $\sigma$ 
     \item the critical value $t_{1-\alpha/2,\,n-1}$, which shrinks from $2.776$ at $n=5$ (\red{Experiment~A}) to $2.093$ at $n=20$ (\red{Experiment~B}) and approaches the Gaussian limit of $1.960$ as $n\!\to\!\infty$, so that the 20-seed \red{Experiment~B} intervals are intrinsically tighter than the 5-seed \red{Experiment~A} ones
 \end{itemize}
 
-Therefore the deltas of this chapter are reported as $\Delta\mathrm{MCC} \pm \delta$.
+Therefore the deltas of this chapter are reported as: $$\Delta\mathrm{MCC} \pm \delta$$.
 
 \paragraph{Statistical significance: the meaning of $p$.}
 A narrow interval of $\delta$ tells us the mean is well estimated, but to decide whether an observed delta is \emph{real}, rather than an artifact of a particular random split or noise realization. For this reason the evaluation pipeline additionally runs a paired \emph{Wilcoxon signed-rank test} on the per-seed deltas of each noisy cell against the clean baseline, computed on the binary MCC (the most stable of the two tasks and the one most relevant to the anomaly-detection use case). The resulting \emph{$p$-value} is the probability of observing a sign-consistent effect at least this strong \emph{if noise truly had no effect} (the null hypothesis). A small $p$ therefore means that such a coherent shift across independent seeds would be exceedingly unlikely to arise by chance, and when: $$p < 0.05$$the null hypothesis is rejected and the effect flagged as significant. This is closely related to the confidence interval: an effect is significant, roughly, when its interval $\Delta\mathrm{MCC} \pm \delta$ lies entirely on one side of zero, so the intuitive reading of ``$p < 0.05$'' is ``the $\pm\delta$ margin is small enough, relative to the size of the effect, that we are confident of its sign''. The stronger value $p < 10^{-4}$ reported for several \red{Experiment~B} cells corresponds to all twenty seeds agreeing on the sign of the effect, whose probability under the null is $\approx 2\times 10^{-6}$: about as close to certainty as twenty seeds permit. One caveat follows directly from this construction, however: the $p$-value depends not only on the effect size and its $\pm\delta$ margin but also on the \emph{number of seeds}. With only five seeds the Wilcoxon test cannot return a value below $\approx 0.0625$ even when every seed agrees, which is why \red{Experiment~A} can display large, tightly-bounded effects that the formal test is nevertheless unable to certify (discussed in Section~\ref{sec:res-A}).
@@ -235,11 +235,27 @@ Three lessons crystallise from the single-feature feature sweep. First, \textbf{
 \label{sec:res-B-single-label}
 % ------------------------------------------------------------
 
-A complementary script applies the \texttt{labels} method directly to the encoded \emph{target} columns, isolating the effect of corrupting the supervision signal rather than an input feature. The two targets are corrupted \emph{independently}, one run per column: the binary target \texttt{label\_generic} and the multi-class target \texttt{Label}. Crucially, because both architectures are \emph{multi-task} (Section~\ref{Chap: model selection}), every corrupted target is evaluated on \emph{both} prediction heads at once. Each of the two corrupted columns therefore yields two MCC curves per model --- the \emph{direct} effect, on the head that predicts the very column being corrupted, and the \emph{cross} effect, on the \emph{other} head --- for a total of $2\ \text{targets}\times 2\ \text{heads}\times 2\ \text{models} = 8$ series, all displayed in Figure~\ref{fig:res-B-labelcliff} and tabulated in Table~\ref{tab:res-B-labelcliff}. This cross-head view is one of the focal analyses of the thesis: it answers not merely ``how badly does corrupting a label damage its own task?'' but the more revealing question ``when one label is corrupted, what happens to the \emph{other} one?'' --- a question that only a multi-task probe can pose, and whose answer turns out to depend sharply on both \emph{which} target is corrupted and on the model architecture.
+A complementary script applies the \texttt{labels} \texttt{Pucktrick} method directly to both \emph{target} columns. This way we aim to isolate the effect of corrupting the supervision signal rather than an input feature. The two targets are corrupted \emph{independently}, one at a time. Crucially, because both architectures are \emph{multi-task} (Section~\ref{Chap: model selection}), every corrupted target is evaluated on \emph{both} prediction heads at once. This is done because examining how the effects of corruption on one label impact the second label is considered a particularly interesting case study. Each of the two corrupted columns therefore yields two MCC curves per model:
+\begin{itemize}
+    \item the \emph{direct} effect, on the head that predicts the very column being corrupted
+    \item  the \emph{cross} effect, on the \emph{other} head
+\end{itemize}
+for a total of $2\ \text{targets}\times 2\ \text{heads}\times 2\ \text{models} = 8$ series, all displayed in Figure~\ref{fig:res-B-labelcliff} and tabulated in Table~\ref{tab:res-B-labelcliff}. This cross-head view is one of the focal analyses of the thesis: it answers not merely ``how badly does corrupting a label damage its own task?'' but the more revealing question ``when one label is corrupted, what happens to the \emph{other} one?'': a question that only a multi-task probe can pose, and whose answer turns out to depend sharply on both \emph{which} target is corrupted and on the model architecture.
 
+\begin{figure}[H]
+    \centering
+    \makebox[\textwidth][c]{\includegraphics[width=1.2\linewidth]{images/results/label_method_noise_singleFeature.png}}
+    \caption{\red{Experiment~B}, single-feature, \texttt{labels} method on the two target columns. Each panel fixes a model and a monitored MCC head (binary / multi-class); within each panel the two curves correspond to corrupting \emph{ONE} of the two label columns, so that the \emph{direct} effect (corrupted target $=$ monitored head) and the \emph{cross} effect to the other head can be read side by side. Bands are Student-$t$ $95\%$ intervals over the 20 seeds; the dashed line is the clean baseline.}
+    \label{fig:res-B-labelcliff}
+\end{figure}
+
+
+% -------------------------------
+\begin{landscape}
+    
 \begin{table}[H]
 \centering
-\caption{\red{Experiment~B}, single-feature, \texttt{labels} method: $\Delta\mathrm{MCC} \pm \delta$ (Student-$t$ $95\%$ half-width over 20 seeds) for the \emph{eight} target-corruption series. The table is split by the \emph{corrupted} target column; within each block every model is evaluated on both prediction heads. A $\dagger$ marks the \emph{direct} head (the one predicting the corrupted column); the unmarked rows are the \emph{cross} head, whose target was \emph{not} corrupted. Corrupting the binary target \texttt{label\_generic} inverts its own head past $50\%$ and --- for the CNN-LSTM only --- drags the multi-class head down with it ($-0.536$); corrupting the multi-class target \texttt{Label} degrades only its own head and leaves the binary head at baseline. Margins stay tight in the flat regime ($\le 0.011$) but widen at the cliff (CNN-LSTM binary $\pm0.114$ at $50\%$), reflecting seed-to-seed instability on the knife-edge of inversion.}
+\caption{\red{Experiment~B}, single-feature, \texttt{labels} method: $\Delta\mathrm{MCC} \pm \delta$ (Student-$t$ $95\%$ half-width over 20 seeds) for the \emph{eight} target-corruption series. The table is split by the \emph{corrupted} target column; within each block every model is evaluated on both prediction heads. A "$\dagger$" marks the \emph{direct} head (the one being actively corrupted by \texttt{Pucktrick}); the unmarked rows are the \emph{cross} head, whose target was \emph{not} corrupted.}
 \label{tab:res-B-labelcliff}
 \small
 \resizebox{\linewidth}{!}{%
@@ -251,6 +267,7 @@ A complementary script applies the \texttt{labels} method directly to the encode
 \midrule
 TabNet   & Binary$^\dagger$    & $-0.007{\pm}0.004$ & $-0.005{\pm}0.003$ & $-0.009{\pm}0.003$ & $-0.016{\pm}0.004$ & $-0.956{\pm}0.041$ & $-1.642{\pm}0.035$ \\
 TabNet   & Multi-class         & $-0.030{\pm}0.008$ & $-0.024{\pm}0.005$ & $-0.028{\pm}0.006$ & $-0.033{\pm}0.004$ & $-0.056{\pm}0.022$ & $-0.050{\pm}0.015$ \\
+\cdashline{1-8}
 CNN-LSTM & Binary$^\dagger$    & $+0.008{\pm}0.009$ & $+0.010{\pm}0.007$ & $-0.003{\pm}0.011$ & $-0.010{\pm}0.011$ & $-0.668{\pm}0.114$ & $-0.864{\pm}0.094$ \\
 CNN-LSTM & Multi-class         & $+0.018{\pm}0.025$ & $+0.019{\pm}0.028$ & $-0.010{\pm}0.029$ & $-0.017{\pm}0.021$ & $-0.008{\pm}0.022$ & $-0.536{\pm}0.065$ \\
 \midrule
@@ -258,6 +275,7 @@ CNN-LSTM & Multi-class         & $+0.018{\pm}0.025$ & $+0.019{\pm}0.028$ & $-0.0
 \midrule
 TabNet   & Binary              & $-0.003{\pm}0.002$ & $-0.003{\pm}0.005$ & $-0.005{\pm}0.005$ & $-0.002{\pm}0.003$ & $-0.004{\pm}0.003$ & $-0.002{\pm}0.002$ \\
 TabNet   & Multi-class$^\dagger$ & $-0.028{\pm}0.004$ & $-0.030{\pm}0.006$ & $-0.033{\pm}0.006$ & $-0.029{\pm}0.004$ & $-0.034{\pm}0.003$ & $-0.042{\pm}0.007$ \\
+\cdashline{1-8}
 CNN-LSTM & Binary              & $+0.004{\pm}0.008$ & $+0.011{\pm}0.007$ & $+0.012{\pm}0.007$ & $+0.001{\pm}0.009$ & $-0.029{\pm}0.044$ & $+0.000{\pm}0.011$ \\
 CNN-LSTM & Multi-class$^\dagger$ & $+0.004{\pm}0.031$ & $+0.008{\pm}0.030$ & $+0.016{\pm}0.026$ & $-0.030{\pm}0.030$ & $-0.123{\pm}0.053$ & $-0.049{\pm}0.031$ \\
 \bottomrule
@@ -265,29 +283,82 @@ CNN-LSTM & Multi-class$^\dagger$ & $+0.004{\pm}0.031$ & $+0.008{\pm}0.030$ & $+0
 }
 \end{table}
 
-\begin{figure}[H]
-    \centering
-    \makebox[\textwidth][c]{\includegraphics[width=1.2\linewidth]{images/label_method_noise_singleFeature.png}}
-    \caption{\red{Experiment~B}, single-feature, \texttt{labels} method on the two target columns. Each panel fixes a model and a monitored MCC head (binary / multi-class); within each panel the two curves correspond to corrupting \texttt{label\_generic} versus corrupting \texttt{Label}, so that the \emph{direct} effect (corrupted target $=$ monitored head) and the \emph{cross} effect (the other head) can be read side by side. Bands are Student-$t$ $95\%$ intervals over the 20 seeds; the dashed line is the clean baseline.}
-    \label{fig:res-B-labelcliff}
-\end{figure}
+Both Table \ref{tab:res-B-labelcliff} and Image \ref{fig:res-B-labelcliff} reveal two pretty interesting truths for  models: 
+\begin{enumerate}
+    \item \textbf{corrupting the binary target (\texttt{label\_generic}) drags the multi-class-target head down with it, at very high corruption levels} (Although loss on multiclass-label is much more significant in CNN-LSTM rather then TabNet where it is barely noticeable). 
+    \item \textbf{corrupting the multi-class-target (\texttt{Label}) degrades only its own head and leaves the binary head at baseline}.
+\end{enumerate}
+Both of those cases are further explored in paragraphs below.
+\end{landscape}
+% -------------------------------
 
-\paragraph{Direct effects: a two-class cliff versus a graceful multi-class decay.}
-Reading the directly-corrupted heads (the $\dagger$ rows of Table~\ref{tab:res-B-labelcliff}), the two targets behave in qualitatively opposite ways. Corrupting the \emph{binary} target \texttt{label\_generic} leaves its own (binary) head essentially untouched up to $35\%$ and then collapses it off a cliff at $50\%$ ($-0.956$ for TabNet, $-0.668$ for CNN-LSTM) and into outright inversion at $75\%$ ($-1.642$, i.e.\ a TabNet binary MCC of $\approx -0.76$). This is exactly what theory predicts for a two-state symmetric label-flip: with only two classes the \texttt{labels} method necessarily \emph{flips} every selected entry, so below $50\%$ the majority of the supervision is still correct, at $50\%$ the signal is information-free (the flipped and correct fractions balance), and beyond it the labels become a minority-inverted signal that the model dutifully learns in reverse, yielding a \emph{negative} clean-set MCC. The $50\%$ flip point is thus a genuine phase transition, not a gradual decline --- and the widening confidence margins at the cliff (CNN-LSTM binary $\pm0.114$ at $50\%$ versus $\pm0.011$ in the flat regime) quantify the seed-to-seed instability of a model balanced on the knife-edge of inversion. Corrupting the \emph{multi-class} target \texttt{Label}, by contrast, never triggers a cliff on its own (multi-class) head: degradation is gradual and monotone (TabNet a steady $-0.03$ to $-0.04$; CNN-LSTM down to $-0.123$ at $50\%$). With fifteen classes a $p\%$ corruption \emph{reassigns} each affected label to one of many alternatives rather than guaranteeing an inversion, so no coherent inverse mapping can ever form. (For completeness, applying the same \texttt{labels} method to the categorical \emph{input} feature \texttt{Protocol} rather than to a target produces only minor effects on either model, confirming that it is corruption of the \emph{supervision signal}, not merely of a discrete column, that carries the danger.)
+\paragraph{Direct consequences on label injected with noise:}
+Reading the directly-corrupted heads (the $\dagger$ rows of Table~\ref{tab:res-B-labelcliff}), the two targets behave in qualitatively opposite ways. Corrupting the \emph{binary} target (\texttt{label\_generic}) leaves its own (binary) head essentially untouched up to $35\%$ and then collapses it off a cliff at $50\%$ ($-0.956$ for TabNet, $-0.668$ for CNN-LSTM) and into outright inversion at $75\%$ (, i.e.\ a TabNet binary MCC of $\approx -0.76$). This is exactly what theory predicts for a two-state symmetric label-flip: with only two classes the \texttt{labels} method necessarily \emph{flips} every selected entry, so below $50\%$ the majority of the supervision is still correct, at $50\%$ the signal is information-free (the flipped and correct fractions balance), and beyond it the labels become a minority-inverted signal that the model dutifully learns in reverse, yielding a \emph{negative} clean-set MCC. The $50\%$ flip point is thus a genuine phase transition, not a gradual decline. Therefore the widening confidence margins at the cliff (CNN-LSTM binary $\pm0.114$ at $50\%$ versus $\pm0.011$ in the flat regime) quantify the seed-to-seed instability of a model balanced on the knife-edge of inversion. 
+Corrupting the \emph{multi-class} target (\texttt{Label}), by contrast, never triggers a significant cliff on its own (multi-class) head: degradation is gradual and monotone (TabNet a steady $-0.03$ to $-0.04$; CNN-LSTM down to $-0.123$ at $50\%$). With fifteen classes a $p\%$ corruption \emph{reassigns} each affected label to one of many alternatives rather than guaranteeing an inversion, so no coherent inverse mapping can ever form. 
 
-\paragraph{Cross effects: corruption leaks between heads, asymmetrically.}
-The genuinely novel observation lies in the off-diagonal (unmarked) rows of Table~\ref{tab:res-B-labelcliff}, i.e.\ in what happens to the head whose target was \emph{not} corrupted. Here a \emph{double} asymmetry emerges. First, \textbf{the contamination is directional}: the catastrophic collapse of \texttt{label\_generic} \emph{propagates} to the multi-class head of the CNN-LSTM ($-0.536$ at $75\%$), whereas corrupting \texttt{Label} leaves the binary head of \emph{both} models effectively at baseline ($|\Delta| \le 0.03$, with margins that overlap zero). Damage therefore flows from the binary target to the multi-class one, but not the reverse --- precisely because the binary collapse is a \emph{global inversion} of the representation that the two heads share, whereas multi-class corruption is a diffuse re-shuffle carrying no coherent signal to leak. Second, \textbf{the contamination is architecture-dependent}: the very same binary collapse that drags the CNN-LSTM's multi-class head down by $-0.536$ barely moves TabNet's ($-0.050$ at $75\%$). TabNet feeds its two heads from a sparsity-regularised, attention-selected representation that stays partially disentangled per task, so a corrupted supervisory signal remains largely confined to its own head; the CNN-LSTM's two heads instead branch off a \emph{single} shared context vector that offers no such firewall, so the catastrophic gradient of the inverted binary loss contaminates the multi-class head as well. This is exactly the kind of asymmetric, task- and architecture-specific coupling that motivated monitoring both heads simultaneously (Section~\ref{Chap: model selection}): it would have been completely invisible under a single-task evaluation.
+
+\paragraph{Indirect consequences on label injected with noise: Leakage of prediction error:}
+Although both models seem to not register any significant performance loss before 35\% noise injection, but at 50\% they both collapse tremendously (TabNet: $\Delta MCC = -0.956{\pm}0.041$, while CNN-LSTM: $\Delta MCC = -0.668{\pm}0.114$) on binary label being corrupted; while registering no particular sign of deterioration on multiclass-label. Yet, after that point, reaching 75\% level of corruption also the multiclass-label prediction start tremendously suffer registering levels of:
+\begin{itemize}
+    \item For \textbf{TabNet}:
+    \begin{itemize}
+        \item $\Delta MCC = -1.642$ : for binary target where noise is being injected (flipping binary label).
+        \item $\Delta MCC = -0.050$ : for multiclass target (clean).
+    \end{itemize}
+    Signifying tat TabNet is particularly resilient even to this more aggressive noise injection strategies, as the clean target only loses about very few points of MCC. This makes sense as TabNet feeds its two heads from a sparsity-regularised, attention-selected representation that stays partially disentangled per task, so a corrupted supervisory signal remains largely confined to its own head.
+    
+    \item For \textbf{CNN-LSTM}:
+    \begin{itemize}
+        \item $\Delta MCC = -0.864$ : for binary target where noise is being injected (flipping binary label).
+        \item $\Delta MCC = -0.5360$ : for multiclass target (clean).
+    \end{itemize}
+    A much more interesting result, the catastrophic collapse of \texttt{label\_generic} \emph{propagates} to the multi-class head of the CNN-LSTM. This makes complete sense when considering CNN-LSTM architechture: the CNN-LSTM's two heads branch off a \emph{single} shared context vector, so the catastrophic gradient of the inverted binary loss contaminates the multi-class head as well. 
+\end{itemize}
+Therefore we can conclude that \textbf{the contamination is architecture-dependent}: the very same binary collapse that drags the CNN-LSTM's multi-class head down by $-0.536$ barely moves TabNet's ($-0.050$ at $75\%$).  
+
+Quite the contrary, when considering effects of corrupting multi-class-target on binary classe predition. In those cases no significant consequences on MCC are monitored. Even if considering that CNN-LSTM shares prediction backbone for both prediction heads, we easily proved that damage flows from the binary target to the multi-class one, but not the reverse precisely because the binary collapse is a \emph{global inversion} of the representation that the two heads share, whereas multi-class corruption is a diffuse re-shuffle carrying no coherent signal to leak. 
+
+
+
+
+
+
+
+
+------------------------------------------------------
 
 \paragraph{Considerations on label corruption.}
 Three lessons follow. First, \textbf{corrupting the supervision signal is categorically different from corrupting the inputs}: feature noise degrades gracefully (and is sometimes even beneficial), whereas binary-label noise is harmless up to a $\approx 50\%$ threshold and then catastrophic, with an outright inversion regime beyond it. Second, \textbf{the damage scales with the label's cardinality}: a two-state target admits a sharp flip-induced cliff, a fifteen-state target only a gradual decay, because the former guarantees an inversion while the latter merely re-shuffles among many alternatives. Third, and most distinctive, \textbf{label noise does not stay local}: through the shared multi-task encoder it can \emph{leak} onto the other head --- but only in the binary$\rightarrow$multi-class direction, and only for the architecture (CNN-LSTM) whose heads are not attention-disentangled. For an operational multi-task IDS this delineates the single most important data-quality boundary: the integrity of the \emph{binary} label must be guaranteed above all, since its corruption past the half-way point not only inverts detection but can simultaneously poison attack-type attribution through a coupling that single-task monitoring would never reveal.
+%un'altra considerazione importante:
+The decisive practical lesson is that \textbf{corrupting the supervision signal behaves fundamentally differently from corrupting the inputs}. Feature noise degrades gracefully and is sometimes even beneficial; binary-label noise is harmless up to a surprisingly high threshold and then catastrophic beyond it, with the additional risk of contaminating a coupled task through a shared representation. For an operational IDS this delineates the single most important data-quality boundary: a training pipeline can tolerate substantial feature-level corruption, but must guarantee that fewer than roughly half of its binary labels are mislabelled, since the failure mode past that point is not mere degradation but inversion.
+
+
+
 
 % ------------------------------------------------------------
-\newpage
+\begin{landscape}
 \subsection{Multiple-Feature Corruption}
 \label{sec:res-B-multi}
 % ------------------------------------------------------------
 
-The multiple-feature scenario corrupts several columns simultaneously within a single PuckTrick call, probing the compound effects that the single-feature sweep cannot reach. Six input-feature groups (spanning combinations of importance and fragility, Section~\ref{sec:exp-B-multi}) are corrupted with \texttt{missing}, \texttt{noise}, and \texttt{outliers}, while a seventh group bundles the two targets for joint \texttt{labels} corruption.
+The multiple-feature scenario corrupts several columns simultaneously within a single \texttt{PuckTrick} call, probing the compound effects that the single-feature sweep cannot reach. Six input-feature groups (spanning combinations of importance and fragility, Section~\ref{sec:exp-B-multi}) are corrupted with \texttt{missing}, \texttt{noise}, and \texttt{outliers}, while a seventh group bundles the two targets for joint \texttt{labels} corruption. Full experimental grid results are displayed below:
+\begin{figure}[H]
+    \centering
+    \makebox[\textwidth][c]{\includegraphics[width=1.3\linewidth]{images/results/Expb_multifeature_TabNet_full.png}}
+    \caption{Full result grid spectrum over MCC for TabNet in both prediction heads (bynary task sx, multitask task dx)}
+    \label{fig:CNN-LSTM_full_grid_single_feature}
+\end{figure}
+\end{landscape}
+
+
+\begin{landscape}
+\begin{figure}[H]
+    \centering
+    \makebox[\textwidth][c]{\includegraphics[width=1.3\linewidth]{images/results/Expb_multifeature_CNN_full.png}}
+    \caption{Full result grid spectrum over MCC for CNN-LSTM in both prediction heads (bynary task sx, multitask task dx)}
+    \label{fig:CNN-LSTM_full_grid_single_feature}
+\end{figure}
+\end{landscape}
 
 % ------------------------------------------------------------
 \subsubsection{Corruption of feature groups}
@@ -303,17 +374,21 @@ Compound corruption is, broadly, the additive-to-superadditive amplification of 
 \small
 \begin{tabular}{lrr}
 \toprule
-\textbf{Corrupted feature group} & \textbf{Binary} & \textbf{Multi-class} \\
+& \multicolumn{2}{c}{\textbf{CNN-LSTM (75\% corruption)}} & \multicolumn{2}{c}{\textbf{TabNet (75\% corruption)}} \\
+\textbf{Corrupted feature group} & \textbf{Binary} & \textbf{Multi-class} & \textbf{Binary} & \textbf{Multi-class} \\
 \midrule
-Top-3 importance (\texttt{Fwd Act Data Pkts}, \texttt{Dst Port}, \texttt{Init Fwd Win Byts}) & $-0.207{\pm}0.030$ & $-0.367{\pm}0.062$ \\
-Top + middle tiers (6 features)                                                              & $-0.209{\pm}0.011$ & $-0.526{\pm}0.080$ \\
-Middle tier (\texttt{Protocol}, \texttt{PSH Flag Cnt}, \texttt{Fwd Seg Size Min})            & $-0.059{\pm}0.022$ & $-0.153{\pm}0.051$ \\
-Mixed fragility (\texttt{Fwd Act Data Pkts}, \texttt{Idle Mean}, \texttt{Init Fwd Win Byts}) & $-0.038{\pm}0.022$ & $-0.126{\pm}0.046$ \\
-One-per-tier (\texttt{Fwd Act Data Pkts}, \texttt{PSH Flag Cnt}, \texttt{Idle Mean})         & $-0.014{\pm}0.009$ & $-0.038{\pm}0.033$ \\
-Zero-variance control (\texttt{Bwd Byts/b Avg}, \texttt{Fwd Blk Rate Avg}, \texttt{Idle Mean}) & $-0.010{\pm}0.010$ & $-0.035{\pm}0.026$ \\
+Top-3 importance (\texttt{Fwd Act Data Pkts}, \texttt{Dst Port}, \texttt{Init Fwd Win Byts}) & $-0.207{\pm}0.030$ & $-0.367{\pm}0.062$   &   &  \\
+Top + middle tiers (6 features)                                                              & $-0.209{\pm}0.011$ & $-0.526{\pm}0.080$   &   &  \\
+Middle tier (\texttt{Protocol}, \texttt{PSH Flag Cnt}, \texttt{Fwd Seg Size Min})            & $-0.059{\pm}0.022$ & $-0.153{\pm}0.051$   &   &  \\
+Highest fragility (\texttt{Fwd Act Data Pkts}, \texttt{Idle Mean}, \texttt{Init Fwd Win Byts}) & $-0.038{\pm}0.022$ & $-0.126{\pm}0.046$ &   &  \\
+One-per-tier (\texttt{Fwd Act Data Pkts}, \texttt{PSH Flag Cnt}, \texttt{Idle Mean})         & $-0.014{\pm}0.009$ & $-0.038{\pm}0.033$   &   &  \\
+Zero-variance control (\texttt{Bwd Byts/b Avg}, \texttt{Fwd Blk Rate Avg}, \texttt{Idle Mean}) & $-0.010{\pm}0.010$ & $-0.035{\pm}0.026$ &   &  \\
 \bottomrule
 \end{tabular}
 \end{table}
+
+Notably no column-group features the \texttt{Timestamp} column. This is done because this experiment's final objective is expand on previous experiment about single-feature-noise-injection (Section \ref{sec:res-B-single-feat}) most destructive performance and doubling down on them, figuring out if any of this corruptions of multiple columns could reach  same levels of  prediction-performance-decay observed on corruption of binary label (seen in section \ref{sec:res-B-single-label}).
+
 
 \begin{figure}[H]
     \centering
