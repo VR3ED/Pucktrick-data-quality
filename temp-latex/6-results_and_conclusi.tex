@@ -365,26 +365,29 @@ The multiple-feature scenario corrupts several columns simultaneously within a s
 \label{sec:res-B-multi-feat}
 % ------------------------------------------------------------
 
-Compound corruption is, broadly, the additive-to-superadditive amplification of the single-feature degradations, dominated by the \texttt{outliers} method on the most important groups. Table~\ref{tab:res-B-multi-outliers} reports the CNN-LSTM degradation under \texttt{outliers} at the highest noise level, ordered to expose the dependence on group composition.
+Compound corruption is, broadly, the additive-to-superadditive amplification of the single-feature degradations, dominated by the \texttt{outliers} method on the most important groups. Table~\ref{tab:res-B-multi-outliers} reports the degradation of \emph{both} models under \texttt{outliers} at the highest noise level, ordered to expose the dependence on group composition and, side by side, the order-of-magnitude gap between the two architectures.
 
 \begin{table}[H]
 \centering
-\caption{\red{Experiment~B}, multiple-feature: CNN-LSTM $\Delta\mathrm{MCC} \pm \delta$ (Student-$t$ $95\%$ half-width over 20 seeds) at $75\%$ \texttt{outliers} corruption, by feature group. Degradation scales jointly with the number of corrupted features and their importance; the zero-variance group is an inert negative control even under compound corruption (its margin overlaps zero, hence it is not significant).}
+\caption{\red{Experiment~B}, multiple-feature: $\Delta\mathrm{MCC} \pm \delta$ (Student-$t$ $95\%$ half-width over 20 seeds) at $75\%$ \texttt{outliers} corruption, by feature group, for \emph{both} models. Degradation scales jointly with the number of corrupted features and their importance, yet the two architectures respond on entirely different scales: on the worst group (six important features) the CNN-LSTM multi-class head loses $-0.526$ whereas TabNet loses only $-0.051$, roughly an order of magnitude less. The zero-variance group is an inert negative control for the binary task of both models; TabNet's residual multi-class offset ($\approx -0.03$ to $-0.04$) is the same near-uniform penalty it pays under \emph{any} corruption (note it is essentially identical for the zero-variance control), present already at low noise and largely independent of which features are hit.}
 \label{tab:res-B-multi-outliers}
 \small
-\begin{tabular}{lrr}
+\resizebox{\linewidth}{!}{%
+\begin{tabular}{lrrrr}
 \toprule
-& \multicolumn{2}{c}{\textbf{CNN-LSTM (75\% corruption)}} & \multicolumn{2}{c}{\textbf{TabNet (75\% corruption)}} \\
+& \multicolumn{2}{c}{\textbf{CNN-LSTM}} & \multicolumn{2}{c}{\textbf{TabNet}} \\
+\cmidrule(lr){2-3}\cmidrule(lr){4-5}
 \textbf{Corrupted feature group} & \textbf{Binary} & \textbf{Multi-class} & \textbf{Binary} & \textbf{Multi-class} \\
 \midrule
-Top-3 importance (\texttt{Fwd Act Data Pkts}, \texttt{Dst Port}, \texttt{Init Fwd Win Byts}) & $-0.207{\pm}0.030$ & $-0.367{\pm}0.062$   &   &  \\
-Top + middle tiers (6 features)                                                              & $-0.209{\pm}0.011$ & $-0.526{\pm}0.080$   &   &  \\
-Middle tier (\texttt{Protocol}, \texttt{PSH Flag Cnt}, \texttt{Fwd Seg Size Min})            & $-0.059{\pm}0.022$ & $-0.153{\pm}0.051$   &   &  \\
-Highest fragility (\texttt{Fwd Act Data Pkts}, \texttt{Idle Mean}, \texttt{Init Fwd Win Byts}) & $-0.038{\pm}0.022$ & $-0.126{\pm}0.046$ &   &  \\
-One-per-tier (\texttt{Fwd Act Data Pkts}, \texttt{PSH Flag Cnt}, \texttt{Idle Mean})         & $-0.014{\pm}0.009$ & $-0.038{\pm}0.033$   &   &  \\
-Zero-variance control (\texttt{Bwd Byts/b Avg}, \texttt{Fwd Blk Rate Avg}, \texttt{Idle Mean}) & $-0.010{\pm}0.010$ & $-0.035{\pm}0.026$ &   &  \\
+Top-3 importance (\texttt{Fwd Act Data Pkts}, \texttt{Dst Port}, \texttt{Init Fwd Win Byts}) & $-0.207{\pm}0.030$ & $-0.367{\pm}0.062$ & $-0.039{\pm}0.018$ & $-0.054{\pm}0.015$ \\
+Top + middle tiers (6 features)                                                              & $-0.209{\pm}0.011$ & $-0.526{\pm}0.080$ & $-0.026{\pm}0.009$ & $-0.051{\pm}0.012$ \\
+Middle tier (\texttt{Protocol}, \texttt{PSH Flag Cnt}, \texttt{Fwd Seg Size Min})            & $-0.059{\pm}0.022$ & $-0.153{\pm}0.051$ & $-0.013{\pm}0.007$ & $-0.029{\pm}0.005$ \\
+Highest fragility (\texttt{Fwd Act Data Pkts}, \texttt{Idle Mean}, \texttt{Init Fwd Win Byts}) & $-0.038{\pm}0.022$ & $-0.126{\pm}0.046$ & $-0.009{\pm}0.002$ & $-0.026{\pm}0.006$ \\
+One-per-tier (\texttt{Fwd Act Data Pkts}, \texttt{PSH Flag Cnt}, \texttt{Idle Mean})         & $-0.014{\pm}0.009$ & $-0.038{\pm}0.033$ & $-0.005{\pm}0.003$ & $-0.026{\pm}0.006$ \\
+Zero-variance control (\texttt{Bwd Byts/b Avg}, \texttt{Fwd Blk Rate Avg}, \texttt{Idle Mean}) & $-0.010{\pm}0.010$ & $-0.035{\pm}0.026$ & $-0.004{\pm}0.006$ & $-0.039{\pm}0.009$ \\
 \bottomrule
-\end{tabular}
+\end{tabular}%
+}
 \end{table}
 
 Notably no column-group features the \texttt{Timestamp} column. This is done because this experiment's final objective is expand on previous experiment about single-feature-noise-injection (Section \ref{sec:res-B-single-feat}) most destructive performance and doubling down on them, figuring out if any of this corruptions of multiple columns could reach  same levels of  prediction-performance-decay observed on corruption of binary label (seen in section \ref{sec:res-B-single-label}).
@@ -399,7 +402,10 @@ Notably no column-group features the \texttt{Timestamp} column. This is done bec
     \label{fig:res-B-multi-heatmap}
 \end{figure}
 
-Two structural facts stand out. First, the \texttt{outliers} corruption of the six-feature top-and-middle group drives the CNN-LSTM multi-class MCC down by more than half its baseline at $75\%$ ($-0.526$), the single most severe feature-level degradation in the entire campaign; \texttt{noise} on the same group is comparably destructive ($-0.494$), whereas \texttt{missing} is markedly gentler ($-0.223$), because masked values are absorbed by the embedding/scaling pipeline rather than injected as out-of-distribution magnitudes. Second, and crucially, the \textbf{beneficial regime essentially disappears in the compound setting}: the \texttt{Timestamp} feature is not a member of any group, so the regularising effect of Section~\ref{sec:res-B-single-feat} cannot manifest, and only a handful of marginal CNN-LSTM gains survive (e.g.\ \texttt{noise} on the mixed-fragility group, $+0.010$ at $35\%$). TabNet, once again, is remarkably resilient: even corrupting six important features at $75\%$ costs it at most $\approx -0.05$ on the multi-class task and $\approx -0.04$ on the binary task. The zero-variance group remains inert in every method and at every intensity, confirming that the negative control holds even under compound corruption.
+Two structural facts stand out. First, the \texttt{outliers} corruption of the six-feature top-and-middle group drives the CNN-LSTM multi-class MCC down by more than half its baseline at $75\%$ ($-0.526$), the single most severe feature-level degradation in the entire campaign; \texttt{noise} on the same group is comparably destructive ($-0.494$), whereas \texttt{missing} is markedly gentler ($-0.223$), because masked values are absorbed by the embedding/scaling pipeline rather than injected as out-of-distribution magnitudes. Second, and crucially, the \textbf{beneficial regime essentially disappears in the compound setting}: the \texttt{Timestamp} feature is not a member of any group, so the regularising effect of Section~\ref{sec:res-B-single-feat} cannot manifest, and only a handful of marginal CNN-LSTM gains survive (e.g.\ \texttt{noise} on the mixed-fragility group, $+0.010$ at $35\%$). The zero-variance group remains inert in every method and at every intensity, confirming that the negative control holds even under compound corruption.
+
+\paragraph{TabNet under compound corruption.}
+The right-hand columns of Table~\ref{tab:res-B-multi-outliers} tell a completely different story, and one that holds across the \emph{whole} noise grid rather than at $75\%$ alone. On the \textbf{binary} task TabNet is, for practical purposes, immovable: every group at every intensity stays within a few thousandths of the baseline, and the largest loss recorded anywhere in the compound-\texttt{outliers} sweep is a mere $-0.039 {\pm} 0.018$ (the three most important features at $75\%$), while corrupting six important features at the same intensity costs only $-0.026 {\pm} 0.009$. The progression is gently monotone in the noise level (e.g.\ the top-three group drifts $-0.004 \to -0.013 \to -0.039$ from $5\%$ to $50\%$ to $75\%$) but never accelerates into the super-additive collapse seen for the CNN-LSTM: TabNet's per-decision-step sparse feature selection re-routes attention around the corrupted columns just as effectively when several are hit at once as when only one is, so there is no compound cliff. On the \textbf{multi-class} task the picture is subtler but equally telling. TabNet pays a near-uniform penalty of $\approx -0.025$ to $-0.035$ that is already present at the lowest noise level and barely deepens as corruption intensifies (the top-three group moves only from $-0.028$ at $5\%$ to $-0.054$ at $75\%$). Decisively, this offset is essentially identical for the \emph{zero-variance control} group ($-0.028$ at $5\%$, $-0.039$ at $75\%$), whose features carry no information at all: the penalty therefore cannot be attributed to the loss of the corrupted signal, and is better read as a generic sensitivity of TabNet's minority-class resolution to \emph{any} perturbation of the training distribution --- the multi-class ``tax'' already noted in the single-feature regime (Section~\ref{sec:res-B-single-feat}), here confirmed to be independent of which, and how many, features are dirtied. The contrast with the CNN-LSTM is stark: on the worst group at $75\%$ TabNet's multi-class head loses $-0.051$ against the CNN-LSTM's $-0.526$, an order of magnitude less. In short, compound feature corruption \emph{confirms rather than overturns} the single-feature verdict --- TabNet is intrinsically robust to the joint corruption of input features, and the only manipulation capable of genuinely breaking it remains the inversion of the binary supervision signal itself (Section~\ref{sec:res-B-single-label}).
 
 % ------------------------------------------------------------
 \subsubsection{Corruption of the target-label group}
