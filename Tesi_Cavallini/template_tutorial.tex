@@ -1,0 +1,324 @@
+
+
+% Remove the following tutorial to clean the template
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% BEGIN TUTORIAL %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+
+\chapter{Step1: structure of the document}
+
+\section{Introduction}
+
+This is the first section.
+
+Lorem  ipsum  dolor  sit  amet,  consectetuer  adipiscing  
+elit. Etiam  lobortisfacilisis sem.  Nullam nec mi et 
+neque pharetra sollicitudin.  Praesent imperdietmi nec ante. 
+Donec ullamcorper, felis non sodales...
+
+\section{Second Section}
+
+Lorem ipsum dolor sit amet, consectetuer adipiscing elit.  
+Etiam lobortis facilisissem.  Nullam nec mi et neque pharetra 
+sollicitudin.  Praesent imperdiet mi necante...
+
+\subsection{First Subsection}
+Praesent imperdietmi nec ante. Donec ullamcorper, felis non sodales...
+
+\subsubsection{First subsubsection}
+Lorem ipsum dolor sit amet, consectetuer adipiscing elit.  
+Etiam lobortis facilisissem.
+\paragraph{First paragraph}
+Lorem ipsum dolor sit amet, consectetuer adipiscing elit.  
+Etiam lobortis facilisissem.
+\subparagraph{First subparagraph}
+Lorem ipsum dolor sit amet, consectetuer adipiscing elit.  
+Etiam lobortis facilisissem.
+
+\section*{Unnumbered Section}
+Lorem ipsum dolor sit amet, consectetuer adipiscing elit.  
+Etiam lobortis facilisissem...
+
+\chapter{Step2: Text style}
+\section{Bold}
+Example of bold \textbf{text}.
+\section{Italic}
+Example of italic \textit{text}.
+\section{Underline}
+Example of underlined \underline{text}.
+\section{mixed}
+Example of mixed \textbf{\textit{word}}
+\section{emph}
+\textbf{Example of emph \emph{word}}\\
+\textit{Example of emph \emph{word}}
+
+\chapter{Elements of the document}
+\section{Images}
+
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.5\textwidth]{u14.jpg}
+\caption{Example image}
+\label{img:ref_image}
+\end{figure}
+
+Reference to the image \ref{img:ref_image}.
+
+\section{Tables}
+\begin{table}
+\centering
+\begin{tabular}{|c|c|c|} 
+ \hline
+ cell1 & cell2 & cell3 \\ \hline
+ cell4 & cell5 & cell6 \\ \hline
+ cell7 & cell8 & cell9 \\ \hline
+\end{tabular}
+\caption{Example table}
+\label{tab:ref_table}
+\end{table}
+
+Reference to the table \ref{tab:ref_table}.
+
+\section{List}
+Example of an unordered list:
+\begin{itemize}
+  \item List entries start with the \verb|\item| command.
+  \item Individual entries are indicated with a black dot, a so-called bullet.
+  \item The text in the entries may be of any length.
+\end{itemize}
+
+Example of an ordered list:
+\begin{enumerate}
+  \item This is the first entry in our list.
+  \item The list numbers increase with each entry we add.
+\end{enumerate}
+
+Example of nested list:
+\begin{enumerate}
+   \item First level item
+   \item First level item
+   \begin{enumerate}
+     \item Second level item
+     \item Second level item
+     \begin{enumerate}
+       \item Third level item
+       \item Third level item
+       \begin{enumerate}
+         \item Fourth level item
+         \item Fourth level item
+       \end{enumerate}
+     \end{enumerate}
+   \end{enumerate}
+ \end{enumerate}
+
+
+\section{Equations}
+
+This is an example of an in-line equation: $E = MC^2$\\
+This is an example of an display mode equation:
+\begin{equation}
+    E = MC^2
+\label{eq}
+\end{equation}
+
+This is a reference to the Equation \ref{eq}.
+
+\section{Code Snippet}
+
+\subsection{verbatim}
+\begin{verbatim}
+Text enclosed inside \texttt{verbatim} environment 
+is printed directly 
+and all \LaTeX{} commands are ignored.
+\end{verbatim}
+
+\subsection{listings}
+\begin{lstlisting}
+import numpy as np
+    
+def incmatrix(genl1,genl2):
+    m = len(genl1)
+    n = len(genl2)
+    M = None #to become the incidence matrix
+    VT = np.zeros((n*m,1), int)  #dummy variable
+    
+    #compute the bitwise xor matrix
+    M1 = bitxormatrix(genl1)
+    M2 = np.triu(bitxormatrix(genl2),1) 
+
+    for i in range(m-1):
+        for j in range(i+1, m):
+            [r,c] = np.where(M2 == M1[i,j])
+            for k in range(len(r)):
+                VT[(i)*n + r[k]] = 1;
+                VT[(i)*n + c[k]] = 1;
+                VT[(j)*n + r[k]] = 1;
+                VT[(j)*n + c[k]] = 1;
+                
+                if M is None:
+                    M = np.copy(VT)
+                else:
+                    M = np.concatenate((M, VT), 1)
+                
+                VT = np.zeros((n*m,1), int)
+    
+    return M
+\end{lstlisting}
+
+\subsection{algpseudocode}
+\begin{algorithmic}
+\State $i \gets 10$
+\If{$i\geq 5$} 
+    \State $i \gets i-1$
+\Else
+    \If{$i\leq 3$}
+        \State $i \gets i+2$
+    \EndIf
+\EndIf 
+\end{algorithmic}
+
+\subsection{algorithm}
+
+reference to algorithm \ref{alg:cap}
+\begin{algorithm}[!h]
+\caption{An algorithm with caption}\label{alg:cap}
+\begin{algorithmic}
+\Require $n \geq 0$
+\Ensure $y = x^n$
+\State $y \gets 1$
+\State $X \gets x$
+\State $N \gets n$
+\While{$N \neq 0$}
+\If{$N$ is even}
+    \State $X \gets X \times X$
+    \State $N \gets \frac{N}{2}$  \Comment{This is a comment}
+\ElsIf{$N$ is odd}
+    \State $y \gets y \times X$
+    \State $N \gets N - 1$
+\EndIf
+\EndWhile
+\end{algorithmic}
+\end{algorithm}
+
+\section{href}
+For further references see \href{http://www.overleaf.com}{Something Linky} 
+or go to the next url: \url{http://www.overleaf.com}
+
+\chapter{Positioning and Size}
+
+\section{package adjustbox}
+\includegraphics[width=0.5\textwidth, right]{u14.jpg}
+
+\section{Figure environment}
+
+\begin{figure}[h]
+\includegraphics[width=0.5\textwidth, inner]{u14}
+\caption{h image}
+\label{fig:figure4}
+\end{figure}
+
+\begin{figure}[t]
+\includegraphics[width=0.5\textwidth, inner]{u14}
+\caption{Top image}
+\label{fig:figure2}
+\end{figure}
+
+\begin{figure}[!]
+\includegraphics[width=0.5\textwidth, inner]{u14}
+\caption{! image}
+\label{fig:figure3}
+\end{figure}
+
+\chapter{Advanced images and table}
+
+\section{Double figures}
+Praesent in sapien. Lorem ipsum dolor sit amet, consectetuer adipiscing elit. Duis fringilla tristique neque...
+
+\begin{figure}[h]
+\begin{subfigure}{0.5\textwidth}
+\includegraphics[width=0.9\linewidth, height=6cm]{u14} 
+\caption{Caption1}
+\label{fig:subim1}
+\end{subfigure}
+\begin{subfigure}{0.5\textwidth}
+\includegraphics[width=0.9\linewidth, height=6cm]{u14}
+\caption{Caption 2}
+\label{fig:subim2}
+\end{subfigure}
+
+\caption{Caption for this figure with two images}
+\label{fig:image2}
+\end{figure}
+
+Praesent blandit blandit mauris. Praesent lectus tellus, aliquet aliquam, luctus a, egestas a, turpis. Mauris lacinia lorem sit amet ipsum. Nunc quis urna dictum turpis accumsan semper.
+
+\section{Wrapped images}
+
+Praesent in sapien. Lorem ipsum dolor sit amet, consectetuer 
+adipiscing elit. Duis fringilla tristique neque. Sed interdum 
+libero ut metus. Pellentesque placerat.
+
+\begin{wrapfigure}{l}{0.25\textwidth}
+\includegraphics[width=0.9\linewidth]{u14} 
+\caption{Caption1}
+\label{fig:wrapfig}
+\end{wrapfigure}
+
+Praesent in sapien. Lorem ipsum dolor sit amet, consectetuer 
+adipiscing elit. Duis fringilla tristique neque. Sed interdum
+Lorem ipsum dolor sit amet, consectetur adipisici elit, sed eiusmod tempor incidunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquid ex ea commodi consequat. Quis aute iure reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint obcaecat cupiditat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.
+
+\subsection{Wrapped Tables}
+
+Ciao! \cite{knuthwebsite}. Questo è il sito di Knuth.
+
+Lorem ipsum dolor sit amet, consectetur adipisici elit, sed eiusmod tempor incidunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquid ex ea commodi consequat. Quis aute iure reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint obcaecat cupiditat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.
+%------------------------------------------
+\begin{wraptable}{r}{5.5cm}
+\caption{A wrapped table going nicely inside the text.}\label{wrap-tab:1}
+\begin{tabular}{ccc}\  
+Header-1 & Header-1 & Header-1 \\
+2 &3 & 5\\  
+2 &3 & 5\\  
+2 &3 & 5\\  
+\end{tabular}
+\end{wraptable}
+Lorem ipsum dolor sit amet, consectetur adipisici elit, sed eiusmod tempor incidunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquid ex ea commodi consequat. Quis aute iure reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint obcaecat cupiditat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.
+
+\chapter{Additional concepts}
+
+\section{Terms}
+
+The \Gls{latex} typesetting markup language is specially suitable 
+for documents that include maths. Formula are rendered 
+properly an easily once one gets used to the commands.
+
+\section{Acronym}
+
+Given a set of numbers, there are elementary methods to compute 
+its \ac{gcd}, which is abbreviated gcd. This 
+process is similar to that used for the lcm.
+
+\chapter{Multiple files management}
+\section{Multiple file 1}
+\subfile{multiple-files/file-one}
+
+\section{Multiple file 1}
+
+\subfile{multiple-files/file-two}
+
+\chapter{Citations}
+
+Let's cite! Einstein's journal paper \cite{einstein} and Dirac's
+book \cite{dirac} are physics-related items.
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% END TUTORIAL %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+
+

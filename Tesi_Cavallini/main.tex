@@ -1,0 +1,94 @@
+\documentclass[a4paper, oneside]{book}
+\usepackage{graphicx} % allows inserting graphics
+\usepackage{listings}
+\usepackage{algpseudocode} % allows code snippets
+\usepackage{algorithm}
+\usepackage{hyperref} % allows
+\usepackage{subcaption} 
+\usepackage[export]{adjustbox} 
+\usepackage{wrapfig} % allows warped figures
+\usepackage[acronym]{glossaries} % add glossary
+\usepackage{acronym} % add acronyms
+\usepackage{subfiles} % support multiple files
+\usepackage{fancyhdr} % more control on headers and footers
+\usepackage{xcolor}
+\usepackage{minted} % Per i blocchi di codice
+\usepackage{tikz}
+\usetikzlibrary{arrows.meta, positioning}
+\usepackage{tabularx}
+\usepackage{booktabs}
+\usepackage{caption}
+\usepackage{pdflscape}
+\usepackage{geometry}
+\usepackage{arydshln}
+
+\newcommand{\red}[1]{\textcolor{red}{#1}}
+
+\graphicspath{ {./images/} }
+
+\pagestyle{plain} %oppure none
+% Altrimenti usare fancy header per più controllo: https://www.overleaf.com/learn/latex/Headers_and_footers#Using_the_fancyhdr_package
+
+% Configura profondità di numerazione e sommario
+\setcounter{secnumdepth}{3} 
+\setcounter{tocdepth}{3}
+
+%% BIBLIGRAPHY SETUP %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%\usepackage{biblatex} 
+\usepackage[
+  backend=biber,
+  style=numeric,
+  sorting=none
+]{biblatex}
+\addbibresource{bibliography.bib}
+
+\DeclareCiteCommand{\supercite}[\mkbibsuperscript]
+  {\usebibmacro{prenote}}
+  {\mkbibbrackets{\usebibmacro{citeindex}\usebibmacro{cite}}}
+  {\multicitedelim}
+  {\usebibmacro{postnote}}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\makeglossaries
+
+\newglossaryentry{latex}{name=latex,
+    description={Is a markup language specially suited for 
+scientific documents}}
+
+\begin{document}
+
+
+%\maketitle
+\subfile{frontispiece}
+
+\tableofcontents
+\listoffigures
+\listoftables
+\printglossary
+\clearpage
+\subfile{chapters/0-Acronyms}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\subfile{chapters/0-abstract}
+\subfile{chapters/1-introduction.tex}
+\subfile{chapters/2-state-of-the-art}
+\subfile{chapters/3-Implementation-Design}
+\subfile{chapters/4-Datataset-Analysis}
+\subfile{chapters/5-Empiric-analysis-models}
+\subfile{chapters/6-conclusion}
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\printbibliography
+\addcontentsline{toc}{chapter}{Bibliography}  % to make it appear in the ToC
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\subfile{chapters/7-appendix}
+
+\end{document}
+
+

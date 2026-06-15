@@ -77,8 +77,10 @@ folder grows.
 | 7. Model comparison | Is TabNet or CNN-LSTM more noise-robust? | Architectural insight. |
 | 8. Per-class analysis | Which attack classes benefit / suffer? | The macro metric can hide per-class effects on rare attacks. |
 | 9. Feature-importance drift | Does corrupting a feature change what the model relies on? | Mechanistic explanation of the trends. |
+| 9b. Rank-drift | How does each corrupted feature's *importance rank* move? | Reads off the mechanism feature-by-feature. |
 | 10. Export | LaTeX/CSV artefacts | Drop-in tables/figures for `temp-latex`. |
 | 11. Auto-summary | A written digest with the key numbers | Starting point for the chapter's conclusions. |
+| 12. Confusion breakdown | For a chosen method, how do TP/TN/FP/FN move vs. the baseline at each noise level? | Shows the FP/FN trade-off behind a &Delta;MCC. |
 
 *Note on language:* the narrative is written in English so it can be lifted
 straight into the (English) thesis in `temp-latex`.
@@ -667,6 +669,70 @@ scaffolding to be edited into academic English, not as final text.""")
     print("\n".join(lines))
 
 auto_summary()""")
+
+    # ------------------------------------------------------------------ #
+    # 12. Confusion breakdown vs baseline (Experiment A only)            #
+    # ------------------------------------------------------------------ #
+    if is_A:
+        md(r"""## 12. Confusion breakdown vs. the clean baseline (per noise level)
+
+This section opens up the binary confusion matrix that the headline MCC/F1
+summarise. For a **chosen PuckTrick method** it produces, **for both models**,
+**every corrupted feature** and **every noise percentage**, a *baseline vs.
+experiment* figure:
+
+* two stacked bars per panel &mdash; *Benign (actual)* split into correct=**TN**
+  and wrong=**FP**, *Malicious (actual)* split into correct=**TP** and
+  wrong=**FN**;
+* each count is the **mean over the 5 random seeds** of that cell;
+* every experiment segment is annotated with its **signed change vs. the clean
+  baseline** (so you see exactly how far each mean has moved &mdash; e.g. fewer
+  false positives, more false negatives);
+* the footer reports **&Delta;MCC** (as requested, in place of &Delta;F1) and
+  **&Delta;FP**, all relative to the clean baseline.
+
+This is the operational read of the trade-off behind a change in MCC: a tiny
+MCC shift can hide a meaningful redistribution between false alarms (FP) and
+missed attacks (FN), which matters a great deal for an IDS.""")
+        co(r"""# Choose the PuckTrick method to break down here.
+# Options come from the data: missing | outliers | noise | duplicated | labels
+CONFUSION_METHOD = "noise"
+
+cbin = eu.confusion_bin_dataframe(ROOT_DIR)
+bcb  = eu.baseline_confusion_bin(ROOT_DIR)
+if cbin.empty or bcb.empty:
+    print("No confusion-matrix data / baseline available yet.")
+elif CONFUSION_METHOD not in set(cbin["method"].dropna().unique()):
+    print(f"Method '{CONFUSION_METHOD}' not found. Available:",
+          sorted(cbin["method"].dropna().unique()))
+else:
+    sub = cbin[cbin["method"] == CONFUSION_METHOD]
+    for model in sorted(sub["model"].dropna().unique()):
+        msub = sub[sub["model"] == model]
+        for feature in sorted(msub["feature"].dropna().unique()):
+            for pct in sorted(msub[msub["feature"] == feature]
+                              ["noise_percentage"].dropna().unique()):
+                fig = eu.plot_confusion_breakdown(cbin, bcb, model,
+                                                  CONFUSION_METHOD, feature, pct)
+                if fig is not None:
+                    plt.show()""")
+        co(r"""# Numeric companion: seed-mean TN/FP/FN/TP (+/-CI) and their baseline deltas,
+# for the chosen method, per (model, feature, noise level). Also exported to CSV.
+if not cbin.empty and not bcb.empty and CONFUSION_METHOD in set(cbin["method"].dropna().unique()):
+    tabs = []
+    for model in sorted(cbin["model"].dropna().unique()):
+        t = eu.confusion_breakdown_table(cbin, bcb, model, CONFUSION_METHOD)
+        if not t.empty:
+            tabs.append(t)
+    if tabs:
+        conf_tab = pd.concat(tabs, ignore_index=True)
+        out = os.path.join(RESULTS_DIR, f"confusion_breakdown_{CONFUSION_METHOD}.csv")
+        conf_tab.to_csv(out, index=False)
+        print("[export]", out)
+        display(conf_tab[["model", "feature", "noise_percentage", "n",
+                          "tn_mean", "fp_mean", "fp_delta",
+                          "fn_mean", "fn_delta", "tp_mean",
+                          "mcc_mean", "mcc_delta"]].round(3))""")
 
     if is_A:
         md(r"""---

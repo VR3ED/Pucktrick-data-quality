@@ -15,8 +15,15 @@ The primary evaluation metric is **MCC** (Matthews Correlation Coefficient), rep
 
 ## Thesis Helper
 
-All the thesis chapeters written so far are insede the `temp-latex` folder. Those require to be:
-1. Be writtent in latex
+The thesis exists in two LaTeX locations — know which one you are editing:
+
+- **`Tesi_Cavallini/`** — the **clean, authoritative manuscript** ("la bella"): the polished, up-to-date version that compiles the final thesis. It is a self-contained LaTeX project (`main.tex`, `chapters/`, `images/`, `bibliography.bib`). **Edits intended for the final thesis go here.** Note its chapters use `images/` (not `images/results/`) and `\subfile{../main.tex}` conventions.
+- **`temp-latex/`** — the **drafts / scratch folder**: earlier working versions and bozze of chapters, kept for reference. Not the final document.
+
+When the user asks to work on "the thesis" / "la bella", default to `Tesi_Cavallini/` unless they point to `temp-latex/`.
+
+All thesis chapters require to:
+1. Be written in LaTeX
 2. Use english as language to write down any further chapters
 3. Use academic language
 

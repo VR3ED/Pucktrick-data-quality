@@ -665,6 +665,89 @@ def baseline_feature_rank(baseline_fi: pd.DataFrame, model: str,
 
 
 # --------------------------------------------------------------------------- #
+# Binary confusion-matrix counts (TN / FP / FN / TP)                           #
+# --------------------------------------------------------------------------- #
+
+def _cm_bin_counts(cm) -> Optional[dict]:
+    """Unpack a 2x2 ``cm_bin`` into TN/FP/FN/TP.
+
+    The artifacts store ``cm_bin = [[TN, FP], [FN, TP]]`` (row 0 = actual
+    benign/negative, row 1 = actual malicious/positive). Returns None if the
+    matrix is not a well-formed 2x2.
+    """
+    if not isinstance(cm, list) or len(cm) != 2:
+        return None
+    try:
+        (tn, fp), (fn, tp) = cm
+    except (ValueError, TypeError):
+        return None
+    return {"tn": float(tn), "fp": float(fp), "fn": float(fn), "tp": float(tp)}
+
+
+def confusion_bin_dataframe(root: str) -> pd.DataFrame:
+    """Long table of binary confusion-matrix counts across all noisy runs.
+
+    Columns: ``model, method, feature, noise_percentage, seed, scenario,
+    tn, fp, fn, tp, mcc``. Baseline runs are excluded (loaded separately by
+    :func:`baseline_confusion_bin`).
+    """
+    files = sorted(glob.glob(os.path.join(root, "**", "*_artifacts.json"),
+                             recursive=True))
+    rows = []
+    for f in files:
+        if _is_baseline_path(f):
+            continue
+        try:
+            with open(f) as fh:
+                d = json.load(fh)
+        except (json.JSONDecodeError, OSError):
+            continue
+        counts = _cm_bin_counts(d.get("cm_bin"))
+        if counts is None:
+            continue
+        coords = parse_label(d.get("label") or os.path.basename(f))
+        model = _model_from_path(f) or _model_from_type(d.get("model_type"))
+        row = {
+            "model": model, "method": coords["method"],
+            "feature": coords["feature"],
+            "noise_percentage": coords["noise_percentage"],
+            "seed": _seed_from_path(f), "scenario": _scenario_from_path(f),
+            "mcc": _to_float((d.get("metrics_binary", {}) or {}).get("mcc",
+                                                                     d.get("mcc_bin"))),
+        }
+        row.update(counts)
+        rows.append(row)
+    return pd.DataFrame(rows)
+
+
+def baseline_confusion_bin(root: str) -> pd.DataFrame:
+    """Per-model binary confusion counts of the clean baseline.
+
+    Columns: ``model, tn, fp, fn, tp, mcc``. One row per model.
+    """
+    files = sorted(glob.glob(os.path.join(root, "**", "*_artifacts.json"),
+                             recursive=True))
+    files = [f for f in files if _is_baseline_path(f)]
+    rows = []
+    for f in files:
+        try:
+            with open(f) as fh:
+                d = json.load(fh)
+        except (json.JSONDecodeError, OSError):
+            continue
+        counts = _cm_bin_counts(d.get("cm_bin"))
+        if counts is None:
+            continue
+        model = _model_from_path(f) or _model_from_type(d.get("model_type"))
+        row = {"model": model,
+               "mcc": _to_float((d.get("metrics_binary", {}) or {}).get(
+                   "mcc", d.get("mcc_bin")))}
+        row.update(counts)
+        rows.append(row)
+    return pd.DataFrame(rows)
+
+
+# --------------------------------------------------------------------------- #
 # Plotting                                                                     #
 # --------------------------------------------------------------------------- #
 
@@ -975,6 +1058,157 @@ def plot_feature_rank_drift(fid: pd.DataFrame, model: str,
         fig.savefig(savepath, bbox_inches="tight", dpi=150)
         print(f"[rank-drift] saved -> {savepath}")
     return fig
+
+
+# --------------------------------------------------------------------------- #
+# Baseline-vs-experiment confusion breakdown (TN/FP/TP/FN), per noise level    #
+# --------------------------------------------------------------------------- #
+
+def _fmt_signed(v, decimals=0):
+    """Signed delta string, e.g. '+57' / '-0.0074'."""
+    if not np.isfinite(v):
+        return ""
+    if decimals == 0:
+        return f"{v:+,.0f}"
+    return f"{v:+.{decimals}f}"
+
+
+def plot_confusion_breakdown(cbin: pd.DataFrame, baseline_cbin: pd.DataFrame,
+                             model: str, method: str, feature: str,
+                             noise_percentage: float, figsize=(13, 5.5),
+                             savepath: Optional[str] = None):
+    """Baseline-vs-experiment stacked confusion bars for one (model, method,
+    feature, noise%) cell.
+
+    Reproduces the requested figure: two side-by-side panels (Baseline |
+    Experiment), each with two stacked bars -- *Benign (actual)* split into
+    correct=**TN** and wrong=**FP**, and *Malicious (actual)* split into
+    correct=**TP** and wrong=**FN**. Every count is the **mean over the random
+    seeds** for that cell. The footer reports the change vs. the clean baseline
+    for **MCC** (delta-MCC, as requested instead of delta-F1) and for the false
+    positives (delta-FP).
+
+    Bars are annotated with the mean counts, and the wrong/correct segment labels
+    additionally carry the signed delta vs. the baseline for that same segment
+    (TN/FP/TP/FN), so "how far each mean is from the baseline" is read directly
+    off the figure.
+
+    Returns the Figure, or None if the cell or the baseline is missing.
+    """
+    import matplotlib.pyplot as plt
+    from matplotlib.patches import Patch
+
+    cell = cbin[(cbin["model"] == model) & (cbin["method"] == method)
+                & (cbin["feature"] == feature)
+                & (cbin["noise_percentage"] == noise_percentage)]
+    if cell.empty:
+        print(f"[confusion] No runs for {model}/{method}/{feature}@{noise_percentage:g}%.")
+        return None
+    bsel = baseline_cbin[baseline_cbin["model"] == model] if baseline_cbin is not None else None
+    if bsel is None or bsel.empty:
+        print(f"[confusion] No clean baseline for model={model}.")
+        return None
+
+    n_seeds = cell["seed"].nunique()
+    exp = {k: float(cell[k].mean()) for k in ("tn", "fp", "fn", "tp")}
+    exp_mcc = float(cell["mcc"].mean())
+    base = {k: float(bsel[k].iloc[0]) for k in ("tn", "fp", "fn", "tp")}
+    base_mcc = float(bsel["mcc"].iloc[0])
+
+    c_correct, c_wrong = "#2a8fbd", "#a8c83a"   # blue = correct, green = wrong
+    x = [0, 1]
+    xlabels = ["Benign\n(actual)", "Malicious\n(actual)"]
+
+    fig, axes = plt.subplots(1, 2, figsize=figsize, sharey=True)
+
+    def _panel(ax, counts, title):
+        # Benign bar: correct=TN (bottom), wrong=FP (top).
+        ax.bar(x[0], counts["tn"], color=c_correct)
+        ax.bar(x[0], counts["fp"], bottom=counts["tn"], color=c_wrong)
+        # Malicious bar: correct=TP (bottom), wrong=FN (top).
+        ax.bar(x[1], counts["tp"], color=c_correct)
+        ax.bar(x[1], counts["fn"], bottom=counts["tp"], color=c_wrong)
+        ax.set_xticks(x); ax.set_xticklabels(xlabels)
+        ax.set_title(title, fontsize=12)
+        ax.grid(True, axis="y", alpha=0.3)
+        return counts
+
+    seg_names = {"tn": "TN · True Negatives", "fp": "FP · False Positives",
+                 "tp": "TP · True Positives", "fn": "FN · False Negatives"}
+
+    def _annot(ax, counts, deltas):
+        # counts: dict tn/fp/fn/tp; deltas: same keys or None for baseline panel.
+        def lab(seg, xpos, y_bottom, val):
+            txt = f"{seg_names[seg]}\n{val:,.0f}"
+            if deltas is not None and np.isfinite(deltas[seg]):
+                txt += f" ({_fmt_signed(deltas[seg])})"
+            ax.text(xpos, y_bottom + val / 2, txt, ha="center", va="center",
+                    fontsize=8.5, color="white" if seg in ("tn", "tp") else "black")
+        lab("tn", x[0], 0, counts["tn"])
+        lab("fp", x[0], counts["tn"], counts["fp"])
+        lab("tp", x[1], 0, counts["tp"])
+        lab("fn", x[1], counts["tp"], counts["fn"])
+
+    _panel(axes[0], base, f"Baseline  (MCC={base_mcc:.4f})")
+    _annot(axes[0], base, None)
+    _panel(axes[1], exp, f"Experiment  (MCC={exp_mcc:.4f})")
+    _annot(axes[1], exp, {k: exp[k] - base[k] for k in exp})
+
+    axes[0].set_ylabel("Number of samples")
+    legend = [Patch(facecolor=c_correct, label="Correct prediction"),
+              Patch(facecolor=c_wrong, label="Wrong prediction")]
+    axes[1].legend(handles=legend, loc="upper right", fontsize=9)
+
+    fig.suptitle(f"{model.upper()} — {method} on '{feature}' @ {noise_percentage:g}%",
+                 fontsize=14, fontweight="bold")
+    d_mcc = exp_mcc - base_mcc
+    d_fp = exp["fp"] - base["fp"]
+    dcol = "green" if d_mcc >= 0 else "firebrick"
+    fig.text(0.5, -0.02,
+             f"$\\Delta$MCC = {_fmt_signed(d_mcc, 4)}   |   "
+             f"$\\Delta$FP = {_fmt_signed(d_fp)}   "
+             f"(means over {n_seeds} seeds)",
+             ha="center", fontsize=11, style="italic", color=dcol)
+    fig.tight_layout(rect=(0, 0.02, 1, 0.96))
+    if savepath:
+        os.makedirs(os.path.dirname(savepath), exist_ok=True)
+        fig.savefig(savepath, bbox_inches="tight", dpi=150)
+        print(f"[confusion] saved -> {savepath}")
+    return fig
+
+
+def confusion_breakdown_table(cbin: pd.DataFrame, baseline_cbin: pd.DataFrame,
+                              model: str, method: str,
+                              conf: float = 0.95) -> pd.DataFrame:
+    """Tidy mean(+/-CI) TN/FP/FN/TP and their baseline deltas, per noise level.
+
+    For one (model, method) this returns one row per (feature, noise%) with the
+    seed-averaged confusion counts, their Student-t CI half-widths, and the
+    signed delta of each mean vs. the clean baseline. Handy as the numeric
+    companion of :func:`plot_confusion_breakdown` and for export to the thesis.
+    """
+    sub = cbin[(cbin["model"] == model) & (cbin["method"] == method)].copy()
+    if sub.empty:
+        return pd.DataFrame()
+    base = baseline_cbin[baseline_cbin["model"] == model] if baseline_cbin is not None else None
+    base_row = None if base is None or base.empty else base.iloc[0]
+
+    out = []
+    for (feature, pct), g in sub.groupby(["feature", "noise_percentage"]):
+        rec = {"model": model, "method": method, "feature": feature,
+               "noise_percentage": pct, "n": g["seed"].nunique()}
+        for seg in ("tn", "fp", "fn", "tp", "mcc"):
+            mean = float(g[seg].mean())
+            std = float(g[seg].std(ddof=1)) if len(g) > 1 else float("nan")
+            rec[f"{seg}_mean"] = mean
+            rec[f"{seg}_ci"] = _ci_half_width(std, len(g), conf)
+            if base_row is not None:
+                rec[f"{seg}_delta"] = mean - float(base_row[seg])
+        out.append(rec)
+    res = pd.DataFrame(out)
+    if not res.empty:
+        res = res.sort_values(["feature", "noise_percentage"]).reset_index(drop=True)
+    return res
 
 
 # --------------------------------------------------------------------------- #
