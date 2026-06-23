@@ -221,13 +221,11 @@ Three properties of the present setting reinforce this inertia:
     \item critically, the duplication is uniform rather than class-targeted, so it does not correct the label imbalance: the one mechanism through which row duplication is genuinely beneficial (minority-class oversampling)
 \end{itemize}
 
-The recurrent intuition that duplication regularities is, moreover, traceable to a conflation with \emph{bootstrap aggregating}, whose regularizing power stems from averaging an ensemble of decorrelated models, not from the duplicates contained within any single bootstrap sample. Consistently with this analysis, the empirical deltas hover within the seed-to-seed noise, with only a mild \emph{negative} drift on the CNN-LSTM multi-class head at high duplication levels ($-0.134$ at $20\%$, $-0.118$ at $75\%$): since duplicated rows share the \texttt{Timestamp} of their source and therefore fall adjacent to it once the sequence is chronologically ordered, a sliding window may contain repeated identical flows, slightly distorting the local temporal statistics on which the CNN-LSTM relies: an effect that, if anything, mildly harms rather than helps, and which leaves the order-invariant TabNet untouched.
+The recurrent intuition that duplication regularities is, moreover, traceable to a conflation with \emph{bootstrap aggregating}, whose regularizing power stems from averaging an ensemble of decorrelated models, not from the duplicates contained within any single bootstrap sample. Consistently with this analysis, the empirical deltas hover within the seed-to-seed noise, with only a mild \emph{negative} drift on the CNN-LSTM multi-class head at high duplication levels ($-0.134$ at $20\%$, $-0.118$ at $75\%$): since duplicated rows share the \texttt{Timestamp} of their source and therefore fall adjacent to it once the sequence is chronologically ordered, a sliding window may contain repeated identical flows, slightly distorting the local temporal statistics on which the CNN-LSTM relies: an effect that, if anything, mildly harms rather than helps, and which leaves the order-invariant TabNet untouched. 
+
+There is also an in-domain explanation to this effect: as we said before in Chapter \ref{sec:temporal-split}. Inside network-flows it is common that duplicate packets flow though the network, adding some more duplicates to the dateset practically means keeping intact the same dataset structure that was already present as some dataset rows were already inevitably duplicated. Therefore makes perfect sense that no effects are recorded using this particular method, in this particular case study.
 
 
-
-\paragraph{-------------------------------------------------------}
-\paragraph{Considerations on input-feature corruption.}
-Three lessons crystallise from the single-feature feature sweep. First, \textbf{robustness is governed by feature importance and by architectural inductive bias}: TabNet's sparse attention makes it nearly immune to the loss of any single feature except the most discriminative one, whereas CNN-LSTM, lacking such a re-weighting mechanism, is more exposed but also more malleable. Second, \textbf{not all ``noise'' is harmful}: when the corrupted feature encodes a spurious shortcut (the temporal index for a time-series model), its destruction is a form of regularisation that improves generalisation. Third, \textbf{the experimental controls behave exactly as designed}: degradation magnitude tracks the combined importance rank, and corrupting zero-variance features is inert, which validates the stratified feature selection of Section~\ref{sec:combined-ranking} and lends credibility to the rest of the campaign. The permutation-importance rank-drift diagnostics confirm this picture: corrupting \texttt{Dst Port} causes both models to shed its rank sharply, while corrupting irrelevant features leaves the ranking unchanged.
 
 % ------------------------------------------------------------
 \newpage
@@ -305,7 +303,7 @@ Although both models seem to not register any significant performance loss befor
         \item $\Delta MCC = -1.642$ : for binary target where noise is being injected (flipping binary label).
         \item $\Delta MCC = -0.050$ : for multiclass target (clean).
     \end{itemize}
-    Signifying tat TabNet is particularly resilient even to this more aggressive noise injection strategies, as the clean target only loses about very few points of MCC. This makes sense as TabNet feeds its two heads from a sparsity-regularised, attention-selected representation that stays partially disentangled per task, so a corrupted supervisory signal remains largely confined to its own head.
+    This signifies that TabNet is particularly resilient even to this more aggressive noise injection strategies, as \textbf{the clean target} (multiclass) only loses about very few points of MCC, while target that has been corrupted (binary). This makes sense as TabNet feeds its two heads from a sparsity-regularised, attention-selected representation that stays partially disentangled per task, so a corrupted supervisory signal remains largely confined to its own head.
     
     \item For \textbf{CNN-LSTM}:
     \begin{itemize}
@@ -317,21 +315,6 @@ Although both models seem to not register any significant performance loss befor
 Therefore we can conclude that \textbf{the contamination is architecture-dependent}: the very same binary collapse that drags the CNN-LSTM's multi-class head down by $-0.536$ barely moves TabNet's ($-0.050$ at $75\%$).  
 
 Quite the contrary, when considering effects of corrupting multi-class-target on binary class prediction. In those cases no significant consequences on MCC are monitored. Even if considering that CNN-LSTM shares prediction backbone for both prediction heads, we easily proved that damage flows from the binary target to the multi-class one, but not the reverse precisely because the binary collapse is a \emph{global inversion} of the representation that the two heads share, whereas multi-class corruption is a diffuse re-shuffle carrying no coherent signal to leak. 
-
-
-
-
-
-
-
-
-------------------------------------------------------
-
-\paragraph{Considerations on label corruption.}
-Three lessons follow. First, \textbf{corrupting the supervision signal is categorically different from corrupting the inputs}: feature noise degrades gracefully (and is sometimes even beneficial), whereas binary-label noise is harmless up to a $\approx 50\%$ threshold and then catastrophic, with an outright inversion regime beyond it. Second, \textbf{the damage scales with the label's cardinality}: a two-state target admits a sharp flip-induced cliff, a fifteen-state target only a gradual decay, because the former guarantees an inversion while the latter merely re-shuffles among many alternatives. Third, and most distinctive, \textbf{label noise does not stay local}: through the shared multi-task encoder it can \emph{leak} onto the other head --- but only in the binary$\rightarrow$multi-class direction, and only for the architecture (CNN-LSTM) whose heads are not attention-disentangled. For an operational multi-task IDS this delineates the single most important data-quality boundary: the integrity of the \emph{binary} label must be guaranteed above all, since its corruption past the half-way point not only inverts detection but can simultaneously poison attack-type attribution through a coupling that single-task monitoring would never reveal.
-%un'altra considerazione importante:
-The decisive practical lesson is that \textbf{corrupting the supervision signal behaves fundamentally differently from corrupting the inputs}. Feature noise degrades gracefully and is sometimes even beneficial; binary-label noise is harmless up to a surprisingly high threshold and then catastrophic beyond it, with the additional risk of contaminating a coupled task through a shared representation. For an operational IDS this delineates the single most important data-quality boundary: a training pipeline can tolerate substantial feature-level corruption, but must guarantee that fewer than roughly half of its binary labels are mislabelled, since the failure mode past that point is not mere degradation but inversion.
-
 
 
 
@@ -451,14 +434,6 @@ On the \textbf{multi-class} task the picture is subtler but equally telling.
 For CNN-LSTM the \texttt{outliers} corruption of the six-feature top-and-middle group drives the CNN-LSTM multi-class MCC down by more than half its baseline at $75\%$ ($-0.526$), the single most severe feature-level degradation in the entire campaign; \texttt{noise} on the same group is comparably destructive ($-0.494$), whereas \texttt{missing} is markedly gentler ($-0.223$), because masked values are absorbed by the embedding/scaling pipeline rather than injected as out-of-distribution magnitudes. 
 
 Meanwhile, TabNet pays a near-uniform penalty of $\approx -0.025$ to $-0.035$ that is already present at the lowest noise level and barely deepens as corruption intensifies (the top-three group moves only from $-0.028$ at $5\%$ to $-0.054$ at $75\%$). Decisively, this offset is essentially identical for the \emph{zero-variance control} group ($-0.028$ at $5\%$, $-0.039$ at $75\%$), whose features carry no information at all: the penalty therefore cannot be attributed to the loss of the corrupted signal, and is better read as a generic sensitivity of TabNet's minority-class resolution to \emph{any} perturbation of the training distribution (the same multi-class "tax" already noted in the single-feature regime, Section~\ref{sec:res-B-single-feat}), here confirmed to be independent of which, and how many, features are dirtied. The contrast with the CNN-LSTM is stark: on the worst group at $75\%$ TabNet's multi-class head loses $-0.051$ against the CNN-LSTM's $-0.526$, an order of magnitude less. 
-
-
---------------------------------------------------------
-\newline
-% conclusioni
-In short, compound feature corruption \emph{confirms rather than overturns} the single-feature verdict --- TabNet is intrinsically robust to the joint corruption of input features, and the only manipulation capable of genuinely breaking it remains the inversion of the binary supervision signal itself (Section~\ref{sec:res-B-single-label}).
-
---------------------------------------------------------
 
 
 
@@ -740,16 +715,3 @@ Several directions follow naturally, on both the experimental and the library-en
 
 \end{document}
 
-
-
----------------------------
-
-
-
-
-
-
-
-
-
-\end{document}

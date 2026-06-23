@@ -1,0 +1,27 @@
+
+
+\paragraph{-------------------------------------------------------}
+\paragraph{Considerations on input-feature corruption.}
+Three lessons crystallise from the single-feature feature sweep. First, \textbf{robustness is governed by feature importance and by architectural inductive bias}: TabNet's sparse attention makes it nearly immune to the loss of any single feature except the most discriminative one, whereas CNN-LSTM, lacking such a re-weighting mechanism, is more exposed but also more malleable. Second, \textbf{not all ``noise'' is harmful}: when the corrupted feature encodes a spurious shortcut (the temporal index for a time-series model), its destruction is a form of regularisation that improves generalisation. Third, \textbf{the experimental controls behave exactly as designed}: degradation magnitude tracks the combined importance rank, and corrupting zero-variance features is inert, which validates the stratified feature selection of Section~\ref{sec:combined-ranking} and lends credibility to the rest of the campaign. The permutation-importance rank-drift diagnostics confirm this picture: corrupting \texttt{Dst Port} causes both models to shed its rank sharply, while corrupting irrelevant features leaves the ranking unchanged.
+
+
+
+
+
+
+------------------------------------------------------
+
+\paragraph{Considerations on label corruption.}
+Three lessons follow. First, \textbf{corrupting the supervision signal is categorically different from corrupting the inputs}: feature noise degrades gracefully (and is sometimes even beneficial), whereas binary-label noise is harmless up to a $\approx 50\%$ threshold and then catastrophic, with an outright inversion regime beyond it. Second, \textbf{the damage scales with the label's cardinality}: a two-state target admits a sharp flip-induced cliff, a fifteen-state target only a gradual decay, because the former guarantees an inversion while the latter merely re-shuffles among many alternatives. Third, and most distinctive, \textbf{label noise does not stay local}: through the shared multi-task encoder it can \emph{leak} onto the other head --- but only in the binary$\rightarrow$multi-class direction, and only for the architecture (CNN-LSTM) whose heads are not attention-disentangled. For an operational multi-task IDS this delineates the single most important data-quality boundary: the integrity of the \emph{binary} label must be guaranteed above all, since its corruption past the half-way point not only inverts detection but can simultaneously poison attack-type attribution through a coupling that single-task monitoring would never reveal.
+%un'altra considerazione importante:
+The decisive practical lesson is that \textbf{corrupting the supervision signal behaves fundamentally differently from corrupting the inputs}. Feature noise degrades gracefully and is sometimes even beneficial; binary-label noise is harmless up to a surprisingly high threshold and then catastrophic beyond it, with the additional risk of contaminating a coupled task through a shared representation. For an operational IDS this delineates the single most important data-quality boundary: a training pipeline can tolerate substantial feature-level corruption, but must guarantee that fewer than roughly half of its binary labels are mislabelled, since the failure mode past that point is not mere degradation but inversion.
+
+
+
+
+--------------------------------------------------------
+\newline
+% conclusioni
+In short, compound feature corruption \emph{confirms rather than overturns} the single-feature verdict --- TabNet is intrinsically robust to the joint corruption of input features, and the only manipulation capable of genuinely breaking it remains the inversion of the binary supervision signal itself (Section~\ref{sec:res-B-single-label}).
+
+--------------------------------------------------------

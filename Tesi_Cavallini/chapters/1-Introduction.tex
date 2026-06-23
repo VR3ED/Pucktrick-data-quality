@@ -6,18 +6,17 @@
 \label{chap:intro}
 
 % ============================================================
+\vspace*{-2em}
 \section{Motivation and Context}
 \label{sec:motivation}
 % ============================================================
 
-The quality of training data is widely recognised as one of the most critical determinants of the performance and reliability of machine learning models.  Real-world datasets are seldom pristine: they are pervasively affected by a wide range of imperfections (including some of which we will deeply explore in the themes of this thesis like: missing values, mislabelled instances, duplicate records, noisy measurements, and statistical outliers).  These defects may arise from heterogeneous sources (sensor malfunction, human annotation error, data integration across disparate systems, etc..).  When such corrupted data are consumed by learning algorithms, the resulting models may exhibit degraded generalisation, biased predictions, or, in safety-critical domains such as cybersecurity and healthcare, potentially harmful decision-making.
+The quality of training data is widely recognized as one of the most critical determinants of the performance and reliability of machine learning models. Real-world datasets are far from pristine: they are pervasively affected by a wide range of imperfections (including some of which we will deeply explore in the themes of this thesis like: missing values, mislabelled instances, duplicate records, noisy measurements, and statistical outliers).  These defects may arise from various sources (sensor malfunction, human annotation error, data integration across disparate systems, etc..).  When such corrupted data are consumed by learning algorithms, the resulting models may exhibit degraded generalization, biased predictions, or, in safety-critical domains such as cybersecurity and healthcare, potentially harmful decision-making. 
 
-Within the paradigm of Data-Centric AI, the focus of the deep learning pipeline widely shifts from model architecture design to systematic improvement and curation of the training data.  Central to this paradigm is the ability to quantify the impact of specific data quality issues on downstream model performance.  This capability, however, presupposes the availability of tools that can introduce controlled, reproducible perturbations into a dataset while leaving all other aspects of the data intact.
-Such tools enable researchers to answer questions of the form: "How much does model predicting perfomances degrade when $x$\% of a given feature's values are replaced by noise?"
+Within the advent of Data-Centric AI, the focus of the deep learning pipeline widely shifted from model architecture design to systematic improvement and curation of the training data.  Central to this paradigm, and therefore to this thesis too, is the ability to quantify the impact of specific data quality issues on downstream model performance.  This capability, however, presupposes the availability of either tools adept to find noise inside datasets whit high certainty, or either tools that can introduce controlled, reproducible perturbations into a clean dataset while leaving all other aspects of the data intact.
+Such tools enable researchers to answer questions of the form: "How much does model predicting performances degrade when $x$\% of a given feature's values are replaced by noise?". To this exact topic \texttt{PuckTrick}\supercite{pucktrick_docs} is an open-source Python library developed at the University of Milano-Bicocca that addresses precisely these needs. \texttt{PuckTrick} provides a unified, programmatic interface for the controlled introduction of five fundamental categories of data corruption into tabular datasets intended for machine learning applications: \emph{duplicated records}, \emph{missing values}, \emph{noisy values}, \emph{outliers}, and \emph{label inconsistencies}.  Each corruption type is parametrized witch the choice of a target column and the desired percentage of affected rows, enabling fine-grained, reproducible experimental designs in which individual data quality dimensions can be isolated and studied independently.
 
-\texttt{PuckTrick}\supercite{pucktrick_docs} is an open-source Python library developed at the University of Milano-Bicocca that addresses precisely these needs. \texttt{PuckTrick} provides a unified, programmatic interface for the controlled introduction of five fundamental categories of data corruption into tabular datasets intended for machine learning applications: \emph{duplicated records}, \emph{missing values}, \emph{noisy values}, \emph{outliers}, and \emph{label inconsistencies}.  Each corruption type is parametrized witch the choice of a target column and the desired percentage of affected rows, enabling fine-grained, reproducible experimental designs in which individual data quality dimensions can be isolated and studied independently.
-
-In its original form, PuckTrick operates exclusively on Pandas DataFrames (a widely used in-memory data structure for tabular data in the Python ecosystem).  While Pandas is an excellent choice for small-to-medium datasets that fit comfortably in a single machine's memory, it becomes a bottleneck when the dataset scales to millions or tens of millions of rows.  Modern cybersecurity, IoT, and financial datasets routinely exceed the single-node memory capacity, and the scientific community increasingly relies on distributed computing frameworks to process them.
+In its original form, PuckTrick operates exclusively on Pandas Datasets (a widely used in-memory Python's data-structure for tabular data).  While Pandas is an excellent choice for small-to-medium datasets that fit comfortably in a single machine's memory, it becomes a bottleneck when the dataset scales to millions or tens of millions of rows. Modern cybersecurity, IoT, and financial datasets routinely exceed this memory capacity, and the scientific community increasingly relies on distributed computing frameworks to process them. For these specific reasons, in this thesis, we will discuss the work that made it possible to expand the \texttt{Pucktrick} library in a distributed environment and the applications (both theoretical and real-world) resulting feasible from the upgrade.
 
 % ============================================================
 \newpage
@@ -27,15 +26,21 @@ In its original form, PuckTrick operates exclusively on Pandas DataFrames (a wid
 
 The empirical component of this thesis is situated within the domain of \emph{network intrusion detection}: a field that offers a particularly compelling setting for studying the interplay between data quality and deep learning performance.
 By it's nature, this setting offers wide range of data that can be used in a deep learning context for developing an automatic intrusion detection system (based on deep learning): a single day of traffic capture at an institutional network can produce millions of flow records, each described by dozens of statistical features (packet counts, byte volumes, inter-arrival times, TCP flag distributions, etc.). Processing and corrupting datasets of this magnitude requires distributed computing capabilities (precisely the motivation for extending PuckTrick to Apache Spark).
+
 A \emph{Network Intrusion Detection System} (NIDS) is tasked with automatically classifying each observed network flow as either benign or malicious and, in the latter case, identifying the specific type of attack being carried out.(such as: brute-force credential guessing, Denial-of-Service (DoS) and Distributed Denial-of-Service (DDoS) floods, web-application exploits (SQL injection, cross-site scripting), botnet command-and-control communications, and stealthy infiltration campaigns).
 
 The specific dataset selected for this study is the \textbf{CSE-CIC-IDS2018}\supercite{ids2018} (\emph{Canadian Institute for Cybersecurity Intrusion Detection System 2018}), a publicly available benchmark produced by the University of New Brunswick and distributed on the Kaggle platform.
 The dataset was collected over a ten-day capture window in 2018 inside a controlled cyber-range infrastructure: 50 attack machines launched a curated battery of attacks against a victim network comprising 420 machines and 30 servers, while a profile generator replayed realistic benign traffic drawn from a usage model encompassing HTTP, HTTPS, FTP, SSH, and email activity.
-All bi-directional network flows were extracted by the \textit{CICFlowMeter} tool, which computes 80 statistical features.
+All bi-directional network flows were extracted by the \textit{CICFlowMeter} tool, which computes 80 statistical features. One very important aspect is the presence of the “\texttt{Timestamp}” feature; if omitted, it allows us to treat the dataset as a tabular-set, whereas if included, it allows us to treat the dataset as a time-series.
 
 In its unified form the dataset comprises over \textbf{16 million network-flow instances}. While lacking presence of any zero-day attacks, as all the network flows were simulated, having this large amount of network flows compels making it one of the largest and most realistic publicly available benchmarks for intrusion detection research.  A detailed statistical characterization of the dataset  is provided in Chapter~\ref{chap:dataset}.
 
-The choice of this domain is deliberate: by studying the effects of controlled noise injection on deep learning models that must discriminate between benign and malicious network traffic, this thesis bridges two active research areas: \emph{data quality for machine learning} and \emph{AI-driven cybersecurity}. This will provide actionable insights into how resilient modern deep learning architectures are when the data on which they are trained exhibit quality degradation of known type and magnitude. 
+The choice of this domain is deliberate: by studying the effects of controlled noise injection on deep learning models that must discriminate between benign and malicious network traffic, this thesis bridges two active research areas: \emph{data quality for machine learning} and \emph{AI-driven cybersecurity}. Therefore this work will provide actionable insights into two main branches:
+\begin{itemize}
+    \item how resilient modern deep learning architectures (some that deal whit tabular-dataset and some that deal whit time-series) are when the data on which they are trained exhibit quality degradation of known type and intensity.
+    \item how the manually injected noise inside the CSE-CIC-IDS2018 dataset alters the prediction in a cibersecurity settings and the real-word implications we could derive from it. 
+\end{itemize}
+
 
 % ============================================================
 \newpage
@@ -43,14 +48,16 @@ The choice of this domain is deliberate: by studying the effects of controlled n
 \label{sec:objectives}
 % ============================================================
 
-This thesis pursues two interrelated objectives:
+As mentioned in previous Chapters \ref{sec:cybersecurity-domain} and \ref{sec:cybersecurity-domain}, this thesis pursues two interrelated objectives:
 
-\paragraph{Objective 1: Extending PuckTrick to Apache Spark.}
-The primary engineering contribution of this work is the extension of the PuckTrick library to support \textbf{Apache Spark} (via PySpark) as an alternative processing backend alongside Pandas.  The work was conducted within the \texttt{Spark\_Conversion} branch of the PuckTrick repository in collaboration with Daniel Satriano, under the supervision of Professor Andrea Maurino.
+\subsection{Objective 1: Extending PuckTrick to Apache Spark.}
+\label{sec: objective-1}
+The primary engineering contribution of this work is the extension of the PuckTrick library to support \textbf{Apache Spark} (via PySpark) as an alternative processing backend alongside Pandas. The main focus of this work will be enabling functional equivalence between the previously implemented 5 Pandas-methods and the new Spark-methods, making that both the Pandas-backend and the Spark-backend produce comparable results while also being \emph{certain} that the newly implemented spark-backend-methods are functionally more efficient than their Pandas counterpart when operating on large datasets. Also, another focal point will be leaving untouched the public library entry-point to the public, in order to ensure ease of use for the user and also without disrupting the way users who were using the library prior to the update were accustomed to using it. The work was conducted within the \texttt{Spark\_Conversion} branch of the PuckTrick repository, under the supervision of Professor Andrea Maurino.
 
 
 
-\paragraph{Objective 2: Evaluating the impact of controlled noise on deep learning models for cybersecurity.}
+\subsection{Objective 2: Evaluating the impact of controlled noise on deep learning models for cybersecurity.}
+\label{sec: objective-2}
 The second objective is an empirical investigation into the effects of PuckTrick-generated data corruption on the performance of deep learning models trained for \emph{network intrusion detection}, the cybersecurity application domain introduced in Section~\ref{sec:cybersecurity-domain}.  
 
 The investigation operates at two levels of granularity:
@@ -59,95 +66,65 @@ The investigation operates at two levels of granularity:
     \item   At the\emph{multi-class classification} level, the models must additionally identify the specific type of attack, a substantially harder task that requires the classifier to learn fine-grained distinctions between attack profiles that often share similar flow-level statistics. 
 \end{itemize}
 
-Studying both levels simultaneously is essential because data corruption may have asymmetric effects: noise that does not materially degrade binary detection (benign vs. malicious) may nonetheless collapse the classifier's ability to distinguish among attack subtypes, or vice versa. In order to do so two state-of-the-art deep learning architectures were selected for the evaluation:
+Studying both levels simultaneously is essential because data corruption may have asymmetric effects: noise that does not materially degrade binary detection (benign vs. malicious) may nonetheless collapse the classifier's ability to distinguish among attack subtypes, or vice versa. In order to do so, two state-of-the-art deep learning architectures were selected for the evaluation:
 
 \begin{itemize}
-    \item \textbf{TabNet}: a sequential attention-based architecture specifically designed for tabular data.  TabNet performs instance-wise feature selection through learnable sparse attention masks at each decision step, producing natively interpretable feature importance scores.  It was configured as a \emph{multi-task classifier}, simultaneously predicting both the binary (benign/malicious) and the fine-grained multi-class (specific attack type) labels.
-    \item \textbf{CNN-LSTM model}: an ad-hoc model created on the basis of another study that aims to use our same dataset and try to improve a regular CNN architecture, using LSTMs blocks inside the model. This is done to help the model learn based on data given to it in time windows (rendering CNN capable of learning on time series such as this dataset), in spite of regular CNN tabular approach
+    \item \textbf{TabNet}: a sequential attention-based architecture specifically designed for tabular data. TabNet performs instance-wise feature selection through learnable sparse attention masks at each decision step, producing natively interpretable feature importance scores.  It was configured as a \emph{multi-task classifier}, simultaneously predicting both the binary (benign/malicious) and the fine-grained multi-class (specific attack type) labels.
+    
+    \item \textbf{CNN-LSTM model}: an ad-hoc model that was directly taken from the "CIC-IDS-using deep leaning"\supercite{jablaoui2024effective} paper that aims to use our same dataset and try to improve a regular CNN architecture, using LSTMs blocks inside the model. This is done to help the model learn based on data given to it in time windows (rendering CNN capable of learning on time series such as this dataset), in spite of regular CNN tabular approach. 
 \end{itemize}
 
-As later specified in Chapter \ref{feature-relevance} and Chapter \ref{chap:5-Empiric-analysis-models} two main branches of experiments were developed:
+As later specified in Chapter \ref{sec:feature-relevance} and Chapter \ref{chap:5-Empiric-analysis-models}, both of those models were deployed in the realization of two main branches of experiments that differ in final goal:
 \begin{itemize}
-    \item \red{Experiment A:} \textbf{Experiments conducted starting from a reduced dataset}: these experiments were performed on a dataset preprocessed to remove both redundant features (features exhibiting high correlation in between each other) and zero-variance features. The primary objective was to identify noise injection strategies capable of consistently improving model performance. This phase serves as a proof of concept, demonstrating that the injection of controlled noise into the original dataset can enhance the effectiveness of deep learning-based Intrusion Detection Systems (IDSs).
+    
+    \item \red{Experiment B:} Those experiments are the main focus of this thesis: they're objective is to map the \emph{full} space of effects that controlled corruption (introduced whit newly implemented \texttt{Pucktrick} library) produces on a tabular and on a time-series classifiers (with both single-feature and multiple-feature corruption experiments). Therefore they represent the more theoretical and analytical core of this work. 
 
-    \item \red{Experiment B:} \textbf{Experiments conducted starting from full dataset}: in contrast to the previous setting, a broader set of experiments was carried out using the complete, unfiltered dataset. This experimental phase is intended to address the more theoretical aspects of the thesis. Its main goal is to provide an in-depth analysis of how the selected models respond to noise introduced through the \texttt{Pucktrick} library.
+    \item \red{Experiment A:}: The primary objective of this experiment was to identify noise injection strategies capable of consistently improving both models performance, through both \texttt{Pucktrick} noise injection and an analytical phase. This experiment objective is therefore a real-word-application of previous Experiment-B. It's goal is reaching proof of concept that the injection of controlled noise into the dataset can enhance the effectiveness of deep learning-based Network Intrusion Detection Systems (NIDSs).
+    
 \end{itemize}
+
+Those two experiment represent the core of the empirical phase of this project. As one would assume, having different goals, meant that those experiments differentiated themselves one from the other over multiple steps in development. Each of their difference, as well as the operational part that they shared will be always specified in this thesis. 
 
 
 % ============================================================
 \newpage
-\section{The library implementation protocol}
+\section{The library update implementation protocol}
 % ============================================================
-Before tackling any emppyrical experiment, this thesis will discuss the implementation of the \texttt{Pucktrick} library update. The central design principle guiding the extension was \emph{functional equivalence}: for every corruption method offered by \texttt{PuckTrick} in it's Spark implementation, it must've accepted the same parametrization and produce statistically equivalent output distributions in the newly implemented spark counterpart. Doing so the experiments conducted on a single-machine using Pandas backend would yield results that are directly comparable with those obtained in a distributed Spark cluster.  This requirement posed non-trivial engineering challenges, because Pandas and Spark embody fundamentally different computation models, and many of PuckTrick's corruption algorithms rely on random sampling, in-place mutation, and index-based row selection: operations that do not have direct analogues in the Spark API.
+Before tackling any empirical experiment, this thesis will discuss the implementation of the \texttt{Pucktrick} library update, which are directly bounded to objectives descripted in Chapter \ref{sec: objective-1}. The central design principle guiding the extension was \emph{functional equivalence}: for every corruption method offered by \texttt{PuckTrick} in it's Spark implementation, it must've accepted the same parametrization and produce statistically equivalent output distributions in the newly implemented Spark-methods counterpart. Doing so the experiments conducted on a single-machine using Pandas-backend would yield results that are directly comparable with those obtained in a distributed Spark-cluster.  
+
+This requirement posed non-trivial engineering challenges, because Pandas and Spark embody fundamentally different computation models, and many of PuckTrick's corruption algorithms rely on random sampling, in-place mutation, and index-based row selection: operations that do not have direct analogues in the Spark API.
 
 The implementation involved:
 \begin{enumerate}
-    \item A systematic audit of all existing PuckTrick corruption methods to
-          catalogue their Pandas-specific dependencies.
-    \item The design of a \emph{dual-backend architecture} in which each
-          corruption module detects the type of the input DataFrame (Pandas
-          \texttt{pd.DataFrame} or PySpark \texttt{pyspark.sql.DataFrame})
-          and dispatches to the appropriate implementation.
-    \item The re-implementation of each corruption method using PySpark's
-          SQL-based DataFrame API, paying particular attention to
-          pseudorandom-number generation with seed control, monotonically
-          increasing identifiers, and window functions to simulate
-          index-based operations.
-    \item An extensive validation campaign comparing the outputs of the Pandas
-          and Spark backends across all corruption types and all supported data
-          types (continuous, discrete, binary, categorical string,
-          categorical integer),
-    \item Performance benchmarking on a multi-node Spark cluster to evaluate
-          the distributed scalability of the extended library.
+    \item A systematic audit of all existing PuckTrick corruption methods to catalogue their Pandas-specific dependencies.
+    \item The design of a \emph{dual-backend architecture} in which each corruption module detects the size of the input DataFrame (Pandas \texttt{pd.DataFrame} when $DatasetSize < 600 Mb$ or PySpark \texttt{pyspark.sql.DataFrame} when $DatasetSize \ge 600 Mb$) and dispatches to the appropriate implementation (also checking on Spark avability on local machine or remote configuration).
+    \item The new implementation of each of the 5 corruption methods using PySpark's SQL-based DataFrame API, paying particular attention to pseudorandom-number generation with seed control, monotonically increasing identifiers, and window functions to simulate index-based operations.
+    \item An extensive validation campaign comparing the outputs of the Pandas and Spark backends across all corruption types and all supported data types (continuous, discrete, binary, categorical string, categorical integer).
+    \item Performance benchmarking on a multi-node Spark cluster to evaluate the distributed scalability of the extended library.
 \end{enumerate}
 
 % ============================================================
 \newpage
+\vspace*{-6em}
 \section{The Experimental Protocol}
 % ============================================================
 
-\red{QUESTO CAPITOLETTO DI EXPERIMENTAL PROTOCOL ANDREBBE RIVISTO TUTTO. IO SUGGERIREI ANCHE DI TOGLIERLO DALL'INTRODUZIONE E METTERLO PIUTTOSTO NELLA PARTE DI ESPERIMENTI}
+The empirical investigation of Objective-2 (Chapter \ref{sec: objective-2}) is organized as a reproducible, multi-stage pipeline. Its backbone is shared by both experimental branches (\red{Experiment~A} and \red{Experiment~B}), which diverge only at a few well-defined points; the full operational details of each stage are given in Chapter~\ref{chap:5-Empiric-analysis-models} and the corresponding results are presented and discussed in Chapter~\ref{chap:Empiric-analysis-models}. Without anticipating any finding, the pipeline can be summarized as follows:
 
-The experimental protocol is structured as a multi-stage pipeline:
 \begin{enumerate}
-    \item  \textbf{Dataset analysis and preparation.} Firstly the entierty of the dataset  is put through an analysis and preparation pipeline. This will remove from the dataset any anomaly such as presence of null and inf values, as such as removal of 
-        of low variance columns and reduntant ones (for more information on full pipeline visit Chapter~\ref{chap:dataset}). Also at the end of this pipeline there will be 
-        an analys of fragility of remaininng features,  which classifies each feature as high,
-        medium, or low fragility based on its skewness and kurtosis. This will allow 
-        to effectively test noise injection into the dataset. 
-    \item \textbf{Hyperparameter optimisation on a reduced dataset.}
-        A stratified 0.1\% sample of the full dataset is used to conduct
-        Bayesian hyperparameter optimisation via Optuna
-        (Tree-structured Parzen Estimator sampler) for both TabNet and CNN-LSTM.
-        The best hyperparameter configurations are persisted for subsequent
-        reuse. Also, using best models from hyperparameters tuning, the attention-based feature importance scores of TabNet and the Variable Selection Network weights of TFT are extracted and intersected; this creates a composed list of approximately 10 most important features that are critical for both architectures.
-    \item \textbf{Baseline and Feature importance analysis and selection.}
-        The orginal dataset is then brought back scaled to 10\% of its original size (approximately
-        1\,600\,000 instances). Using previously extracted hyperparameters and top 10 most
-        important features 2 models (one for each model) are trained as baseline for subsequent
-        experiments.
-    \item \textbf{Feature fragility cross-referencing.}
-          The feature importance rankings are then cross-referenced with the
-          fragility analysis performed during dataset exploration
-          (Chapter~\ref{chap:dataset}).  
-          The final set of 5 target features for corruption comprises those that are
-          simultaneously \emph{highly important} and \emph{highly fragile}: a
-          combination that maximises the expected impact of noise injection on
-          model performance.
-    \item \textbf{Systematic noise injection and retraining.}
-          Retaining same dataset as previous, Each of the five target features is then corrupted independently using four of PuckTrick's five corruption methods (missing, noise, outliers,
-          labels), yielding $5 \times 4 = 20$ corrupted dataset variants.  The
-          fifth method, \emph{duplicated}, is row-level and therefore applied
-          once globally on an arbitrary feature.  Each variant is used to
-          retrain both TabNet and TFT, producing a total of
-          $(5 \times 4 + 1) \times 2 = 42$ model evaluations.
-    \item \textbf{Statistical robustness via repeated trials.}
-          The entire corruption-and-retraining loop is repeated 10 times with
-          different random seeds to establish confidence intervals around the
-          observed performance deltas, ensuring that the results are
-          statistically robust and not an artefact of a particular random
-          split or noise realisation.
+    \item \textbf{Dataset analysis and preparation.} The dataset is first unified and cleaned of anomalies (null and \texttt{inf} values), and its features are characterized along three axes: their measurement type, their distributional \emph{fragility} (classified as high, medium, or low on the basis of skewness and kurtosis), and their relevance to the two targets (the complete pipeline is described in Chapter~\ref{chap:dataset}). From this analysis two starting datasets are derived: a \emph{reduced}, feature-pruned version (from which redundant and zero-variance features have been removed) that feeds \red{Experiment~A}, and the \emph{complete} version (all features retained) that feeds \red{Experiment~B}.
+
+    \item \textbf{Hyperparameter optimization.} For both TabNet and CNN-LSTM, hyperparameters are tuned with Optuna (Tree-structured Parzen Estimator sampler) on a small stratified $0.1\%$ sample of the data. To counter the dataset's strong class imbalance, the optimization objectives rely on imbalance-robust metrics rather than accuracy. The best configurations of each model are persisted and reused unchanged in every subsequent stage.
+
+    \item \textbf{Feature importance extraction and selection.} Using the tuned models from previous step, a per-feature importance ranking is obtained for each architecture (TabNet's native attention-based scores and a permutation-importance procedure purpose-built for the CNN-LSTM) and the two rankings are combined. From this combined view a compact \emph{working set} of features is derived, with a selection criterion tailored to each branch's goal: a high-signal intersection of the features deemed most important by both models for \red{Experiment~A}, and a wider set, stratified across importance tiers, feature types and fragility levels (including a few deliberate zero-variance \emph{controls}), for \red{Experiment~B}.
+
+    \item \textbf{Baseline training.} Both models are then trained on a larger $10\%$ stratified sample (approximately $1.6$ million instances), partitioned into train/validation/test-sets through a deliberately shuffle-free, temporal strategy that preserves both the chronological ordering of the packets and the presence of every attack class. Trained on clean data, these baselines constitute the reference against which the effect of every subsequent corruption is measured.
+
+    \item \textbf{Systematic noise injection and retraining.} This is the core of the empirical study. Holding the validation and test partitions clean, \emph{only} the training partition is corrupted through \texttt{PuckTrick}, sweeping a grid that varies the corruption method, the target column (or group of columns), the corruption percentage, and the random seed; for every configuration both models are retrained from scratch. \red{Experiment~A} is the smaller, proof-of-concept phase (a handful of target columns, repeated over $5$ random seeds), whereas \red{Experiment~B} is the broad analytical campaign (repeated over $20$ random seeds) that probes both the corruption of individual features and labels and the simultaneous corruption of several of them at once. Taken together, the two branches amount to nearly $14{,}000$ independently trained models.
+
+    \item \textbf{Statistical analysis.} Because every configuration is repeated over multiple seeds, each reported effect is summarized by its mean together with a Student-$t$ confidence interval whose width adapts to the number of seeds, and is tested against the clean baseline with a paired, non-parametric significance test. This ensures that the reported effects are statistically grounded and not an artefact of a particular random split or noise realization.
 \end{enumerate}
+
 
 % ============================================================
 \newpage
@@ -162,14 +139,11 @@ This section provides a concise overview of the principal technologies and frame
 \label{sec:tech-spark}
 % ------------------------------------------------------------
 
-Apache Spark is a unified analytics engine for large-scale data processing developed at the AMPLab of UC Berkeley and subsequently donated to the Apache Software Foundation.  Spark extends the MapReduce paradigm by introducing an in-memory computation model based on Resilient Distributed Datasets (immutable, fault-tolerant collections of records partitioned across a cluster's nodes).  Subsequent releases introduced the DataFrame API (a distributed analogue of the Pandas DataFrame with a SQL-like query optimizer, Catalyst) and the Dataset API (offering compile-time type safety on the JVM).
+Apache Spark\supercite{apache_spark} is a unified analytics engine for large-scale data processing developed at the AMPLab of UC Berkeley and subsequently donated to the Apache Software Foundation.  Spark extends the MapReduce paradigm by introducing an in-memory computation model based on Resilient Distributed Datasets (immutable, fault-tolerant collections of records partitioned across a cluster's nodes).  Subsequent releases introduced the DataFrame API (a distributed analogue of the Pandas DataFrame with a SQL-like query optimizer, Catalyst) and the Dataset API (offering compile-time type safety on the JVM).
 
-PySpark is the Python binding to Spark, enabling Python-native code to orchestrate distributed computation on a Spark cluster. In the context of this thesis, PySpark provides the execution substrate for the Spark-based corruption methods implemented in PuckTrick: each corruption operation is expressed as a sequence of Spark DataFrame transformations (column selections, filters, joins, window functions, and user-defined functions)  that are compiled by Catalyst into an optimized physical execution plan and distributed across the cluster's executors.
+PySpark\supercite{pyspark_docs} is the Python binding to Spark, enabling Python-native code to orchestrate distributed computation on a Spark cluster. In the context of this thesis, PySpark provides the execution substrate for the Spark-based corruption methods implemented in PuckTrick: each corruption operation is expressed as a sequence of Spark DataFrame transformations (column selections, filters, joins, window functions, and user-defined functions)  that are compiled by Catalyst into an optimized physical execution plan and distributed across the cluster's executors.
 
-The Spark cluster used for benchmarking and experimental runs in this work
-consists of a driver node and four executor nodes, each equipped with 4 cores
-and 13\,GB of memory, for a total distributed capacity of 16 cores and 52\,GB
-of RAM.
+The Spark cluster used for benchmarking and experimental runs in this work consists of a driver node and four executor nodes, each equipped with 4 cores and 13\,GB of memory, for a total distributed capacity of 16 cores and 52\,GB of RAM.
 
 
 % ------------------------------------------------------------
@@ -177,13 +151,18 @@ of RAM.
 \label{sec:tech-pandas}
 % ------------------------------------------------------------
 
-Pandas is the standard library for, in-memory, tabular data 
-manipulation in the Python data science ecosystem.  Its
-core abstraction, the \texttt{DataFrame}, is a two-dimensional labelled data
-structure with heterogeneous column types, supporting rich indexing, grouping,
-merging, and reshaping operations.  Pandas operates eagerly and mutably on a
-single machine: all data must reside in RAM, and transformations are executed
-immediately upon invocation.
+Pandas\supercite{pandas_overview} is the standard library for, in-memory, tabular data manipulation in the Python data science ecosystem.  Its core abstraction, the \texttt{DataFrame}, is a two-dimensional labelled data structure with heterogeneous column types, supporting rich indexing, grouping, merging, and reshaping operations.  Pandas operates eagerly and mutably on a single machine: all data must reside in RAM, and transformations are executed immediately upon invocation.
+
+
+% ------------------------------------------------------------
+\subsection{Optuna}
+\label{sec:tech-optuna}
+% ------------------------------------------------------------
+
+Optuna\supercite{optuna_website} is an automatic hyperparameter optimization framework that implements efficient search strategies including the \emph{Tree-structured Parzen Estimator} (TPE) and \emph{Hyperband} pruning.
+It provides a \emph{define-by-run} API in which the search space is specified programmatically inside the objective function, enabling dynamic space definitions that depend on the values of previously sampled hyperparameters.
+
+In this work, Optuna is used to tune both TabNet and CNN-LSTM.  The TPE sampler is employed with early-stopping callbacks and configurable 10 trial budgets.  Optuna's built-in visualization tools (parameter importance plots, optimization history) are used to analyses the sensitivity of model performance to individual hyperparameters.
 
 % ------------------------------------------------------------
 \newpage
@@ -195,29 +174,8 @@ TabNet~\supercite{arik2021tabnet} is a deep learning architecture explicitly des
 
 A more detailed explanation on how the model function is given in Chapter \ref{Chapter: model tabnet}
 
+In this work, TabNet is instantiated as a \texttt{TabNetMultiTaskClassifier} from the \texttt{pytorch-tabnet} library\supercite{pytorch_tabnet}, with two prediction heads sharing a common encoder: one for the binary label and one for the multi-class label.
 
-In this work, TabNet is instantiated as a \texttt{TabNetMultiTaskClassifier}
-from the \texttt{pytorch-tabnet} library~\supercite{dreamquark2020tabnet}, with two
-prediction heads sharing a common encoder: one for the binary label and one for the multi-class label.
-
-
-% ------------------------------------------------------------
-\subsection{Optuna}
-\label{sec:tech-optuna}
-% ------------------------------------------------------------
-
-Optuna~\supercite{akiba2019optuna} is an automatic hyperparameter optimization
-framework that implements efficient search strategies including the
-\emph{Tree-structured Parzen Estimator} (TPE) and \emph{Hyperband} pruning.
-It provides a \emph{define-by-run} API in which the search space is specified
-programmatically inside the objective function, enabling dynamic space
-definitions that depend on the values of previously sampled hyperparameters.
-
-In this work, Optuna is used to tune both TabNet and CNN-LSTM.  The TPE sampler is
-employed with early-stopping callbacks and configurable trial budgets (10
-trials for local development, 20 for cluster-based runs).  Optuna's built-in
-visualisation tools (parameter importance plots, optimization history) are used
-to analyse the sensitivity of model performance to individual hyperparameters.
 
 % ------------------------------------------------------------
 \subsection{Scikit-learn and PyTorch Ecosystem}

@@ -604,7 +604,7 @@ Correct cluster operation required following ports to be opened on the firewall 
 \caption{Network ports used by the Spark cluster.}
 \end{table}
 
-Failure to open port 7077 prevents workers from registering with the master, resulting in a cluster that appears operational but lacks any computational resources. The Web UI on port 8080 proved to be an indispensable diagnostic tool for monitoring cluster status, verifying the number of connected workers, and inspecting resource allocation.
+Failure to open port 7077 prevents workers from registering with the master, resulting in a cluster that appears operational but lacks any computational resources. The Web UI on port 8080 proved to be an indispensable diagnostic tool for monitoring cluster status, verifying the number of connected workers, and inspecting resource (this web-ui has resulted being very useful for testing).
 
 
 
@@ -615,7 +615,7 @@ Failure to open port 7077 prevents workers from registering with the master, res
 % ====================================================
 
 
-Upon completing the remote library setup, a systematic performance evaluation of the PuckTrick framework was conducted, comparing its two computational backends: Pandas and Apache Spark.
+Upon completing the remote library setup, a systematic performance evaluation of the PuckTrick framework was conducted \emph{using said Spark cluster} and comparing its two computational backends: Pandas and Apache Spark.
 
 The first benchmark was executed on a synthetic dataset (\texttt{fake\_dataset.csv}) comprising \textbf{1{,}000{,}000 rows} with columns of heterogeneous data types:
 

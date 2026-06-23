@@ -1,12 +1,14 @@
 % =====================================================================
-%  Extended thesis summary (riassunto) -- max 6 pages excluding title.
-%  Page geometry reproduces Tesi_Cavallini/main.tex:
-%   a4paper passed to the class + \usepackage{geometry} with no options,
-%   so the body dimensions (and therefore the margins) are identical.
+%  Extended thesis summary (riassunto) -- max 5 pages excluding title.
+%  Body font reduced to 9pt (via extarticle) + tight margins (top slightly
+%  shaved) to fit the page limit. Headings/math scale with the base size.
+%  To gain/lose room: change "9pt" below (extarticle supports 8..12pt, or
+%  switch back to \documentclass[a4paper]{article} for the standard 10pt),
+%  or tweak the top/bottom/hmargin values in the geometry line.
 % =====================================================================
-\documentclass[a4paper]{article}
+\documentclass[a4paper, 9pt]{extarticle}
 
-\usepackage{geometry}          % same call as main.tex -> same margins
+\usepackage[a4paper, hmargin=2cm, top=1.5cm, bottom=1.8cm]{geometry}  % tight; top slightly reduced
 \usepackage{graphicx}
 \usepackage{amsmath}
 \usepackage{amssymb}
@@ -15,21 +17,29 @@
 \usepackage{xcolor}
 \usepackage[T1]{fontenc}
 \usepackage[utf8]{inputenc}
+\usepackage{titlesec}
 \usepackage{hyperref}
 
-% logo lives in the authoritative manuscript folder
-\graphicspath{ {../Tesi_Cavallini/images/} }
+% --- compact headings: one size smaller + tighter spacing, to save vertical space ---
+\titleformat{\section}{\normalfont\large\bfseries}{\thesection}{0.6em}{}
+\titleformat{\subsection}{\normalfont\normalsize\bfseries}{\thesubsection}{0.6em}{}
+\titleformat{\paragraph}[runin]{\normalfont\bfseries}{}{0pt}{}
+\titlespacing*{\section}{0pt}{1.3ex plus .2ex minus .2ex}{0.7ex plus .2ex}
+\titlespacing*{\subsection}{0pt}{1.0ex plus .2ex minus .2ex}{0.5ex plus .2ex}
+\titlespacing*{\paragraph}{0pt}{0.9ex plus .2ex minus .1ex}{1em}  % was ~3.25ex before the heading
 
 \newcommand{\red}[1]{\textcolor{black}{#1}}  % neutralised placeholder
 
 \begin{document}
 
 % =====================================================================
+
 \begin{titlepage}
 
+    
     \noindent
     \begin{minipage}[t]{0.19\textwidth}
-        \vspace{-4mm}{\includegraphics[scale=1.10]{logo_unimib.pdf}}
+        \vspace{-4mm}{\includegraphics[scale=1.10]{images/logo_unimib.pdf}}
     \end{minipage}
     \hspace{2mm}
     \begin{minipage}[t]{0.70\textwidth}
@@ -40,329 +50,158 @@
             \par
     }
     \end{minipage}
-
+    
 \vspace{40mm}
-
+    
 \begin{center}
 {
     \LARGE{
         \textbf{Pucktrick Data Quality:}
         \newline
-        Robustness and Computational Performance Analysis of Deep Learning
-        Models on Tabular and Time Series Data with Synthetic Corruption via
-        Pucktrick
+        Robustness and Computational Performance Analysis of Deep Learning Models on Tabular and Time Series Data with Synthetic Corruption via Pucktrick
     }
     \par
 }
 \end{center}
-
-    \vspace{20mm}
-    \begin{center}\large \textbf{Extended Summary}\end{center}
-    \vspace{15mm}
+    
+    \vspace{30mm}
 
     \noindent
-    {\large \textbf{Relatore:} Prof. Andrea Maurino} \\
+    {\large \textbf{Relatore:} Prof. Maurino Andrea} \\
+
 
     \vspace{10mm}
 
     \begin{flushright}
         {\large \textbf{Tesi di Laurea di:}} \\
-        \large{ Cavallini Francesco } \\
-        \large{ Matricola 920835 }
+        \large{ \red{Cavallini Francesco} } \\
+        \large{ Matricola \red{920835} } 
     \end{flushright}
-
+    
     \vspace{10mm}
     \begin{center}
-        {\large{\bf Anno Accademico 2024-2025}}
+        {\large{\bf Anno Accademico 20\red{25}-20\red{26}}}
     \end{center}
 
+    %\restoregeometry
+    
 \end{titlepage}
 
 % =====================================================================
 \section{Motivation, Context, and Objectives}
 % =====================================================================
 
-The quality of training data is one of the most critical determinants of the
-performance and reliability of deep learning models. Real-world datasets are
-seldom pristine: they are pervasively affected by missing values, mislabelled
-instances, duplicate records, noisy measurements, and statistical outliers,
-arising from sensor malfunction, human annotation error, or data integration.
-When such corrupted data are consumed by learning algorithms, the resulting
-models may exhibit degraded generalisation, biased predictions, or, in
-safety-critical domains such as cybersecurity, harmful decision-making.
+The quality of training data is one of the most critical key factors for good performance and reliability of deep learning models. Real-world datasets are far from pristine: they are commonly affected by various types of noise such as missing values, mislabelled instances, duplicate records, noisy measurements, and statistical outliers (arising from sensor malfunction, human annotation error, or data integration).
+When such corrupted data are consumed by learning algorithms, the resulting models may exhibit degraded generalization, biased predictions, or, in safety-critical domains such as cybersecurity, harmful decision-making.
 
-Within the paradigm of \emph{Data-Centric AI}, systematic curation of the
-training data takes precedence over model-architecture design, and central to
-this paradigm is the ability to quantify the impact of specific data-quality
-issues through controlled, reproducible perturbations. \textbf{PuckTrick} is an
-open-source Python library developed at the University of Milano-Bicocca that
-addresses precisely this need, providing a unified programmatic interface for
-the controlled injection of five fundamental categories of data corruption into
-tabular datasets: \emph{duplicated records}, \emph{missing values}, \emph{noisy
-values}, \emph{outliers}, and \emph{label inconsistencies}. In its original form
-PuckTrick operates exclusively on Pandas DataFrames, which become a bottleneck
-when datasets scale to millions of rows: a limitation that motivates its
-extension to distributed computing.
-
-The empirical component of this thesis is situated within \emph{network
-intrusion detection}. The dataset selected is the \textbf{CSE-CIC-IDS2018},
-a publicly available benchmark comprising over \textbf{16 million} labelled
-network-flow instances spanning benign traffic and fourteen attack categories,
-collected over a multi-day capture window in a controlled cyber-range. This
-thesis therefore pursues two interrelated objectives:
+Within the paradigm of \emph{Data-Centric AI}, systematic curation of the training data takes precedence over model-architecture design, and central to this paradigm is the ability to quantify the impact of specific data-quality issues through controlled, reproducible perturbations. To this topic: \textbf{PuckTrick} is an open-source Python library developed at the University of Milano-Bicocca that addresses precisely this need, providing a unified programmatic interface for the controlled injection of five fundamental categories of data corruption into
+tabular datasets: \emph{duplicated records}, \emph{missing values}, \emph{noisy values}, \emph{outliers}, and \emph{label inconsistencies}. In its original form PuckTrick operated exclusively on Pandas DataFrames, which become a bottleneck when datasets scaled to millions of rows: a limitation that motivated its extension to distributed computing, discussed in this thesis as it's first engineering task; while the empirical component of this thesis is situated within \emph{network intrusion detection}. The dataset selected is the \textbf{CSE-CIC-IDS2018}, a publicly available benchmark comprising over \textbf{16 million} labelled network-flow instances spanning benign traffic and 15 attack categories, collected over a multi-day capture window in a controlled cyber-range. This thesis therefore pursues two interrelated objectives:
 
 \begin{itemize}
-  \item \textbf{Objective 1 --- Extending PuckTrick to Apache Spark.} The
-        primary engineering contribution is the extension of PuckTrick to
-        support Apache Spark (via PySpark) as an alternative backend alongside
-        Pandas, carried out in the \texttt{Spark\_Conversion} branch in
-        collaboration with Daniel Satriano and under the supervision of
-        Professor Andrea Maurino.
-  \item \textbf{Objective 2 --- Evaluating controlled noise on deep learning
-        NIDS.} An empirical investigation into the effect of PuckTrick-generated
-        corruption on two complementary models, evaluated at two levels of
-        granularity: a \emph{binary} task (benign vs.\ malicious, analogous to
-        anomaly detection) and a \emph{multi-class} task (the specific attack
-        type, a substantially harder problem).
+  \item \textbf{Objective 1: Extending PuckTrick to Apache Spark.} The primary engineering contribution is the extension of PuckTrick to support Apache Spark (via PySpark) as an alternative backend alongside Pandas, carried out in the \texttt{Spark\_Conversion} branch under the supervision of Professor Andrea Maurino.
+  \item \textbf{Objective 2: Evaluating controlled noise on deep learning NIDS.} An empirical investigation into the effect of PuckTrick-generated corruption on two complementary models, evaluated at two levels of granularity: a \emph{binary} task (benign vs.\ malicious, analogous to anomaly detection) and a \emph{multi-class} task (the specific attack type, a substantially harder problem). Studying both levels simultaneously is essential because corruption may have asymmetric effects. Two state-of-the-art architectures were selected, both configured as \emph{multi-task classifiers} predicting the binary and the multi-class label from a shared representation: \textbf{TabNet}, a sequential attention-based architecture (that exploits \textbf{CSE-CIC-IDS2018} dataset as tabular data) with naively interpretable feature importance, and \textbf{CNN-LSTM}, a convolutional backbone augmented with LSTM blocks (that learns from chronologically ordered time windows of flows, therefore treats selected dateset as a time-series).
+  
+  The empirical work is organized into two branches: \textbf{Experiment~A} (a proof of concept starting on a feature-pruned \emph{reduced} dataset, over 5 random seeds) demonstrating that targeted noise can \emph{improve} a deep NIDS prediction performances, and \textbf{Experiment~B} (main focus of thesis: an analytical core starting on the \emph{complete} dataset, taking place over 20 random seeds, with both single-feature and multiple-feature corruption experiments) mapping the full space of effects that controlled corruption produces on a tabular and on a time-series classifier.
 \end{itemize}
 
-Studying both levels simultaneously is essential because corruption may have
-asymmetric effects. Two state-of-the-art architectures were selected, both
-configured as \emph{multi-task classifiers} predicting the binary and the
-multi-class label from a shared representation: \textbf{TabNet}, a sequential
-attention-based architecture for tabular data with natively interpretable
-feature importance, and \textbf{CNN-LSTM}, a convolutional backbone augmented
-with LSTM blocks that learns from chronologically ordered time windows of flows.
 
-The empirical work is organised into two branches: \textbf{Experiment~A}
-(a proof of concept on a feature-pruned \emph{reduced} dataset, over 5 random
-seeds) demonstrating that targeted noise can \emph{improve} a deep NIDS, and
-\textbf{Experiment~B} (the analytical core, on the \emph{complete} dataset, over
-20 random seeds, with both single- and multiple-feature corruption) mapping the
-full space of effects that controlled corruption produces on a tabular and on a
-time-series classifier.
 
 % =====================================================================
 \section{Background and Positioning}
 % =====================================================================
 
-The machine learning community has historically concentrated on the model
-training stage, yet a growing body of evidence shows that data-quality issues
-upstream of training often have a larger impact on final performance than the
-choice of model. PuckTrick distinguishes itself from detection/cleaning tools
-(DataAssert, CleanML, etc.) by its focus on the \emph{deliberate injection} of
-orthogonal corruption categories, each parametrised by a target column, a
-percentage, and a \emph{New}/\emph{Extended} variant for incremental
-experiments. The empirical literature on each noise type is consistent: feature
-noise causes a roughly monotone degradation proportional to the corrupted
-feature's importance; label noise is widely regarded as more damaging than
-feature noise; duplicates bias the model toward over-represented instances; and
-outliers can destabilise training. Prior deep-learning work on CIC-IDS2018
-(Random Forest, CNNs, LSTM/GRU, autoencoders) reports strong detection rates but
-\emph{does not} systematically study how data-quality degradation affects
-performance. This thesis fills that gap by introducing controlled PuckTrick
-corruptions and measuring their impact on TabNet and a CNN-LSTM in a multi-task
-configuration.
+The machine learning community has historically concentrated on the model training stage, yet a growing body of evidence shows that data-quality issues upstream of training often have a larger impact on final performance than the choice of model. PuckTrick distinguishes itself from detection/cleaning tools by its focus on the \emph{deliberate injection} of 5 orthogonal corruption categories, each parametrised by a target column, a percentage, and a \emph{New}/\emph{Extended} variant for incremental experiments. The empirical literature on each noise type is consistent: feature noise causes a roughly monotone degradation proportional to the corrupted feature's importance; label noise is widely regarded as more damaging than feature noise; duplicates bias the model toward over-represented instances; and outliers can destabilize training. 
+
+On the empirical side of this thesis, prior deep-learning work on CIC-IDS2018 (Random Forest, CNNs, LSTM/GRU, autoencoders) reports strong detection rates but \emph{does not} systematically study how data-quality degradation affects performance. This thesis fills that gap by introducing controlled PuckTrick corruptions and measuring their impact on TabNet and a CNN-LSTM in a multi-task configuration; making this dataset the perfect candidate for mapping full of noise induced consequences on predictions, planned by \textbf{Experiment A} and \textbf{Experiment B}.
 
 % =====================================================================
 \section{Library Extension: Design, Challenges, and Performance}
 % =====================================================================
 
-The central design principle guiding the extension was \emph{functional
-equivalence}: for every corruption method, the Spark implementation must accept
-the same parametrisation and produce statistically equivalent output
-distributions, so that Pandas and Spark results are directly comparable. The
-migration had to abstract away Pandas idioms (row-level indexing, in-place
-assignment, NumPy-backed sampling) and instead exploit Spark's defining traits:
-\emph{lazy evaluation} (transformations are planned and optimised by the Catalyst
-engine, executed only when an action is invoked), a distributed \emph{columnar}
-DataFrame API that operates at the column rather than the row level, and
-\emph{horizontal scalability} across cluster nodes.
+The central design principle guiding the extension was \emph{functional equivalence}: for each of the 5 already present corruption methods, the Spark implementation must accept the same parametrization and produce statistically equivalent output distributions, so that Pandas and Spark results are directly comparable. The migration had to abstract away Pandas idioms (row-level indexing, in-place assignment, NumPy-backed sampling) and instead exploit Spark's defining traits: \emph{lazy evaluation} (transformations are planned and optimized by the Catalyst engine, executed only when an action is invoked), a distributed \emph{columnar} DataFrame API that operates at the column rather than the row level, and \emph{horizontal scalability} across cluster nodes. Below is a small list of paragraph that covers the whole engineering work:
 
 \paragraph{Dual-backend architecture.}
-The originally flat, Pandas-specific codebase was reorganised into a three-tier
-modular layout (\texttt{pucktrick/core/}, \texttt{backends/pandas\_backend/},
-\texttt{backends/spark\_backend/}). The single user-facing \texttt{PuckTrick}
-class accepts a DataFrame and an engine selector (\texttt{Engine.AUTO},
-\texttt{Engine.PANDAS}, \texttt{Engine.SPARK}); a \texttt{BackendFactory}
-resolves the backend at runtime (in \texttt{AUTO} mode by PySpark availability
-and estimated dataset size, with a $600$\,MB threshold). A static
-\texttt{make\_remote\_cluster\_config} encapsulates all cluster configuration,
-and a \texttt{BaseBackend} abstract class guarantees that future engines (Polars,
-DuckDB) can be added without touching the public API.
+The originally flat, Pandas-specific codebase was reorganized into a three-tier modular layout: \texttt{pucktrick/core/}, \texttt{backends/pandas\_backend/}, \texttt{backends/spark\_backend/}. Each backend is an implementation of \texttt{BaseBackend} abstract class, this guarantees that future engines can be added without touching the public API. Said public API is represented as the sole user entry point to the library: the \texttt{PuckTrick} class. This class accepts a DataFrame and a publicly available enumeration (\texttt{Engine}) as engine selector (\texttt{Engine.AUTO}, \texttt{Engine.PANDAS}, \texttt{Engine.SPARK}); a \texttt{BackendFactory} resolves the backend at runtime (in \texttt{AUTO} mode by PySpark availability and estimated dataset size, with a $600$\,MB threshold). Also, a completely optional step is that the static \texttt{make\_remote\_cluster\_config} method encapsulates all remote cluster configurations, rendering possible connection to the users's own remote clusters. 
 
 \paragraph{The five corruption methods.}
-Every method accepts a working copy of the DataFrame and a declarative
-\emph{strategy dictionary} (the affected features, a row-selection criterion, the
-percentage, the \texttt{new}/\texttt{extended} mode, and a perturbation
-specification) and returns a tuple \texttt{(error\_code, modified\_df)}. The five
-modules behave identically across backends: \texttt{duplicated} appends copies of
-sampled rows (optionally producing \emph{near}-duplicates via text perturbations
-such as word shuffling or abbreviation); \texttt{labels} flips binary targets or
-replaces categorical targets with a different existing class; \texttt{missing}
-nullifies the sampled cells; \texttt{noise} replaces values with plausible
-in-domain alternatives (a different category for strings, a uniform draw in
-$[\min,\max]$ for numerics, a random in-range date for datetimes); and
-\texttt{outliers} injects type-dependent extreme values (beyond $\mu\pm4\sigma$
-for numerics, the next integer beyond the maximum for categorical integers, a
-sentinel string, or extreme timestamps).
+As their previous Pandas counterpart, every new Spark method accepts a working copy of the Spark DataFrame (in Pandas it was the Pandas dataset) and a declarative \emph{strategy dictionary} (this specifies the affected features, a row-selection criterion, the percentage, the \texttt{new}/\texttt{extended} mode, and a perturbation specification) and returns a tuple \texttt{(result\_code, modified\_df)} (just as the old Pandas counterpart, taking a step onto functional equivalence). The five
+modules \textbf{behave identically across backends}: \texttt{duplicated} appends copies of sampled rows (optionally producing \emph{near}-duplicates via text perturbations such as word shuffling or abbreviation); \texttt{labels} flips binary targets or
+replaces categorical targets with a different existing class; \texttt{missing} nullifies the sampled cells; \texttt{noise} replaces values with plausible in-domain alternatives (a different category for strings, a uniform draw in $[\min,\max]$ for numerics, a random in-range date for datetimes); and \texttt{outliers} injects type-dependent extreme values (beyond $\mu\pm4\sigma$ for numerics, the next integer beyond the maximum for categorical integers, a sentinel string, or extreme timestamps). 
 
 \paragraph{Technical challenges.}
-Several deep architectural differences between Pandas and Spark required
-engineering solutions across the five modules: (i) the \emph{absence of
-positional indices} in Spark was resolved by assigning each row a surrogate key
-via \texttt{monotonically\_increasing\_id()} (\texttt{\_pucktrick\_row\_id});
-(ii) \emph{lazy versus eager evaluation} forced a restructuring of the control
-flow in \texttt{noisy} and \texttt{outliers}, where branching depends on column
-properties that only an action can materialise; (iii) Spark's \emph{probabilistic
-sampling} was made exact through an oversample-and-\texttt{limit(n)} strategy that
-restores the precise requested percentage; (iv) divergent \emph{null semantics}
-were handled with explicit casts and \texttt{isNull}/\texttt{isNotNull}
-predicates; and (v) the \texttt{duplicated} method was rewritten to minimise the
-number of Spark \emph{actions} (caching counts, replacing
-\texttt{dropDuplicates().count()} with a single aggregation), eliminating the
-redundant global shuffles that initially made it slower than Pandas. Functional
-equivalence was certified by a suite of unit and cross-backend integration tests,
-and validated on a real five-node Standalone Spark cluster (one master and four
-workers; three workers with $4$ cores/$16$\,GB and one with $16$ cores/$32$\,GB),
-configured through passwordless SSH, a \texttt{workers} file, per-worker resource
-limits set in \texttt{spark-env.sh}, and the opening of ports $7077$ (cluster
-communication) and $8080$ (Web UI).
+Several deep architectural differences between Pandas and Spark required engineering solutions across the five modules: 
+\begin{itemize}
 
-\paragraph{Performance results.}
-A benchmark on a synthetic $1{,}000{,}000$-row dataset with heterogeneous column
-types (corruption rate $50\%$) revealed two clusters. For the
-\emph{low-complexity} methods (\texttt{duplicated}, \texttt{missing}) Pandas is
-faster ($\approx 0.5$\,s vs.\ $\approx 2$\,s for Spark), because Spark's fixed
-DAG-compilation and serialization overhead ($1.2$--$1.5$\,s) cannot be amortised
-on operations that fit in a single machine. For the \emph{high-complexity}
-methods (\texttt{noise}, \texttt{outliers}, \texttt{labels}) the ranking reverses
-dramatically: Spark is uniformly $2$--$8$\,s across all column types, whereas
-Pandas is strongly type-dependent ($\text{float}<\text{int}<\text{string}<\text{date}$),
-reaching $\approx 2{,}500$\,s on string/datetime columns. A break-even study
-($1$M$\to$$64$M rows) confirmed that \texttt{duplicated} and \texttt{missing}
-overtake Pandas only beyond $\approx 7$M rows, while the complex methods are
-already faster below $1$M. A distributed stress test of \texttt{duplicated}
-scaled near-linearly from $1$M to $128$M rows ($3.6$\,s $\to$ $84.6$\,s).
-Crucially, running the \emph{whole} five-method pipeline sequentially, the Spark
-backend is already $8.2\times$ faster than Pandas at one million rows, rising to
-$29.1\times$ at $4$M, $40.9\times$ at $16$M and saturating at $40$--$43\times$
-beyond $32$M (an Amdahl's-law plateau). This $\approx 8\times$ gain at the
-one-million-row scale is precisely what made the experimental campaign of the two
-empirical phases (almost $14{,}000$ trained models) computationally tractable,
-binding the engineering contribution directly to the analytical one.
+    \item \textbf{absence of positional indices} in Spark was resolved by assigning each row a surrogate key via \texttt{monotonically\_increasing\_id()} (\texttt{\_pucktrick\_row\_id});
+    
+    \item \textbf{lazy versus eager evaluation} forced restructure of the control flow in \texttt{noisy} and \texttt{outliers}, where branching depends on column (forcing DAG operations to materialize data);
+
+    \item Spark's \textbf{probabilistic sampling} was made exact through an oversample-and-\texttt{limit(n)} strategy that restores the precise requested percentage;
+
+    \item Spark's \textbf{divergent null semantics} were handled with explicit casts and \texttt{isNull}/\texttt{isNotNull}predicates;
+
+    \item The whole 5 methods were either re-written (in case of \texttt{duplicated}) or optimized to minimize the number of Spark \emph{actions} (caching counts, replacing \texttt{dropDuplicates().count()} with a single aggregation), eliminating the redundant global shuffles that initially made them slower (this was done after initial discovery that \texttt{duplicated} method was initially always slower than its Pandas counterpart, never reaching break-even point).
+\end{itemize}
+
+Functional equivalence was certified by a suite of unit and cross-backend integration tests, and validated on a real five-node Standalone Spark cluster (one master and four workers; three workers with $4$ cores/$16$\,GB and one with $16$ cores/$32$\,GB), configured through SSH, and the opening of ports $7077$ (cluster communication) and $8080$ (Web UI, that resulted very useful for testing).
+
+\paragraph{Library's stress tests results.}
+Using previously configured spark cluster 3 types of stress tests were made. First test is a benchmark on a synthetic $1{,}000{,}000$-rows dataset with heterogeneous column types (corruption rate $50\%$). This revealed that newly implemented Spark method could be classified in two classes. First class is the \emph{low-complexity} methods (\texttt{duplicated}, \texttt{missing}) where ($1{,}000{,}000$-rows) Pandas is faster ($\approx 0.5$\,s vs.\ $\approx 2$\,s for Spark), because Spark's fixed DAG-compilation and serialization overhead ($1.2$--$1.5$\,s) cannot be amortized. Second class is the \emph{high-complexity} methods (\texttt{noise}, \texttt{outliers}, \texttt{labels}), where the ranking reverses dramatically: Spark is uniformly $2$--$8$\,s across all column types, whereas Pandas is strongly type-dependent ($\text{float}<\text{int}<\text{string}<\text{date}$), reaching $\approx 2{,}500$\,s on string/datetime columns. 
+
+Secondly, a break-even test ($1$M$\to$$64$M rows) confirmed that \texttt{duplicated} and \texttt{missing} overtake Pandas only beyond $\approx 7$M rows (break-even reached), while other methods are already faster below $1$M. 
+
+Thirdly, last and most crucial test revealed that running the \emph{whole} five-method pipeline sequentially, the Spark backend is already $8.2\times$ faster than Pandas at one million rows, rising to $29.1\times$ at $4$M, $40.9\times$ at $16$M and saturating at $40$--$43\times$ beyond $32$M (an Amdahl's-law plateau). This $\approx 8\times$ gain at the one-million-row scale is precisely what made the experimental campaign of the two empirical phases (almost $14{,}000$ trained models in \textbf{Experiment-A} and \textbf{Experiment-B}) computationally tractable, binding the engineering contribution directly to the analytical one.
 
 % =====================================================================
 \section{Dataset Analysis}
 % =====================================================================
 
-After unification the dataset contains $16{,}173{,}208$ flow instances described
-by $79$ purely statistical features (no application-layer payload) plus two
-labels: \texttt{Label} (fine-grained attack type) and \texttt{label\_generic}
-(binary benign/malicious). The class distribution is \emph{severely imbalanced}
-(benign $\gg$ malign), which is why all evaluation is reported in terms of
-imbalance-robust metrics rather than accuracy. Temporal analysis of the
-\texttt{Timestamp} column shows that attacks are clustered into bursts (a
-scripted, campaign-like structure), which validates treating the data as a time
-series and motivates the CNN-LSTM. A completeness scan found only $\approx 0.37\%$
+Prior to any empirical task a full examination of the dataset took place. The full \textbf{CSE-CIC-IDS2018} dataset contains $16{,}173{,}208$ flow-packet instances described by $79$ purely statistical features (no application-layer payload) plus two labels: \texttt{Label} (fine-grained attack type) and \texttt{label\_generic}
+(binary benign/malicious). The class distribution is \emph{severely imbalanced} (benign $83\%$ $\gg$ malign $17\%$), which is why all evaluation is reported in terms of imbalance-robust metrics rather than accuracy (mostly MCC). Temporal analysis of the
+\texttt{Timestamp} column shows that attacks are clustered into bursts (pattern typical of DDoS attacks), which validates treating the data as a time series and motivates the usage CNN-LSTM. A completeness scan found only $\approx 0.37\%$
 null/\texttt{inf} rows, removed by listwise deletion.
 
-A feature-relevance pipeline then drove the two-branch design. A Pearson
-correlation screen ($|r|\ge 0.85$) flagged \textbf{27} redundant features, and a
-variance screen flagged \textbf{8} zero-variance features; both were removed for
-\textbf{Experiment~A} (yielding a \textbf{44}-feature reduced set) but
-\emph{retained} for \textbf{Experiment~B} (full \textbf{79} features), precisely
-so that noise injection into uninformative features could be studied as a
-control. By effective cardinality the full set comprises $11$ binary, $3$ categorical,
-$64$ continuous and $1$ date feature ($7/2/34/1$ in the reduced set). A fragility
-analysis based on skewness and kurtosis classified the vast majority of features
-($\approx 57/79$) as \emph{high fragility}. A
-feature--target analysis (point-biserial with the binary label, ANOVA F with the
-multi-class label) revealed a central tension: the maximum binary correlation is
-modest ($|\rho|\approx 0.43$, \texttt{Fwd Seg Size Min}), while the most
-discriminative features for attack-type attribution are also the most fragile.
-This \emph{fragility--relevance tension} is the hypothesis that the experiments
-were designed to probe.
+A feature-relevance pipeline then drove the two-branch design. A Pearson correlation screen ($|r|\ge 0.85$) flagged \textbf{27} redundant features, and a variance screen flagged \textbf{8} zero-variance features; both were removed for
+\textbf{Experiment~A} (yielding a \textbf{44}-feature reduced set) but \emph{retained} for \textbf{Experiment~B} (full \textbf{79} features), precisely so that noise injection into features of all level of importance could be studied. By effective cardinality the full set comprises $11$ binary, $3$ categorical, $64$ continuous and $1$ date feature ($7/2/34/1$ in the reduced set). 
+
+Secondly, a fragility analysis based on skewness and kurtosis classified the vast majority of features ($\approx 57/79$) as \emph{high fragility}. This information (along with which features were very robust and which were moderately robust) proved useful later in the experimental phase. Then, this score was paired whit a feature-target analysis (point-biserial with the binary label, ANOVA-F with the multi-class label) revealed a central tension: the maximum binary correlation is modest ($|\rho|\approx 0.43$, \texttt{Fwd\_Seg\_Size\_Min}, coincidentally the most robust feature of the set), while the most discriminative features for attack-type attribution are also the most fragile.
+This \emph{fragility--relevance tension} is the hypothesis that the experiments were designed to probe.
 
 % =====================================================================
 \section{Experimental Protocol}
 % =====================================================================
 
-\paragraph{Models.}
-TabNet was retained for its strong baseline F1 and its native, attention-based
-global feature importance; the CNN-LSTM (adapted from Jablaoui et al.) for its
-proven ability to learn window-level statistical signatures of attack campaigns.
-Two further candidates, a pure LSTM and a Temporal Fusion Transformer (TFT), were
-tested and \emph{discarded}: the TFT in particular is structurally mismatched to
-retrospective flow classification (it requires static and known-future
-covariates absent here), and empirically collapsed its predictions to a single
-class. The CNN-LSTM consumes 3D sliding windows ($T=50$, stride $S=10$), labelled
-by their last flow; an important consequence is a $\approx 10{:}1$ asymmetry in
-effective sample count (TabNet $\approx 269$k validation samples vs.\ CNN-LSTM
-$\approx 27$k), which makes CNN-LSTM metrics intrinsically noisier.
+\paragraph{Models selection}
+First candidate that we wanted to try was TabNet (Google's state of the art model). After trial it was retained for its strong baseline F1 and, most importantly, its native, attention-based global feature importance that natively allowed to estimate the model's own features importance scaling. Therefore this model was used to process \emph{CSE-CIC-IDS2018} as tabular data, without usage of \texttt{Timestamp} column.
+
+Second winning candidate for our experimental phase was a CNN-LSTM (adapted from Jablaoui et al.) for its proven ability to learn window-level statistical signatures of attack campaigns. For this reason this model was deployed to process \emph{CSE-CIC-IDS2018} dataset as a time-series dividing the data in 3D-temporal-sliding-windows ($T=50$, stride $S=10$) using the \texttt{Timestamp} column (an important consequence is a $\approx 10{:}1$ asymmetry in effective sample count (TabNet $\approx 269$k validation samples vs.\ CNN-LSTM $\approx 27$k), which makes CNN-LSTM metrics intrinsically noisier). To level the playing field with TabNet, in terms of functionalities, a custom ranking system for feature importance in CNN-LSTM was developed based on \emph{permutation importance}. For each feature $i$, the values along feature dimension 2 of the entire validation tensor were randomly permuted across samples (while leaving all other features intact) and the resulting drop in binary classification accuracy, $\Delta_i = \mathrm{acc}_{\text{base}} - \mathrm{acc}_{\text{permuted},i}$, was recorded.  The raw $\Delta_i$ values were normalized to $[0, 1]$ by dividing by the maximum observed drop, yielding a relative importance score $\hat{\Delta}_i \in [0, 1]$.
+
+Two further candidates, a pure LSTM and a Temporal Fusion Transformer (TFT), were tested and \emph{discarded}: the TFT in particular required static and known-future covariates absent here and empirically collapsed its predictions to a single class. 
+
 
 \paragraph{HPO and feature selection.}
-Hyperparameters were optimised with Optuna (TPE sampler and Median Pruner) on a
-$0.1\%$ stratified sample ($\approx 16$k flows), maximising mean MCC (TabNet) or
-mean F1 (CNN-LSTM) to counter the class imbalance ($9$ TabNet trials, $10$
-CNN-LSTM trials). The best configurations (TabNet trial~7 for Experiment~B,
-trial~1 for Experiment~A, reaching a mean MCC of $0.870$ on the validation
-sample; CNN-LSTM trial~1) were persisted, with a linear batch-size scaling rule
-(and a matching $\lambda_{\text{sparse}}$/learning-rate correction) applied when
-moving to the larger training set.
-Feature importance from both models was then combined: Experiment~A took the
-\emph{intersection} of the two top-15 lists (a compact $8$-feature, high-signal
-set), whereas Experiment~B used a \emph{combined average rank} with a
-\emph{stratified} selection that deliberately spans importance tiers and feature
-types, including zero-variance \emph{negative controls}, yielding a $9$-feature
-working set plus \texttt{Timestamp}.
+Hyperparameters were optimized with Optuna (TPE sampler and Median Pruner) on a $0.1\%$ stratified sample ($\approx 16$k records) of full 79-feature-set for \textbf{Experiment-B}, while using 44-feture-subset for \textbf{Experiment-A} maximising mean MCC (TabNet) or mean F1 (CNN-LSTM) to counter the class imbalance ($9$ TabNet trials, $10$ CNN-LSTM trials). The best configurations (which slightly varies from Experiment-A and Experiment-B, yet still reaching good overall performances for both: mean-F1 over two heads for Exp-A: 0,85 -- mean-F1 over two heads for Exp-B: 0,6) were persisted, with a linear batch-size scaling rule (and a matching $\lambda_{\text{sparse}}$/learning-rate correction) applied when moving to the larger training set of both experiments.
 
-\paragraph{Splitting and baselines.}
-A shuffle-free temporal split (sort by \texttt{Timestamp}, modular assignment
-$g_i = i \bmod 3$) on a $10\%$ stratified sample ($\approx 1{,}614{,}745$ flows)
-preserves chronological order \emph{and} all 15 attack classes, with
-$66.7\%/16.7\%/16.7\%$ train/validation/test fractions; a \texttt{StandardScaler}
-fitted only on the training partition prevents leakage. The clean baselines
-(against which all noisy runs are compared) are reported in
-Table~\ref{tab:baselines}.
+Yet, another crucial step, is that is from this task's best models (for both Exp-A and Exp-B) the list of most important features were extracted. Then, these two lists (one for each model) were combined in a different way, depending on experiment: Experiment~A took the \emph{intersection} of the two top-15 features from the 2 lists (a compact $8$-feature, high-signal set), whereas Experiment~B used a \emph{combined average rank} with a \emph{stratified} selection that deliberately spans: 3 top features of combined ranking, 3 middle features of combined ranking, 3 bottom features from combined ranking. This selected subset also cover each feature type (binary/categorical/float) and each feature fragility (retained from dataset analysis) including zero-variance \emph{negative controls}; yielding a $9$-feature working set plus \texttt{Timestamp} and making it perfect to map \emph{all kinds} of noise induced effects (which is exact intent of Exp-B).
+Getting this slimmer lists of features for both Experiment-A and Experiment-B was rendered necessary as using full-features-set for training $\approx1\,400$ models was computationally unfeasible.
 
-\begin{table}[h]
-\centering
-\caption{Clean baseline MCC on the validation set (binary / multi-class).}
-\label{tab:baselines}
-\small
-\begin{tabular}{lcc}
-\toprule
-\textbf{Model} & \textbf{Experiment~A (reduced)} & \textbf{Experiment~B (full)} \\
-\midrule
-TabNet   & $0.896 \,/\, 0.886$ & $0.883 \,/\, 0.856$ \\
-CNN-LSTM & $0.730 \,/\, 0.580$ & $0.737 \,/\, 0.635$ \\
-\bottomrule
-\end{tabular}
-\end{table}
+\paragraph{Datasets splitting and baselines.}
+Each of the $\approx1\,400$ models (baselines included) was trained on one of two datasets, one for \textbf{Exp-A} and one for \textbf{Exp-B}: they differ only in the features retained, while both contain the same number of instances, namely a $10\%$ sample of the respective $\approx16$ million instances (retaining about $\approx1.6$ million rows). The sampling is done by taking 1 every 10 rows of original dataset, this cut is admissible because network traffic is intrinsically redundant (a single application emits thousands of near-identical packets per second), so that retaining one flow in ten preserves the syntactic and semantic structure of the capture with negligible information loss. From these $\approx1.6$ million instances the train/validation/test partitions were obtained through a deliberately \emph{shuffle-free} procedure, since no conventional splitting method was applicable: a random \texttt{train\_test\_split} would shuffle the rows and destroy the chronological continuity the CNN-LSTM depends on, whereas a naive day-based split (e.g.\ assigning the first days to training) would exclude attack types that appear only on specific days, silently dropping entire classes. The adopted strategy instead sorts all rows by ascending \texttt{Timestamp} and assigns to each the group index $g_i = i \bmod 3$ (with $i$ being $0$-based position in the sorted sequence). Then sends the instances with $g_i\in\{0,1\}$ (two thirds of the data) to the \emph{training} set; and splits the remaining third ($g_i = 2$) by position parity, the even positions forming the \emph{validation} set and the odd positions the \emph{test} set. This yields three non-overlapping partitions that jointly cover all $15$ classes while preserving strict chronological order, in the proportions $66.7\%/16.7\%/16.7\%$ ($\approx1\,$million / $\approx300\,k$ / $\approx300\,k$). Finally, a \texttt{StandardScaler} fitted \emph{only} on the training partition (and then applied to validation and test) scales the continuous features without leakage, while categorical and binary features are left integer-encoded.
+
+On these clean partitions the two baseline models were trained, and they constitute the reference against which every noisy run is measured (as a $\Delta\mathrm{MCC}$). Results are:
+\begin{itemize}
+    \item On \textbf{Exp-A}'s high-signal-feature-subset the binary/multi-class validation MCC is $0.896/0.886$ for TabNet and $0.730/0.580$ for CNN-LSTM.
+    \item On \textbf{Exp-B}'s feature-subset it is $0.883/0.856$ for TabNet and $0.737/0.635$ for CNN-LSTM.
+\end{itemize}
+The purpose of the baselines is not to maximize absolute detection but to provide a stable anchor for the \emph{relative} effect of corruption.
+
+
+
 
 \paragraph{Experimental grid.}
-For every fully specified configuration (one feature or feature-group, one of the
-five PuckTrick methods, one corruption percentage, one seed) \emph{both} models
-are retrained from scratch and their metrics (MCC, F1, AUC, confusion matrices,
-feature importance) persisted. Validation and test partitions remain clean
-throughout: only the training partition is corrupted. Experiment~A uses the grid
-$p_A\in\{1,5,10,20,30,50,75\}\%$ over $5$ seeds and $4$ corrupted columns
-($525$ configurations $\Rightarrow$ $1{,}050$ models). Experiment~B uses
-$p_B\in\{5,10,20,35,50,75\}\%$ over $20$ seeds, in a single-feature scenario
-($10$ columns plus the two targets; $4{,}080$ configurations $\Rightarrow$
-$8{,}160$ models) and a multiple-feature scenario ($6$ feature groups plus a
-joint target group; $2{,}280$ configurations $\Rightarrow$ $4{,}560$ models).
+For every fully specified configuration (one feature or feature-group, one of the five PuckTrick methods, one corruption percentage, one seed) \emph{both} models are retrained from scratch and their metrics (MCC, F1, AUC, confusion matrices, feature importance) persisted. Validation and test partitions remain clean throughout: only the training partition is corrupted. \textbf{Experiment-A} uses 7 corruption-percentages ($p_A\in\{1,5,10,20,30,50,75\}\%$) over $5$ seeds and $4$ corrupted columns ($525$ configurations $\Rightarrow$ $1{,}050$ models). \textbf{Experiment-B} uses 6 corruption-percentages ($p_B\in\{5,10,20,35,50,75\}\%$) over $20$ seeds, in a single-feature scenario ($10$ columns plus the two targets; $4{,}080$ configurations $\Rightarrow$ $8{,}160$ models) and a multiple-feature scenario ($6$ feature groups plus a joint target group; $2{,}280$ configurations $\Rightarrow$ $4{,}560$ models).
 The campaign totals \textbf{6{,}885 configurations} and \textbf{13{,}770 trained
-models}. Each cell is summarised by its mean MCC with a Student-$t$ $95\%$
-confidence half-width over its seeds, and tested for significance against the
-clean baseline with a paired Wilcoxon signed-rank test ($p<0.05$); with only five
-seeds Experiment~A cannot fall below the test's hard floor of $\approx 0.0625$,
-so its large effects are read descriptively and \emph{confirmed} by the 20-seed
-Experiment~B. The grid was run partly on a local GPU workstation and partly on an
-HPC cluster; since each model skips training when its checkpoint already exists
-(idempotent reruns) and out-of-memory crashes are a recurrent risk, a watchdog
-process auto-restarted failed jobs from their last checkpoint.
+models}. Each single experiment is summarized by its mean MCC with a Student-$t$ $95\%$ confidence half-width over its seeds, and tested for significance against the clean baseline with a paired Wilcoxon signed-rank test ($p<0.05$); with only five seeds Experiment~A cannot fall below the test's hard floor of $\approx 0.0625$, so its large effects are read descriptively and \emph{confirmed} by the 20-seed Experiment~B. The full experimental grid was run partly on a local GPU workstation and partly on an HPC cluster as it required lots of computation time and resources.
 
 % =====================================================================
 \section{Experimental Results}
@@ -373,147 +212,72 @@ process auto-restarted failed jobs from their last checkpoint.
 % ---------------------------------------------------------------------
 
 \paragraph{Single-feature corruption.}
-Three regimes emerge. \emph{(1) Broad resilience.} Corrupting any single input
-feature leaves the binary MCC essentially unchanged across almost the entire
-grid, especially for TabNet, whose sparse sequential attention simply reallocates
-its mask toward the surviving clean features. The multi-class head pays a small,
-systematic $-0.02$ to $-0.03$ penalty under almost any corruption (even of
-zero-variance controls), confirming that fine-grained attack resolution is the
-first capability to erode. The lone exception is \texttt{Dst Port} (the single
-most discriminative column), whose corruption degrades both models and is flagged
-highly significant ($p<10^{-4}$). \emph{(2) Beneficial corruption.} The most
-striking result is that injecting \texttt{outliers} into \texttt{Timestamp}
-\emph{improves} the CNN-LSTM monotonically and significantly ($\Delta\mathrm{MCC}$
-up to $+0.147$ binary and $+0.236$ multi-class at high noise, $p<10^{-4}$). Since
-\texttt{Timestamp} is dropped before the feature tensor is built, the corruption
-does not pollute inputs; instead it permutes the rows \emph{before} the
-chronological sort, weakening the within-window label auto-correlation that the
-CNN-LSTM would otherwise exploit as a spurious \emph{temporal shortcut}. The
-corruption thus acts as a targeted regulariser. The effect is absent for the
-order-invariant TabNet, which has no such shortcut to remove. \emph{(3) Inert
-duplication.} The row-level \texttt{duplicated} method has near-null effect, as
-exact duplicates add no entropy and merely re-weight rows.
+Three regimes emerge. 
+\begin{itemize}
+    \item \emph{Broad resilience, with one sharp exception.} Corrupting any single input feature leaves the binary MCC essentially unchanged across almost the entire grid, especially for TabNet, whose sparse sequential attention simply reallocates its mask toward the surviving clean features. This robustness (mirrored by the narrow Student-$t$ bands around these near-baseline deltas) is made possible because the working set deliberately retains more than one discriminative feature, therefore when only one is corrupted models can rely on the other features to still maintain good performances. The multi-class head pays only a small, systematic $-0.02$ to $-0.03$ penalty under almost any corruption, confirming that fine-grained attack resolution is the first capability to erode. The one feature whose corruption produces a sizable, \emph{monotone} degradation in \emph{both} models is \texttt{Dst Port} (the single most discriminative column for TabNet and the second most discriminative for CNN-LSTM): once the most informative feature is destroyed and no redundant substitute remains, performance inevitably falls, a loss the paired Wilcoxon test certifies as highly significant ($p<10^{-4}$, signifying most of twenty seeds agree on its sign). Tellingly, CNN-LSTM's \emph{own} top feature, \texttt{Fwd Seg Size Min}, is the dataset's only \emph{low-fragility} column (meaning it's pretty robust to noise), and corrupting it barely moves the MCC (no visible decline below $35\%$ noise, and only $\approx 4\%$ at $70\%$); the permutation-importance rank-drift diagnostics confirm the asymmetry, with \texttt{Dst Port} shedding its importance rank immediately (already at $5\%$ noise for TabNet, dropping to third then fifth for CNN-LSTM) while \texttt{Fwd Seg Size Min} holds the top rank until corruption reaches $35\%$. The magnitude of degradation therefore tracks the \emph{joint} effect of feature importance and feature fragility with fidelity.
 
-\paragraph{Label corruption.}
-Corrupting the supervision signal is categorically different. As shown in
-Table~\ref{tab:cliff}, flipping the \emph{binary} target is harmless up to
-$\approx 35\%$ and then collapses off a cliff at $50\%$, descending into outright
-\emph{inversion} at $75\%$ ($\Delta\mathrm{MCC}=-1.642$ for TabNet, a near-complete
-sign reversal): exactly the phase transition a two-state symmetric flip predicts.
-Corrupting the $15$-class \emph{multi-class} target, by contrast, only degrades
-gradually, because a reassignment among many classes can never form a coherent
-inverse mapping. The multi-task probe further exposes \emph{cross-head leakage}:
-the binary collapse \emph{propagates} to the multi-class head, but only in the
-binary$\rightarrow$multi-class direction and only for the CNN-LSTM (whose two
-heads share a single context vector, $-0.536$ at $75\%$), while TabNet's
-attention-disentangled heads barely move ($-0.050$). The operational lesson is
-sharp: the integrity of the \emph{binary} label must be guaranteed above all.
+    \item \emph{Beneficial corruption exists: } The most striking result is that injecting \texttt{outliers} into \texttt{Timestamp} \emph{improves} the CNN-LSTM monotonically and significantly ($\Delta\mathrm{MCC}$ up to $+0.147$ binary and $+0.236$ multi-class at high noise, $p<10^{-4}$). Since \texttt{Timestamp} is dropped before the feature tensor is built, the corruption does not pollute inputs; instead it permutes the rows \emph{before} the chronological sort, weakening the within-window label auto-correlation that the CNN-LSTM would otherwise exploit as a spurious \emph{temporal shortcut}. The corruption thus acts as a targeted regularizer. The effect is absent for the order-invariant TabNet, which has no such shortcut to remove.
 
-\begin{table}[h]
-\centering
-\caption{Experiment~B, single-feature \texttt{labels} method on the binary target
-\texttt{label\_generic}: $\Delta\mathrm{MCC}$ on the directly corrupted binary head
-(against the clean baseline). The $50\%$ flip point is a genuine phase transition.}
-\label{tab:cliff}
-\small
-\begin{tabularx}{\textwidth}{l*{6}{>{\centering\arraybackslash}X}}
-\toprule
-\textbf{Model} & \textbf{5\%} & \textbf{10\%} & \textbf{20\%} & \textbf{35\%} & \textbf{50\%} & \textbf{75\%} \\
-\midrule
-TabNet   & $-0.007$ & $-0.005$ & $-0.009$ & $-0.016$ & $-0.956$ & $-1.642$ \\
-CNN-LSTM & $+0.008$ & $+0.010$ & $-0.003$ & $-0.010$ & $-0.668$ & $-0.864$ \\
-\bottomrule
-\end{tabularx}
-\end{table}
+    \item \emph{(3) Ineffective duplication.} The row-level \texttt{duplicated} method has near-null effect, as exact duplicates add no entropy and merely re-weight rows.
+\end{itemize}
+
+
+  
+
+\paragraph{Single-label corruption.}
+Corrupting the supervision signal is categorically different. Flipping the \emph{binary} target is harmless up to $\approx 35\%$ and then collapses off a cliff at $50\%$ for both models, finally descending into:
+\begin{itemize}
+    \item for TabNet: outright \emph{inversion} at $75\%$ ($\Delta\mathrm{MCC}=-1.642$, a near-complete sign reversal): exactly the phase transition a two-state symmetric flip predicts.
+    \item  for CNN-LST: Total confusion at $75\%$, registering $\Delta\mathrm{MCC}=-0.864$. Still reaching a negative value of MCC, wich most likely means that by corrupting even further, this model too, would arrive to a symmetric flip prediction.
+\end{itemize}
+
+Corrupting the $15$-class \emph{multi-class} target, by contrast, only degrades gradually, because a reassignment among many classes can never form a coherent inverse mapping. Yet, most interesting result from this study is that the multi-task probe further exposes \emph{cross-head leakage}: when binary target gets corrupted and inevitably collapses, the collapse \emph{propagates} to the multi-class head. The most interesting find resides in the fact that this kind of collapse-propagation only occurs in the binary$\rightarrow$multi-class direction and only for the CNN-LSTM (whose two heads share a single context vector, $-0.536$ at $75\%$), while TabNet's attention-disentangled heads barely move ($-0.050$). 
+
+The lesson is clear: the integrity of the \emph{binary} label must be guaranteed above all, as corruption of this class implies very heavy consequences upon prediction performances (as one would expect).
+
 
 \paragraph{Multiple-feature corruption.}
-Compound corruption is additive-to-super-additive. On the worst group (six
-important features) at $75\%$ \texttt{outliers}, the CNN-LSTM multi-class MCC
-falls by $-0.526$ (the single most severe feature-level degradation in the
-campaign), whereas TabNet loses only $\approx -0.05$ --- an order of magnitude
-less --- because its per-step sparse attention re-routes around the corrupted
-columns and demotes them in its importance ranking while \emph{promoting} clean
-ones (notably the low-fragility \texttt{Fwd Seg Size Min}). Decisively, jointly
-corrupting \emph{both} targets does \emph{not} reproduce the binary cliff: a
-reassignment among attack classes preserves the benign/malicious distinction, so
-the binary supervision stays largely intact. The impact of label noise therefore
-depends not only on its quantity but on the precise \emph{mechanics} of how it is
-realised.
+Six input-feature groups (spanning combinations of importance and fragility). Results explain that corrupting several input features at once amplifies the single-feature degradations in an additive-to-\emph{super-additive} fashion, but, again, only for the CNN-LSTM. Notably, no group contains \texttt{Timestamp}, so the beneficial regularization regime cannot manifest here and the compound effect is essentially always negative.
+
+On the binary task the two architectures diverge by an order of magnitude: on the worst group (3 most important features + 3 middle features all being corrupted at once) at $75\%$ \texttt{outliers} the CNN-LSTM binary head loses $-0.209$ while TabNet loses only $-0.026$. TabNet's progression stays gently monotone (the top-three group drifts $-0.004 \to -0.013 \to -0.039$ from $5\%$ to $50\%$ to $75\%$) and never accelerates into the super-additive collapse of the CNN-LSTM, because its per-step sparse attention re-routes around the corrupted columns just as effectively when several are hit at once as when only one is. This was proved by seeing average feature-ranking ranking for TabNet demoting the dirtied features in its importance ranking and \emph{promoting} clean ones: a re-ranking that the CNN-LSTM is unable to perform. 
+
+On the multi-class task the gap is starker still: \texttt{outliers} on the six-feature group  (top-and-middle importance features) drives the CNN-LSTM multi-class MCC down by $-0.526$: the single most severe \emph{feature-level degradation}of the whole campaign, with \texttt{noise} comparably destructive ($-0.494$) and \texttt{missing} markedly gentler ($-0.223$, since masked cells are absorbed by the embedding/scaling pipeline rather than injected as out-of-distribution magnitudes). TabNet, by contrast, pays only a near-uniform $\approx -0.03$ penalty that is already present at the lowest noise level and is \emph{identical} for the zero-variance control group, proving that it stems not from the loss of the corrupted signal but from a
+generic sensitivity of minority-class resolution to \emph{any} distribution shift (the same multi-class "tax" seen in the single-feature regime). 
+
+In short, compound feature corruption \emph{confirms rather than overturns} the single-feature verdict: TabNet is intrinsically robust to the joint corruption of inputs, and the only manipulation that genuinely breaks it remains the inversion of the binary supervision signal.
+
+\paragraph{Multiple-label corruption.}
+A seventh multi-feature-group corrupts the two targets \texttt{Label} and \texttt{label\_generic} \emph{jointly}, and its outcome is at first sight surprising: the catastrophic binary cliff of the single-label experiment does \emph{not} reappear. Both models retain near-baseline binary MCC across the entire grid (TabNet $\Delta \approx -0.004$; CNN-LSTM between $+0.015$ and $-0.009$), while the multi-class task degrades only mildly (TabNet $-0.027$ to $-0.043$; CNN-LSTM from $+0.033$ at $5\%$ down to $-0.086$ at $50\%$). 
+
+The explanation lies in the \emph{consistency} of joint corruption: when both targets are dirtied together, a row whose multi-class label is reassigned from one attack type to another keeps its binary label \emph{malicious}, so reassignments among the many attack classes overwhelmingly \emph{preserve} the benign/malicious distinction. The binary supervision therefore stays largely intact even at $50\%$
+group corruption and no inversion forms. This is a sharp contrast with what we saw whit the isolated binary corruption: when label flip occurred. The methodological lesson is decisive: the impact of label noise depends not only on its quantity but on the precise mechanics of how it is realized, specifically on whether the corruption respects or violates the semantic coupling between related labels.
 
 % ---------------------------------------------------------------------
 \subsection{Experiment A: a real-world proof of concept}
 % ---------------------------------------------------------------------
 
-On the reduced, high-signal $8$-feature set, the regularisation phenomenon of
-Experiment~B reappears across \emph{most} features rather than only
-\texttt{Timestamp}. For the CNN-LSTM, the \texttt{outliers} method systematically
-raises held-out MCC, with the largest and most consistent gains on the
-multi-class task (e.g.\ $+0.353$ for \texttt{Timestamp}, and $\approx +0.17$ for
-\texttt{FIN Flag Cnt} and \texttt{Down/Up Ratio}, with tight confidence margins).
-TabNet, already near its ceiling, shows no systematic improvement, confirming
-that the gain is specifically about \emph{regularising an overfit-prone temporal
-model}.
+Finally, last experiment was conducted on the reduced, high-signal $8$-feature set while applying noise one feature at a time similarly to what was done in \textbf{Exp-B} single-feature-corruption. In fact, the regularization phenomenon of \textbf{Experiment B} reappears, strangely enough, across \emph{most} features in CNN-LSTM, rather than only \texttt{Timestamp}. For this model, the \texttt{outliers} method systematically raises held-out MCC, with the largest and most consistent gains on the multi-class task (e.g.\ $+0.353$ for \texttt{Timestamp}, and $\approx +0.17$ for \texttt{FIN Flag Cnt} and \texttt{Down/Up Ratio}, with tight confidence margins).
+TabNet, already near its ceiling, shows no systematic improvement, confirming that the gain is specifically about \emph{regularizing an overfit-prone temporal model}.
 
-The decisive contribution of Experiment~A, however, is the change of yardstick.
-For a security system the proper measure is not the aggregate MCC but the
-\emph{asymmetric operational cost} of errors: a false negative (a missed attack)
-is far graver than a false positive (a false alarm). Read through this lens, a
-\emph{model-independent} improvement emerges: corrupting the \texttt{Protocol}
-column with \texttt{outliers} at $50\%$ consistently reduces the number of false
-negatives for \emph{both} TabNet ($\approx 600$ fewer missed detections) and
-CNN-LSTM ($\approx 200$), at the price of at most a negligible MCC loss. A
-property of the dataset, identified through systematic analysis, can thus be
-deliberately exploited to make a deep NIDS materially safer in deployment: the
-proof of concept is validated.
+Yet, the decisive contribution of \textbf{Experiment A}, however, is the change of yardstick.
+For this particular experiment we base our conclusion on completely different train of thoughts. While keeping track of accuracy scores such as MCC is a good way to check the validity of a model, inside a security system the proper measure is not the aggregate MCC but the \emph{asymmetric operational cost} of errors: a false negative (a missed attack) is far graver than a false positive (a false alarm). Read through this lens we tried to guide us trough the improvements gave to us by the MCC (that were monitored earlier) in order to find a \emph{model-independent} improvement that could minimize missed attacks (false-negatives). This search lead us to great discovery: corrupting the \texttt{Protocol} column with \texttt{outliers} at $50\%$ consistently reduces the number of false negatives for \emph{both} TabNet ($\approx 600$ fewer missed detections) and CNN-LSTM ($\approx 200$), at the price of at most a negligible MCC loss for only TabNet. This proved to us that a property of the dataset, identified through systematic analysis, can be deliberately exploited to make a deep NIDS materially safer in deployment: thus the proof of concept was validated, reveling that noise injection experiments (such as this one) can have real word applications into solving real-life problems, one of those being increasing consistency in NIDS.
 
 % =====================================================================
 \section{Conclusions}
 % =====================================================================
 
-All three objectives were met. \textbf{(1)} PuckTrick was successfully
-re-engineered with an Apache Spark backend behind an unchanged public API, with
-certified functional equivalence and a decisive, scalable speed-up
-($8.2\times$ at one million rows, plateauing at $40$--$43\times$) that made the
-$\approx 14$k-model campaign affordable. \textbf{(2)} Experiment~B produced a
-coherent, statistically grounded behavioural map: robustness is an
-\emph{architectural} property (TabNet's sparse attention makes it markedly more
-robust than the CNN-LSTM); a controlled noise budget can be net-positive but only
-within a narrow window (removing a learnable temporal shortcut); the two tasks
-degrade at different rates (attack attribution is the more fragile); corrupting
-the supervision signal is categorically more dangerous than corrupting inputs,
-with a binary-label inversion cliff beyond $50\%$ and architecture-dependent
-cross-head leakage; and the magnitude of degradation tracks feature importance so
-faithfully that the protocol doubles as a model-agnostic importance probe.
-\textbf{(3)} Experiment~A demonstrated a practical, model-independent real-world
-gain (false-negative reduction via \texttt{outliers} on \texttt{Protocol}).
+After exploring all results of the full experimental grid we can agree that all of our objectives were met:
+\begin{itemize}
+    \item PuckTrick was successfully re-engineered with an Apache Spark backend behind an unchanged public API, with certified functional equivalence and a decisive, scalable speed-up. 
+    While not all method reach breack-even-point at $1\,$Million-instances-dataset (as some Pandas methods were intrisecally optimized on their own), we still proved that break-even is reached for \emph{all} methods at $\approx7\,$Million rows. Crucially, another fundamental result was that running full pipline of all the 5 \texttt{Pucktrick} methods one after another made each pipeline execution (already at one just million rows) $8.2\times$ faster in Spark-backend confronted to Pandas-backend, plateauing at $40\times$ to $43\times$). This sped up is what made the $\approx 14$k-model campaign affordable.
 
-In closing, this thesis shows that controlled data corruption, far from being
-merely a threat to be defended against, can be turned into a deliberate,
-well-characterised \emph{tool}: one that probes what a model has learned, exposes
-the boundaries of its robustness, and --- when wielded with knowledge of the data
-and the cost structure of the task --- can make a deep-learning intrusion
-detection system measurably safer.
+    \item Experiment~B produced a coherent, statistically grounded behavioral map: robustness is mostly an \emph{architectural} property (TabNet's sparse attention makes it remarkably more robust than the CNN-LSTM). Yet one interesting find was that controlled noise budget can be net-positive, as noise can be used as a from of regularization (in our specific case, for CNN-LSTM removing a learnable temporal shortcut). Secondly, by this study we can confirm that the magnitude of degradation tracks feature importance so faithfully that noise-injection-protocol could be used to double as a model-agnostic importance probe, which is a result backed up by both single-feature-experiments \emph{and} multi-feature-experiments. Thirdly, another interesting result, very coherent whit literature, is that corrupting the supervision signal (especially on more generic binary label) is categorically more dangerous than corrupting inputs: with a binary-label inversion cliff beyond $50\%$ and architecture-dependent cross-head leakage when model shares backbone prediction for both heads. Yet, counter-intuitively when corrupting \emph{both} target-columns a row whose multi-class label is reassigned from one attack type to another keeps its binary label \emph{malicious}, so reassignments among the many attack classes overwhelmingly \emph{preserve} the benign/malicious distinction: a result that we could had never discovered if we only had one prediction head. All collected results therefore plan a very complete grid of effects of noise injection over both tabular-data and temporal-data, fully fulfilling this experiment's intention of exploring effects of noise inside tabulaset-dataset and time-series. 
+    
+    \item Experiment~A met its goal once the right yardstick was adopted: a false negative (a missed attack) is far graver than a false positive (a false alarm) in a real-word security-setting. Read through this lens, the campaign delivered a concrete, \emph{model-independent} gain: corrupting the \texttt{Protocol} column with \texttt{outliers} at $50\%$ consistently reduced the number of false negatives for \emph{both} architectures, at the cost of at most a negligible MCC loss. This confirmed, on real data,  that a property of the dataset, once identified through systematic analysis, can be deliberately exploited to make a deep-learning NIDS materially safer in deployment, validating the proof of concept that \texttt{Pucktrick}-style noise injection is a usable, practical tool and not merely an analytical one.
 
-% =====================================================================
-\section{Future Work}
-% =====================================================================
+\end{itemize}
 
-Several directions follow naturally. On the experimental side: extending the
-false-negative/false-positive operational analysis of Experiment~A to the full
-feature set and the multi-feature groups of Experiment~B, ideally validated in an
-online or streaming detection setting; treating noise injection as a
-\emph{tunable hyperparameter} searched directly for an operational objective
-(e.g.\ minimal false negatives at bounded false-positive cost) rather than
-discovered by exhaustive sweep; formally characterising and mitigating the
-asymmetric multi-task contamination observed in the CNN-LSTM, motivating
-architectural countermeasures such as attention-disentangled or gated
-task-specific heads; and replicating the campaign on further architectures and
-datasets to test how far the architecture-dependent conclusions generalise. On
-the library-engineering side: adding new backends beneath the existing
-\texttt{BackendFactory} (Polars or DuckDB for fast single-machine execution, a
-GPU/RAPIDS \texttt{cuDF} backend for large in-memory workloads), and closing the
-residual performance gaps --- lowering the $\approx 7$M-row break-even point of
-the \texttt{duplicated} and \texttt{missing} methods, and porting the
-date-column \texttt{noise} path to native Spark date handling.
+In closing, this thesis shows that controlled data corruption, far from being merely a threat to be defended against, can be turned into a deliberate, well-characterised \emph{tool}: one that probes what a model has learned, exposes the boundaries of its robustness, and (when wielded with knowledge of the data
+and the cost structure of the task) can make a deep-learning model used in real word application intrinsically better in its prediction, in our specific case we were able to create proof of concept that intrusion detection systems based on deep learning can be made measurably safer by the use of \texttt{Pucktrick} noise injection.
 
 \end{document}
